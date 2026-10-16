@@ -139,8 +139,9 @@ checkouts"; everything else in this file still applies.
   beyond its acceptance criteria.
 - **A fork stops the run.** If the task touches an area under [Forks](#forks), write no code:
   comment on the issue with the fork and the question, and remove `claude-ready`.
-- **One issue, one branch, one PR.** Branch `agent/<issue>-<slug>`; never push to `main`. Open
-  the PR against `main` with the template filled in and `Closes #<issue>`.
+- **One issue, one branch, one PR.** Branch `claude/<issue>-<slug>` (cloud sessions push
+  `claude/` branches); never push to `main`. Open the PR against `main` with the template
+  filled in and `Closes #<issue>`.
 - **Green before the PR.** `npm run lint`, `npm test`, `npm run build` and
   `npm run electron:build`. Anything still red after a fix attempt: open the PR as a draft and
   put the failing output under Evidence.
