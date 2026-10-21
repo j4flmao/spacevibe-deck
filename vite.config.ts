@@ -3,10 +3,13 @@
 // type error, and dropping that block silently breaks 276 component tests.
 import { defineConfig } from "vitest/config";
 import preact from "@preact/preset-vite";
+import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath } from "node:url";
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [preact()],
+  plugins: [preact(), tailwindcss()],
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   // Relative asset paths: Electron loads index.html over file://, where the
   // default absolute "/assets/..." resolves to the filesystem root, 404s, and
   // produces a blank window with nothing on stderr.

@@ -98,6 +98,22 @@ in implementation evidence; do not silently re-resolve `latest` between waves.
 
 ## Settings and theme boundary
 
+### Gallery pilot (owner request, 2026-10-21)
+
+Before production migration, the owner requested a broad gallery preview of Deck with the
+selected shadcn/Tailwind system. The [registered specimen](../../src/gallery/sections/shadcn-deck-section.tsx)
+embeds an isolated document with its own upstream reset, tokens, fonts and portals. It shows
+Workbench, Settings, Usage and Changes with launcher/menu interactions and light/dark modes.
+Data is illustrative and local to the preview; no host, persistent settings or agent runs.
+The shared controls are real generated components; surrounding screens are proposed gallery
+compositions, not the migrated production screens. Gallery acceptance does not satisfy AC-2,
+AC-4 or the whole-app migration gate. The pilot's Settings navigation is not an approved
+direction: Command (SET-2) remains the target, and no pilot layout is promoted as the Settings
+structure. Composites the pilot builds by hand are proposals, not shared component definitions
+under UI-4.
+
+### Production boundary
+
 The first migrated product surface is the existing Settings functionality. All mounted
 categories, account states and compound editors must be covered, not just Appearance.
 The previously selected Command navigation remains the intended Settings direction, but is
