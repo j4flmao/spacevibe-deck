@@ -134,6 +134,13 @@ export function UsageReposSection() {
       >
         <UsageDockOverviewSpecimen />
       </Specimen>
+      <Specimen
+        name="Dock overview · period reloading"
+        note="Cost figures stay visible and quiet while a new period loads; allowance does not dim."
+        surface="chrome-2"
+      >
+        <UsageDockOverviewSpecimen loading />
+      </Specimen>
     </>
   );
 }

@@ -1,6 +1,7 @@
 export const messages = {
   en: {
     navProduct: "Deck",
+    navDocs: "Docs",
     navChangelog: "Changelog",
     navGithub: "GitHub",
     navDownload: "Download",
@@ -27,6 +28,14 @@ export const messages = {
     changelogPreview: "Preview",
     changelogNoNotes: "No release notes were published.",
     changelogViewRelease: "View release",
+    docsTitle: "Docs",
+    docsIntro:
+      "Install Deck, launch your agents, and find your way around panes, files, shortcuts and settings. These guides live beside the app's source and go live with every change to them.",
+    docsNavLabel: "Guides",
+    docsFeedbackLead: "Something unclear or out of date?",
+    docsFeedbackLink: "Tell us",
+    docsUntranslated:
+      "This guide changed recently and its translation has not caught up yet, so you are reading the latest English version.",
     localeLabel: "Language",
     navFeedback: "Feedback",
     feedbackTitle: "Feedback",
@@ -103,7 +112,7 @@ export const messages = {
     finaleTitle: "Your shell, intact.",
     proofPtyTitle: "Real PTY, real shell",
     proofPtyBody:
-      "Every pane runs your login shell ($SHELL -l) — PATH, aliases, and dotfiles just work.",
+      "Every pane runs your own shell and loads your login files — PATH, aliases, and dotfiles just work.",
     proofOpenTitle: "Open source, MIT licensed",
     proofOpenBody: "The whole app is on GitHub — read it, build it, fork it, ship a patch.",
     proofLocalTitle: "Your work stays on your machine",
@@ -130,6 +139,7 @@ export const messages = {
   },
   vi: {
     navProduct: "Deck",
+    navDocs: "Tài liệu",
     navChangelog: "Changelog",
     navGithub: "GitHub",
     navDownload: "Tải về",
@@ -156,6 +166,14 @@ export const messages = {
     changelogPreview: "Thử nghiệm",
     changelogNoNotes: "Bản phát hành này không có ghi chú.",
     changelogViewRelease: "Xem bản phát hành",
+    docsTitle: "Tài liệu",
+    docsIntro:
+      "Cài Deck, chạy agent rồi làm quen dần với pane, file, phím tắt và phần cài đặt. Các hướng dẫn này nằm ngay cạnh mã nguồn của app, sửa lúc nào là lên trang lúc đó.",
+    docsNavLabel: "Hướng dẫn",
+    docsFeedbackLead: "Có chỗ nào khó hiểu hay đã cũ?",
+    docsFeedbackLink: "Báo cho chúng tôi",
+    docsUntranslated:
+      "Hướng dẫn này vừa được cập nhật và bản tiếng Việt chưa kịp theo, nên bạn đang xem bản tiếng Anh mới nhất.",
     localeLabel: "Ngôn ngữ",
     navFeedback: "Góp ý",
     feedbackTitle: "Góp ý",
@@ -237,7 +255,7 @@ export const messages = {
     finaleTitle: "Shell của bạn, nguyên vẹn.",
     proofPtyTitle: "PTY thật, shell thật",
     proofPtyBody:
-      "Mỗi pane chạy đúng login shell của bạn ($SHELL -l) — PATH, alias, dotfiles hoạt động y nguyên.",
+      "Mỗi pane chạy đúng shell của bạn và nạp các file login của bạn — PATH, alias, dotfiles hoạt động y nguyên.",
     proofOpenTitle: "Mã nguồn mở, giấy phép MIT",
     proofOpenBody: "Toàn bộ app nằm trên GitHub — đọc, tự build, fork hay gửi patch đều được.",
     proofLocalTitle: "Công việc của bạn ở lại trên máy bạn",

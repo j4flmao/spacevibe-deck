@@ -4,7 +4,7 @@ import { Terminal } from "@xterm/xterm";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { initializeDesktopEnvironment, resetDesktopEnvironmentForTests } from "../lib/platform";
 import { DEFAULT_SETTINGS, type Settings } from "../settings/settings-schema";
-import { createPane, toFontStack, type PaneEvents } from "./pane";
+import { createPane, isInterruptKey, toFontStack, type PaneEvents } from "./pane";
 
 beforeAll(() => {
   // Never fires: nothing in this file resizes anything, and `fit()` is
@@ -24,6 +24,38 @@ const silentEvents: PaneEvents = {
 };
 
 describe("Pane transfer primitives", () => {
+  it("keeps control bytes inside programmatic text from ending bracketed paste", async () => {
+    const writes: string[] = [];
+    const originalPaste = Terminal.prototype.paste;
+    // Exercise xterm's real framing without mounting its canvas renderer.
+    const paste = vi.spyOn(Terminal.prototype, "paste").mockImplementation(function (
+      this: Terminal,
+      text,
+    ) {
+      const core = (this as unknown as { _core: { textarea?: HTMLTextAreaElement } })._core;
+      core.textarea ??= document.createElement("textarea");
+      originalPaste.call(this, text);
+    });
+    const pane = createPane(99, DEFAULT_SETTINGS as Settings, {
+      ...silentEvents,
+      onData: (_id, data) => {
+        writes.push(data);
+        return Promise.resolve(true);
+      },
+    });
+    try {
+      pane.write("\u001b[?2004h");
+      await pane.flush();
+      await pane.pasteText("first\n\u001b[201~\rmarker\u009b201~\tlast\n\n");
+      expect(writes).toHaveLength(1);
+      expect(writes[0].split("\u001b[201~")).toHaveLength(2);
+      expect(writes[0]).not.toContain("\u009b");
+      expect(writes[0]).toBe("\u001b[200~first\r[201~\rmarker201~\tlast\r\r\u001b[201~");
+    } finally {
+      paste.mockRestore();
+      pane.dispose();
+    }
+  });
   it("flush() resolves after xterm has parsed everything already written", async () => {
     const pane = createPane(1, DEFAULT_SETTINGS as Settings, silentEvents);
     pane.write("hello");
@@ -143,5 +175,45 @@ describe("toFontStack", () => {
 
   it("uses a user-entered fallback list verbatim", () => {
     expect(toFontStack('"Iosevka", monospace')).toBe('"Iosevka", monospace');
+  });
+});
+
+describe("Pane interrupt keys (INT1)", () => {
+  const key = (init: KeyboardEventInit) => new KeyboardEvent("keydown", init);
+
+  it("reports Escape and Ctrl+C, and not the copy chords", () => {
+    expect(isInterruptKey(key({ key: "Escape" }))).toBe(true);
+    expect(isInterruptKey(key({ key: "c", ctrlKey: true }))).toBe(true);
+    expect(isInterruptKey(key({ key: "c", metaKey: true }))).toBe(false);
+    expect(isInterruptKey(key({ key: "C", ctrlKey: true }))).toBe(true); // Caps Lock
+    expect(isInterruptKey(key({ key: "C", ctrlKey: true, shiftKey: true }))).toBe(false);
+    expect(isInterruptKey(key({ key: "c", ctrlKey: true, shiftKey: true }))).toBe(false);
+    expect(isInterruptKey(key({ key: "c" }))).toBe(false);
+    expect(isInterruptKey(key({ key: "a", ctrlKey: true }))).toBe(false);
+  });
+
+  it("reports a key from xterm's onKey to the owner and nothing else", () => {
+    type KeyListener = (event: { key: string; domEvent: KeyboardEvent }) => void;
+    let listener: KeyListener | null = null;
+    const onKey = vi
+      .spyOn(Terminal.prototype as unknown as { onKey: unknown }, "onKey", "get")
+      .mockReturnValue(((fn: KeyListener) => {
+        listener = fn;
+        return { dispose() {} };
+      }) as never);
+    const interrupts: number[] = [];
+    const pane = createPane(7, DEFAULT_SETTINGS as Settings, {
+      ...silentEvents,
+      onInterruptKey: (id) => interrupts.push(id),
+    });
+    const press = (key: string, init: KeyboardEventInit = {}) =>
+      listener!({ key, domEvent: new KeyboardEvent("keydown", { key, ...init }) });
+    press("\x1b", { key: "Escape" });
+    press("\x03", { key: "c", ctrlKey: true });
+    press("c", { key: "c", metaKey: true });
+    press("a", { key: "a" });
+    expect(interrupts).toEqual([7, 7]);
+    pane.dispose();
+    onKey.mockRestore();
   });
 });

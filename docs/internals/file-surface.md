@@ -35,10 +35,28 @@ app catalog have no Tauri counterpart, and `open_editor` is the one path Tauri k
 ## Explorer and editor
 
 - The tree ([`file-tree.ts`](../../src/files/file-tree.ts)) is virtualized by plain index
-  arithmetic, 22px rows, hides `.git`, `node_modules`, `dist` and `target` by a fixed list
-  rather than by parsing `.gitignore`, sorts directories first with a locale compare and a
-  code-unit tie-break, and walks with a visited set so a symlink cycle inside the root cannot
-  loop. A symlink out of the root renders as a leaf and does not open.
+  arithmetic, 22px rows, sorts directories first with a locale compare and a code-unit
+  tie-break, and walks with a visited set so a symlink cycle inside the root cannot loop. A
+  symlink out of the root renders as a leaf and does not open.
+- **What the tree hides is git's verdict, not a list.** Each listing asks
+  [`ignored_paths`](../../electron/fs/ignored-names.ts) which of its entry names the
+  repository ignores ([`listing-ignore.ts`](../../src/files/listing-ignore.ts)), and
+  [`file-tree.ts`](../../src/files/file-tree.ts) hides those unless **Show ignored files** is on.
+  Git's answer *replaces* the fixed list, so a tracked `dist/` or `target/` is shown. Only
+  where git gives no answer for a listing (not a repository, git missing, a failure, a timeout,
+  an ignored root, over 10,000 names, a host without the channel) do `node_modules`, `dist`
+  and `target` count as ignored, which is why a plain folder still hides `node_modules`. `.git`
+  is never listed and is never sent to git. The two filters are independent: an ignored
+  `.env.local` needs both Show hidden files and Show ignored files. The classifier runs `git
+  check-ignore` read-only with the **canonical** directory as git's working directory and bare
+  names on stdin, so the realpath'd row paths and the renderer's root spelling never meet, and
+  a directory inside a submodule is judged by the submodule's rules. A listing waits at most
+  300 ms for the verdict; a later one is applied only while that listing is still current, and a
+  failed query never reaches the status line. Verdicts live beside the listings in
+  [`file-surface-store.ts`](../../src/files/file-surface-store.ts); a changed `.gitignore`
+  re-lists every visible directory at or under its folder
+  ([`tree-refresh.ts`](../../src/files/tree-refresh.ts)). The tree does not watch `.git`, so an
+  index or `info/exclude` edit shows on the next re-list or Refresh.
 - Monaco is imported lazily on the first file tab and its languages are enumerated one
   import at a time in [`editor-host.ts`](../../src/files/editor-host.ts), because a loop over
   strings is not statically analyzable. Language services (TypeScript, JSON, CSS, HTML
@@ -66,16 +84,19 @@ app catalog have no Tauri counterpart, and `open_editor` is the one path Tauri k
   deliberately not persisted, so it never becomes the only restored explorer state.
 - **Focus is a path, not an index** ([`tree-focus.ts`](../../src/files/tree-focus.ts)): a
   create re-sorts the rows, and focus must land on the created *entry*, which is an identity.
-- The root row carries five always-visible controls, each a 17px square rather than
-  `.iconbtn`'s 24px box, which would overflow a 22px row. **Show hidden files** flips the
-  per-workspace, in-memory `showHidden` and then calls `refreshTree`: the filter is part of
-  the watch scope, and only the controller restates that. **Refresh re-lists every visible
+- The root row carries six always-visible controls, each a 17px square rather than
+  `.iconbtn`'s 24px box, which would overflow a 22px row. **Show hidden files** and **Show
+  ignored files** each flip a per-workspace, in-memory flag and then call `refreshTree`: the
+  filters are part of the watch scope, and only the controller restates that. Ignored rows
+  rest at `--text-faint` and carry an "Ignored" description, so colour is not the only cue.
+  Creating a name either filter would hide turns that filter on and says so
+  ([`created-entry-filters.ts`](../../src/files/created-entry-filters.ts)). **Refresh re-lists every visible
   directory without clearing the cache** — clearing destroys the map `visibleDirectories`
   reads, so only the root would reload. **Collapse All** empties `expanded`, leaves the root
   open, and is a controller operation because only the controller may call `refreshWatch()`.
 - **The active document is marked, not selected.** The row follows the workspace's selected
   document, even while the terminal has focus. Revealing it is a request armed by a document
-  change, a mount or hidden files
+  change, a mount or either filter
   turning on, and spent when it finishes: [`tree-reveal.ts`](../../src/files/tree-reveal.ts)
   names the next move from the loaded listings, the hook makes it through the controller,
   and a later collapse or scroll stands. It matches the document against the *listed* entry
@@ -106,8 +127,11 @@ host cannot answer.
 - **Every spawn carries `--no-optional-locks`, and that is load-bearing.** A plain `git status`
   rewrites `.git/index` to refresh its stat cache; the watch below reports the index; the
   report would read again and rewrite it again. Drop the flag and an idle Explorer spins. The
-  only verbs allowed are `rev-parse`, `status`, `diff` and `hash-object` without `-w`, and the
-  inherited `GIT_*` environment is dropped, so a hook or test that exports `GIT_DIR` cannot
+  observation also reads config, tracked paths and attributes before status. The
+  [runner](../../electron/git/changes.ts) disables fsmonitor and refuses tracked files
+  assigned executable clean/process filters, because suppressing their normalization
+  would produce misleading diffs. Dirty submodule traversal is skipped; submodule commit
+  changes remain visible. The inherited local `GIT_*` environment is dropped, so a hook or test that exports `GIT_DIR` cannot
   redirect a read. A folder inside a repository is read relative to its own prefix, and a
   rename's old path is dropped when it lies outside the root.
 - **Two watches, because one cannot see everything**
@@ -120,13 +144,25 @@ host cannot answer.
   watch counting `index` and `HEAD` only. Platforms without a recursive watch use that watch
   for the root's own `.git` as well and otherwise depend on focus, turn end and Refresh. An
   event only says "read again", at most one per 100 ms per window.
+- **A window of ignored writes emits nothing.** When a 100 ms window closes, its paths go to
+  the shared classifier ([`ignore-classifier.ts`](../../electron/git/ignore-classifier.ts))
+  and `git:changed` fires only if one is not ignored; an install writing only `node_modules/`
+  therefore no longer makes Deck run `git status` every second. It fails open everywhere: no
+  answer, a 500 ms budget spent, git not governing the root, a window over 10,000 paths or a
+  classification still running all emit as before, so a classifier fault can cost an extra
+  read and never hide a change. A `.gitignore` write, a null filename, the `.git` paths that
+  count and `.git/info/exclude` emit without classification. Verdicts are cached against the
+  stamps of the `.gitignore` chain, `info/exclude` and the index (tracking changes what git
+  ignores), and cleared when one changes. A window holding a path inside a submodule makes git
+  reject the whole batch, so it emits.
 - **The scheduler decides when git runs, in the renderer**
   ([`changes-scheduler.ts`](../../src/files/changes/changes-scheduler.ts)). Watch events and
   turn ends are debounced 150 ms but never held past 1 s from a burst's first trigger; a read
   starts no sooner than 1 s after the previous one started and one previous duration after it
   ended; focus, the list appearing and Refresh skip the debounce; one read is in flight and
-  whatever arrives meanwhile collapses into exactly one more. A hidden window or a hidden view
-  runs nothing and releases the watch; coming back reads once. Turn end is a pane of the shown
+  whatever arrives meanwhile collapses into exactly one more. The Explorer holds the watch in
+  either view, because the Changes chip shows the totals while Files is up; a hidden window or
+  a closed Explorer runs nothing and releases the watch; coming back reads once. Turn end is a pane of the shown
   workspace's tab leaving `working`
   ([`turn-end.ts`](../../src/files/changes/turn-end.ts)), so a finished agent turn refreshes the
   list even where no watch exists.
@@ -136,7 +172,7 @@ host cannot answer.
   the rail's repository scan, not from a `git status`: a folder the scan calls plain disables
   the Changes chip with "Not a git repository". That scan cannot tell a missing git from a
   folder that is not a repository, so with no git on `PATH` the chip is disabled the same way
-  and the "Git is not installed" message appears only if git vanishes while the list is shown.
+  and the "Git is not installed" message appears only if git vanishes while the list is up.
 
 ## Main-process file guards
 
@@ -152,6 +188,10 @@ host cannot answer.
   unique temp sibling opened `wx` so a symlink planted at the temp name cannot be followed,
   then rename; the store uses the same function. A directory target is refused because its
   dirname would be the workspace's parent.
+- `ignored_paths` takes `{ root, directory, names }` with `names` single segments of
+  `directory` (at most 10,000, no separator, `.`, `..` or NUL) and rejects anything else like
+  `stat_files`; one `realpath` per call, not per entry, is why the payload is relative. A git
+  failure never rejects: the reply is `unavailable` and the tree falls back.
 - Watching is non-recursive, on directories not files (an atomic writer destroys the inode a
   file watcher holds), and every `watch_paths` call **replaces** the window's whole scope so
   a collapsed directory cannot leak a watcher. Caps: 256 directories and 2,048 files per
@@ -166,9 +206,11 @@ host cannot answer.
 macOS only) flips a document. The view is a read-only picture of the **live buffer**,
 debounced 150ms, so it rides the external-change path for free.
 
-The policy ([`markdown-policy.ts`](../../src/files/markdown-policy.ts)) is pure and exists so
-the feature needs no Content Security Policy; nothing in it may grow a rule only a CSP would
-enforce.
+The pure [markup policy](../../src/files/markdown-policy.ts) classifies links and images.
+The app session also enforces an [image request boundary](../../electron/app-image-policy.ts):
+Mermaid can create an image before sanitizing its SVG, so checking the returned markup is
+too late. Packaged app renderers cannot load HTTP(S) images; development permits only Vite's
+configured origin for bundled assets. The browser panel keeps its separate session.
 
 - Raw HTML is escaped and shown verbatim, not sanitized.
 - A link carries its decision in `data-md-target` and its destination in `data-md-href`,
@@ -177,10 +219,13 @@ enforce.
   an in-workspace relative link raises the same `requestPathOpen` a ⌘+click does; `#anchor`
   scrolls; `javascript:`, `data:`, `file:` and every unhandled scheme, and anything
   resolving outside the root by segment-wise comparison, render as plain text.
-- Images are local only. A local image inside the root gets its bytes through
-  `workspace_for_path` (containment answered in main) and `read_image_as_data_url`
-  (extension allowlist, 1 MB cap); a remote image is a labelled placeholder, never a fetch.
-  `read_file` cannot serve this because it refuses every PNG as binary.
+- Images are local only. Electron persists roots selected through its native folder picker or
+  dropped as an OS-backed folder in a [main-only grant store](../../electron/image-workspace-grants.ts),
+  then authorizes each window's active roots against those grants before
+  [bounded image reads](../../electron/images.ts). A remote image is a labelled placeholder,
+  never a fetch. Logo import uses its own native image picker and returns bytes, never a
+  renderer-readable path. Tauri keeps its frozen image command.
+  `read_file` cannot serve images because it refuses every PNG as binary.
 - Fenced code is colorized by Monaco's own colorizer against the enumerated language set;
   `mermaid` is imported only when a document holds a fence, and a diagram that fails keeps
   its code block plus an error line.

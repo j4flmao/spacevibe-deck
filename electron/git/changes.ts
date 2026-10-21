@@ -8,8 +8,10 @@
  *
  * Read-only by construction (CHG5). Every spawn carries `--no-optional-locks`:
  * a plain `git status` rewrites `.git/index`, which wakes the very watcher that
- * asked for the read and loops. The only verbs here are `rev-parse`, `status`,
- * `diff` and `hash-object` without `-w`.
+ * asked for the read and loops. The only verbs here and in `head-file.ts` are
+ * `config` (read only), `ls-files`, `check-attr`, `rev-parse`, `status`, `diff`,
+ * `hash-object` without `-w`, and `cat-file` (`-s`, `blob`) for the diff
+ * column's `HEAD` side.
  */
 import { execFile } from "node:child_process";
 import { open, stat } from "node:fs/promises";
@@ -66,12 +68,24 @@ export interface ChangesFailure {
 
 export type ChangesReply = ChangesSnapshot | ChangesFailure;
 
-export type GitRun =
-  | { readonly ok: true; readonly stdout: string }
-  | { readonly ok: false; readonly kind: ChangesFailureKind; readonly stderr: string };
+export type GitRun<Out = string> =
+  | { readonly ok: true; readonly stdout: Out }
+  | {
+      readonly ok: false;
+      readonly kind: ChangesFailureKind;
+      readonly stderr: string;
+      /** The process exit status, when git ran and exited non-zero. */
+      readonly exitCode?: number;
+    };
 
 /** Injectable so tests reach the timeout, overflow and missing-git paths. */
-export type GitRunner = (args: readonly string[], input?: string) => Promise<GitRun>;
+export type GitRunner<Out = string> = (
+  args: readonly string[],
+  input?: string,
+) => Promise<GitRun<Out>>;
+
+/** The runner in buffer mode: stdout as bytes, for a blob that may not be UTF-8. */
+export type GitBufferRunner = GitRunner<Buffer>;
 
 /** What `git rev-parse --local-env-vars` lists. A caller that inherited one of
  * these (a hook, the pre-push suite) would point every spawn at someone else's
@@ -106,26 +120,33 @@ function cleanEnv(): NodeJS.ProcessEnv {
   return env;
 }
 
-function runnerFor(root: string): GitRunner {
+/** Text mode by default; `"buffer"` keeps stdout as bytes. Same environment,
+ * bounds and failure classification either way. */
+export function runnerFor(root: string): GitRunner;
+export function runnerFor(root: string, mode: "buffer"): GitBufferRunner;
+export function runnerFor(root: string, mode?: "buffer"): GitRunner<string | Buffer> {
   const env = cleanEnv();
+  const encoding = mode === "buffer" ? "buffer" : "utf8";
   return (args, input) =>
     new Promise((resolve) => {
       const child = execFile(
         "git",
-        ["--no-optional-locks", "-C", root, ...args],
+        ["--no-optional-locks", "-c", "core.fsmonitor=false", "-C", root, ...args],
         {
-          encoding: "utf8",
+          encoding,
           timeout: GIT_TIMEOUT_MS,
           maxBuffer: GIT_MAX_BUFFER,
           windowsHide: true,
           env,
         },
-        (error, stdout, stderr) => {
+        (error, stdout, rawStderr) => {
           if (error === null) {
             resolve({ ok: true, stdout });
             return;
           }
+          const stderr = rawStderr.toString();
           const code = (error as NodeJS.ErrnoException).code;
+          const exitCode = typeof code === "number" ? code : undefined;
           if (code === "ENOENT") {
             resolve({ ok: false, kind: "git-missing", stderr: "" });
           } else if (code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER") {
@@ -133,9 +154,9 @@ function runnerFor(root: string): GitRunner {
           } else if (error.killed === true) {
             resolve({ ok: false, kind: "timeout", stderr: "" });
           } else if (/not a git repository/i.test(stderr)) {
-            resolve({ ok: false, kind: "not-repository", stderr });
+            resolve({ ok: false, kind: "not-repository", stderr, exitCode });
           } else {
-            resolve({ ok: false, kind: "failed", stderr });
+            resolve({ ok: false, kind: "failed", stderr, exitCode });
           }
         },
       );
@@ -152,7 +173,7 @@ const MESSAGES: Readonly<Record<Exclude<ChangesFailureKind, "failed">, string>> 
   overflow: "The change list is too large to read",
 };
 
-function failure(run: Extract<GitRun, { ok: false }>): ChangesFailure {
+export function failure(run: Extract<GitRun, { ok: false }>): ChangesFailure {
   if (run.kind !== "failed") {
     return { kind: run.kind, message: MESSAGES[run.kind] };
   }
@@ -347,12 +368,60 @@ async function read(root: string, deps: ReadChangesDeps): Promise<ChangesReply> 
   // Three lines; the prefix is empty at the top level, so keep the blank one.
   const prefix = (probe.stdout.split("\n")[2] ?? "").trim();
 
+  // Status/diff can run clean/process filters even with --no-ext-diff and
+  // --no-textconv. Refuse rather than show misleading raw-byte changes (LFS,
+  // for example). Read includes and keep the final value of each setting.
+  // This preflight is not a sandbox against concurrent config/attribute mutation.
+  const filters = await run([
+    "config",
+    "--includes",
+    "--null",
+    "--get-regexp",
+    "^filter\\..*\\.(clean|process)$",
+  ]);
+  if (!filters.ok && filters.exitCode !== 1) {
+    return failure(filters);
+  }
+  if (filters.ok) {
+    const effective = new Map<string, string>();
+    for (const entry of filters.stdout.split("\0")) {
+      const separator = entry.indexOf("\n");
+      if (separator >= 0) {
+        effective.set(entry.slice(0, separator), entry.slice(separator + 1));
+      }
+    }
+    const executable = new Set(
+      [...effective]
+        .filter(([, value]) => value.trim().length > 0)
+        .map(([key]) => key.slice(7, key.lastIndexOf("."))),
+    );
+    if (executable.size > 0) {
+      // Status refreshes the entire index, including paths above a workspace
+      // subfolder. Relative names from ls-files also work with check-attr.
+      const tracked = await run(["ls-files", "-z", "--cached", "--", ":/"]);
+      if (!tracked.ok) return failure(tracked);
+      const attributes = await run(["check-attr", "-z", "--stdin", "filter"], tracked.stdout);
+      if (!attributes.ok) return failure(attributes);
+      const values = attributes.stdout.split("\0");
+      for (let index = 2; index < values.length; index += 3) {
+        if (executable.has(values[index])) {
+          return {
+            kind: "failed",
+            message:
+              "Changes cannot be read safely because tracked files use executable Git filters.",
+          };
+        }
+      }
+    }
+  }
+
   const status = await run([
     "status",
     "--porcelain=v2",
     "-z",
     "--branch",
     "--untracked-files=all",
+    "--ignore-submodules=dirty",
     "--",
     ".",
   ]);
@@ -376,6 +445,7 @@ async function read(root: string, deps: ReadChangesDeps): Promise<ChangesReply> 
     "--no-ext-diff",
     "--no-textconv",
     "--no-color",
+    "--ignore-submodules=dirty",
     base,
     "--",
     ".",

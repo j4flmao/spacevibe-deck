@@ -19,6 +19,7 @@ describe("agent-signals-host launch config", () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("keeps parsing the settings path and the hook port as before", async () => {
@@ -41,6 +42,35 @@ describe("agent-signals-host launch config", () => {
     await expect(host.agentSignalConfig()).resolves.toMatchObject({
       claudeSettingsPath: null,
       hookPort: null,
+    });
+  });
+
+  it("reads the bootstrap and Codex flag answers, and defaults each to false", async () => {
+    const { host } = await facadeAnswering({
+      hookPort: 1,
+      shellBootstrap: true,
+      codexBypassHookTrust: true,
+      codexNoDaemon: true,
+    });
+    await expect(host.agentSignalConfig()).resolves.toMatchObject({
+      shellBootstrap: true,
+      codexBypassHookTrust: true,
+      codexNoDaemon: true,
+    });
+    const { host: bare } = await facadeAnswering({
+      hookPort: 1,
+      shellBootstrap: "yes",
+      codexBypassHookTrust: 1,
+    });
+    await expect(bare.agentSignalConfig()).resolves.toMatchObject({
+      shellBootstrap: false,
+      codexBypassHookTrust: false,
+      codexNoDaemon: false,
+    });
+    expect(bare.NO_SIGNAL_CONFIG).toMatchObject({
+      shellBootstrap: false,
+      codexBypassHookTrust: false,
+      codexNoDaemon: false,
     });
   });
 

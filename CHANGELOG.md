@@ -5,11 +5,84 @@ User-facing release notes. The release workflow's `promote` job publishes the
 platform-limitations header), so each section is written for users, reviewed in
 the release PR, and frozen at the tag — never an auto-generated commit list.
 
-## Unreleased
+## 2.13.0
+
+- **Safer terminal paste and Markdown.** Pasted text can no longer break out of its protected
+  paste frame with embedded control characters. Deck blocks external HTTP(S) images,
+  including images requested while rendering Mermaid diagrams.
+- **Changes no longer runs repository callbacks.** Reading a repository disables fsmonitor
+  and reports an error when tracked files need executable filters. Submodule commit changes
+  stay visible; dirty files inside submodules are not scanned. Special and oversized Git
+  metadata files are refused.
+- **Multi-window operations respect every window.** The update confirmation counts work and
+  unsaved files in other windows too. Moving a pane checks both its source and destination,
+  and session restore no longer loses windows when several save at once.
+- **Busy-work checks recognize shell scripts.** A running shell script now keeps its pane in
+  the close warning, and on Windows a reused process ID can no longer be mistaken for a
+  pane's child.
+- **Clone a GitHub repository from Deck.** **Clone repository…** on the Open board and in the
+  File menu takes `owner/repo` or an HTTPS or SSH link, clones it with your own Git
+  credentials, shows progress with a Cancel, and adds the folder as a workspace. Nothing
+  starts automatically: submodules stay uninitialized (Deck says so) and no agent runs.
+- **The Open board puts the common actions in a row.** **Open folder…**, **Clone repository…**
+  and **Create worktree…** are buttons beside the folder bar; **Create workspace…**, **Resume a
+  session…** and **Manage agents** moved from **More…** into the folder bar's menu. The folder
+  bar and the last-session banner no longer span the whole window.
+- **Double-click a recent workspace to open it.** On the Open board, double-clicking a row
+  in **Recent workspaces** opens that workspace in the rail with its remembered agent, or a
+  terminal when no agent can run. A single click still only selects it.
+- **Drop files or folders to add workspaces.** Drop onto Deck's chrome or the
+  Open board to save folders as workspaces;
+  files use their containing folder. A batch adds each folder once and selects
+  the first without starting an agent. Terminal drops still insert paths.
+
+## 2.12.1
+
+- **opencode status works on opencode 2.** The rail again shows when opencode is working,
+  waiting for you or finished, on both opencode 1.18.29+ and 2.x. Deck loads its plugin only for a
+  local session: `--attach`, `--server`, `--help` and `--version` runs are left alone, and the
+  plugin closes its connection to Deck when opencode shuts it down.
+- **Claude Code sessions use less CPU.** Deck reads Claude's usage limits from its status line,
+  and used to start a collector on every refresh. It now collects at most once every 30 seconds
+  per session. With a status line that refreshes every second, nine sessions were spending
+  about half a CPU core on it.
+
+## 2.12.0
+
+- **Explorer hides what git ignores.** The tree now follows the repository's ignore rules
+  instead of a fixed list of four names. A **Show ignored files** toggle on the root row, off
+  by default and remembered per workspace, shows those entries dimmed. `.git` stays hidden.
+- **Changes stops polling for ignored output.** An `npm install` or a build that writes only
+  ignored files no longer makes Deck run `git status` about once a second.
+
+- **Search Settings.** A field at the top of the [rail](src/ui/settings/settings-nav.tsx) finds a
+  setting by name, shows how many matches each page holds and jumps to the first page with one.
+  Esc clears the search before it closes Settings.
+- **See what you changed.** A dot marks every setting that differs from its default, and a page
+  with changes shows how many and a **reset page** action.
+- **Restore defaults is split in three.** [Reset](src/ui/settings/sections/reset-section.tsx)
+  now has separate rows for preferences, layout, and agents with prompt templates. Each asks
+  first, lists what it changes and what it keeps, and is disabled when nothing differs.
+  Resetting agents and templates also unpins the deleted agents from quick launch.
+
+- **Settings keeps a consistent width.** Every category now uses the same centered
+  [1050px content limit](src/styles/11-settings-screen.css), including Appearance and Agents.
+
+- **Usage stays compact on wide screens.** The [details page](src/ui/usage/usage-page.tsx)
+  now centers its content in a box up to 1050px wide and fits smaller windows.
+
+## 2.11.0
 
 - **A larger Usage view.** Details in the Usage tab, View → Usage Details, or ⌘⇧R
   (Ctrl+Shift+R on Windows and Linux) opens usage across the content area while the sidebar
   stays visible. Back or Escape returns to where you were; terminals keep running underneath.
+
+- **Usage leads with what you have left.** The Usage tab now opens on your remaining allowance:
+  one tile per limit window with the percentage left, a bar in the agent's colour and when it
+  resets, turning yellow at 30% and red at 15%. Below it, Estimated API cost shows each agent's
+  share as its own card, and the period you pick (Today, 7 days, 30 days, All) is highlighted.
+  The Usage page adds token totals, with what the cache saved, and a table of your models by
+  cost, share and tokens.
 
 - **Usage remembers which project each token was spent in.** The token scanner now records the
   repository (or folder) an agent was working in, with worktrees counted under their
@@ -25,6 +98,58 @@ the release PR, and frozen at the tag — never an auto-generated commit list.
   old `PATH`, so start the new agent from a new terminal. A pane running Claude Code or Codex
   now shows that agent instead of reading as busy once the agent starts helpers such as MCP
   servers.
+
+- **OpenCode reports its status by default.** Signals is now on for OpenCode: Deck loads a
+  small plugin into OpenCode in its panes, so a turn shows as working, a permission request or
+  a question shows as needing you, and the end of a turn shows as done. Your global
+  `~/.config/opencode/AGENTS.md` still applies there. While it is on, OpenCode in a Deck pane
+  uses Deck's config directory (`OPENCODE_CONFIG_DIR`), so agents, commands, plugins and
+  `AGENTS.md` from a directory you set in `OPENCODE_CONFIG_DIR` yourself do not load there;
+  switch it off in Settings → Agents if you rely on them. Deck no longer reserves a port for
+  OpenCode. Electron only, macOS and Linux.
+
+- **Codex reports its status by default.** Signals is now on for Codex too: a turn shows as
+  working when you send a prompt, an approval or a question shows as needing you, and the end
+  of a turn shows as done. Deck adds its hooks to `~/.codex/hooks.json`, beside any of yours;
+  Codex started outside Deck may ask once whether to trust them, and since they do nothing
+  outside a Deck pane, either answer is fine. In a Deck pane Codex now starts with
+  `--dangerously-bypass-hook-trust`, so enabled hooks run there without Codex's hook review,
+  and with `--no-daemon`, so those sessions do not appear in `codex agents` or remote control.
+  If you had switched Codex's Signals off, it comes back on once with this update; switch it
+  off again in Settings → Agents. Electron only, macOS and Linux.
+
+- **Claude Code reports its status by default.** Signals is now on for Claude Code, so the rail
+  shows a turn as working the moment you send a prompt, keeps it working through quiet tool
+  runs and large tool output, and clears a permission wait as soon as you answer it. Pressing
+  Escape or Ctrl+C in the pane clears the working mark at once instead of leaving it for two
+  minutes. Deck adds its hooks to `~/.claude/settings.json`, beside any of yours, and creates
+  the file if it does not exist. If you had switched Claude Code's Signals off, it comes back
+  on once with this update; switch it off again in Settings → Agents if you prefer. Electron
+  only, macOS and Linux.
+
+- **An agent run by another agent no longer takes over its pane's status.** When Claude ran
+  `codex exec` or `claude -p` from a tool call, the inner run could claim the pane, and the
+  outer turn's end was then ignored. Panes now start through Deck's own startup files, which
+  load yours first (zsh, bash and fish), so `claude`, `codex` and `opencode` typed in a pane
+  run through small Deck wrappers that tell the outer agent from the inner one. Your PATH
+  order, aliases and dotfiles are unchanged; a bash pane now loads your login files itself
+  instead of starting as a login shell. macOS and Linux, Electron only.
+
+- **A new Quick Launch page.** Agents are larger tiles: press one to split it beside your
+  pane, or use the ⊕ in its corner for a new space. Hover or focus a tile to see the exact
+  command it will run, and pick another launch profile for this visit from the chip beside
+  it. Agents you have not installed show on the page with Install. A launch that fails before
+  it opens shows why, with Retry. The heading, the Add agent card and the footer are gone;
+  choose which agents show in Settings → Agents. Electron only.
+
+- **See a changed file's diff beside the Explorer.** Pressing a file in Changes now opens
+  its diff against the last commit in a column beside the Explorer instead of opening the
+  file: side by side when there is room, unified when there is not, with long unchanged
+  stretches folded. In the column, n and p move between changes, ] and [ between files, and
+  Esc closes it; Open file shows the file itself. Electron only.
+
+- **Changes counts stay in view.** The Changes switch in the file explorer shows how many
+  lines the checkout added and removed while you browse Files, not only once you open it.
 
 ## 2.10.0
 
@@ -257,7 +382,7 @@ easier to spot in the rail.
   They launch bare, without flag, model or effort controls (Droid keeps its
   autonomy level and spec mode).
 - **Add agents from Quick Launch.** An **Add agent** card on the
-  [launcher](src/launcher/quick-agent-editor.tsx) picks which agents appear
+  launcher picks which agents appear
   there, and it shares one list with Settings → Quick agents.
 - **Appearance and Agents settings have a new layout.**
   [Appearance](src/ui/settings/sections/appearance-section.tsx) shows each

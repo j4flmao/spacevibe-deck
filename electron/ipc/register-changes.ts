@@ -7,6 +7,8 @@ import { ipcMain, webContents, type WebContents } from "electron";
 import { CHANNELS, EVENTS } from "./channels";
 import { readChanges } from "../git/changes";
 import { createChangesWatchRegistry, type ChangesWatchRegistry } from "../git/changes-watch";
+import { readHeadFile } from "../git/head-file";
+import { sharedIgnoreClassifier } from "../git/ignore-classifier";
 
 export interface ChangesRegistration {
   readonly watches: ChangesWatchRegistry;
@@ -14,6 +16,7 @@ export interface ChangesRegistration {
 
 export function registerChanges(): ChangesRegistration {
   const watches = createChangesWatchRegistry({
+    classifier: sharedIgnoreClassifier(),
     emit: (sender, root) => {
       const target = webContents.fromId(sender);
       if (target !== undefined && !target.isDestroyed()) {
@@ -44,6 +47,7 @@ export function registerChanges(): ChangesRegistration {
 
   // Never rejects: every failure is a typed reply for the status line.
   ipcMain.handle(CHANNELS.gitChanges, (_event, { root }) => readChanges(root));
+  ipcMain.handle(CHANNELS.gitHeadFile, (_event, { root, path }) => readHeadFile(root, path));
   ipcMain.handle(CHANNELS.gitChangesWatch, (event, { root }) => {
     const id = track(event.sender);
     if (root !== null && typeof root !== "string") {

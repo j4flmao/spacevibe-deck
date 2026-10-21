@@ -75,7 +75,7 @@ it.each([false, true])(
     const order = [...host.querySelector(".usage-overview")!.children].map(
       (node) => node.className,
     );
-    expect(order.slice(0, 3)).toEqual(["usage-hero", "usage-allowance", "usage-range"]);
+    expect(order.slice(0, 3)).toEqual(["usage-allowance", "usage-hero", "usage-timeline"]);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(15_000);
     });
@@ -140,7 +140,7 @@ it("opens the details page through the callback from its one control", async () 
   await act(async () => {
     render(<UsageDockTab onOpenDetails={onOpenDetails} />, host);
   });
-  act(() => host.querySelector<HTMLButtonElement>(".usage-dock__details")?.click());
+  act(() => host.querySelector<HTMLButtonElement>(".sbtn")?.click());
   expect(onOpenDetails).toHaveBeenCalledTimes(1);
 });
 it("keeps the poll alive when the dock tab closes while the page still holds it", async () => {

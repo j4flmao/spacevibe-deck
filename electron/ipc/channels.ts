@@ -58,12 +58,10 @@ export const CHANNELS = {
   // Electron-only, like the block above.
   agentRegistry: "agent_registry",
   // Stage 2 of the same layer: the launch config a pane's command is
-  // augmented with (`--settings` file, hook port), and opencode's per-pane
-  // server attachment (`{ paneId }` → `{ port }`). Electron-only, like the
+  // augmented with (`--settings` file, hook port). Electron-only, like the
   // block above; the hook endpoint itself is loopback HTTP, not IPC, and its
   // accepted posts arrive as the `hook:event` push below.
   agentSignalConfig: "agent_signal_config",
-  opencodeAttach: "opencode_attach",
   // Window label accessor, for the same restore work: no renderer accessor
   // existed before this (main derived it per-request via `labelOf(event)`
   // only). Electron-only, like the block above.
@@ -90,7 +88,9 @@ export const CHANNELS = {
   externalApps: "external_apps",
   openInApp: "open_in_app",
   listPromptAssets: "list_prompt_assets",
-  readImageAsDataUrl: "read_image_as_data_url",
+  readWorkspaceImageAsDataUrl: "read_workspace_image_as_data_url",
+  activateImageWorkspaceRoot: "activate_image_workspace_root",
+  pickImageAsDataUrl: "pick_image_as_data_url",
   scanWorkspaceFavicon: "scan_workspace_favicon",
   confirmQuit: "confirm_quit",
   cancelQuit: "cancel_quit",
@@ -112,6 +112,7 @@ export const CHANNELS = {
   updateCheck: "update_check",
   updateDownload: "update_download",
   updateInstall: "update_install",
+  updateCensus: "update_census",
   updateReportError: "update_report_error",
   applySettingsPatch: "apply_settings_patch",
   suspendMenuAccelerators: "suspend_menu_accelerators",
@@ -132,6 +133,13 @@ export const CHANNELS = {
   // `{ root, parent, name, kind }` per R6; main builds the destination from
   // `parent + name` and never accepts a composed path from the renderer.
   createEntry: "create_entry",
+  // Which of one directory's entries git ignores (spec 2026-10-19-ignore-aware-
+  // explorer, IGN19). Electron-only like `createEntry` — there is no Tauri
+  // counterpart and a host without it keeps the tree's fixed list. Flat
+  // `{ root, directory, names }` per R6, `names` single segments relative to
+  // `directory`; the reply is `classified` or `unavailable`, never a rejection
+  // for a git failure.
+  ignoredPaths: "ignored_paths",
   // Browser panel. No Tauri counterpart exists — the panel is Electron-only,
   // so unlike every channel above these names are new rather than ported.
   browserOpen: "browser_open",
@@ -187,6 +195,27 @@ export const CHANNELS = {
   // Replaces this sender's one watched checkout; `{ root: null }` releases it.
   // Held only while the list is shown and the window visible. Electron-only.
   gitChangesWatch: "git_changes_watch",
+  // The diff column's HEAD side: one file as the last commit holds it, size-
+  // checked before it is read (plan 2026-10-10-diff-column, D8). Electron-only
+  // like the two above: no `#[tauri::command]` counterpart, and the column is
+  // reachable only from the Changes list that the frozen Tauri host never shows.
+  // Flat `{ root, path }` per R6; `path` is root-relative with `/`.
+  gitHeadFile: "git_head_file",
+  // Optional Google account (docs/specs/2026-10-20-accounts.md). Main owns the
+  // session; every reply and the broadcast below carry display state only,
+  // never a token (A7). All four take no payload.
+  accountState: "account_state",
+  accountSignIn: "account_sign_in",
+  accountCancelSignIn: "account_cancel_sign_in",
+  accountSignOut: "account_sign_out",
+  // Clone & add workspace (docs/plans/2026-10-20-clone-workspace-mvp.md).
+  // Electron-only like the blocks above. Flat `{ requestId, repository, parent,
+  // name }`, `{}` and `{ jobId }` per R6; main derives the owning window from the
+  // sender, so no owner key exists in any payload. Replies are `CloneResult`
+  // (`src/lib/clone-contract.ts`); `clone_status` answers the latest owned job.
+  cloneStart: "clone_start",
+  cloneStatus: "clone_status",
+  cloneCancel: "clone_cancel",
 } as const;
 
 /** Events: main → renderer, fire and forget. */
@@ -217,13 +246,18 @@ export const EVENTS = {
   // choices dismiss the row across every window). Carries consent state only —
   // never a daily id.
   telemetryState: "telemetry:state-changed",
-  // One accepted hook post or opencode server event, delivered to the window
+  // One accepted hook post, delivered to the window
   // that owns the pane (agent-signal contract layer, stage 2). Flat keys —
   // `electron/agent-hooks/hook-server.ts`'s `HookEventPayload`.
   hookEvent: "hook:event",
   // "Read the changes again" for the checkout this window watches. Carries the
   // root only, never a file list: the renderer owns all scheduling.
   gitChanged: "git:changed",
+  // Every account state change, broadcast so all windows agree (A12). The
+  // payload is the same display state `account_state` returns.
+  accountState: "account:state-changed",
+  // One full `CloneJob` snapshot, sent only to the window that owns the job.
+  cloneChanged: "clone:changed",
 } as const;
 
 /**

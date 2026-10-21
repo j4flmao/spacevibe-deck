@@ -24,6 +24,7 @@
 @import "./styles/10-modals.css";
 @import "./styles/11-settings-screen.css";
 @import "./styles/11-settings-studio.css";
+@import "./styles/11-settings-search.css";
 @import "./styles/12-usage.css";
 @import "./styles/13-sessions.css";
 @import "./styles/14-dock.css";
@@ -37,3 +38,5 @@
 @import "./styles/22-caption-overlay.css";
 @import "./styles/23-attention-popover.css";
 @import "./styles/24-dev-servers.css";
+@import "./styles/25-diff-column.css";
+@import "./styles/26-clone-workspace.css";

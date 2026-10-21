@@ -17,6 +17,7 @@ import { paneCwd } from "./pane-cwd";
 import { classifyOscNotification } from "../lib/osc-notification";
 import { copyTerminalSelection, pasteIntoTerminal } from "./terminal-clipboard";
 import { getDesktopEnvironment } from "../lib/platform";
+import { sanitizeTerminalPaste } from "../lib/terminal-paste";
 import { createCodexWheelHandler } from "./codex-wheel";
 import { mountPaneAgentHeader } from "./pane-agent-header";
 
@@ -32,6 +33,25 @@ export interface PaneEvents {
   onResize(id: number, cols: number, rows: number): void;
   onFocus(id: number): void;
   onAttentionSignal?(id: number, signal: PaneAttentionSignal): void;
+  /**
+   * Escape or Ctrl+C reached the terminal (INT1). Reported, never consumed: what the key
+   * writes to the PTY is unchanged.
+   */
+  onInterruptKey?(id: number): void;
+}
+
+/**
+ * Escape or Ctrl+C, the keys that interrupt an agent (Cmd+C and Ctrl+Shift+C are copies). Caps
+ * Lock makes Ctrl+C report `C`, which xterm still sends as \x03, so the letter is compared
+ * without case and Shift is what rules the copy chord out.
+ */
+export function isInterruptKey(
+  event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "shiftKey">,
+): boolean {
+  return (
+    event.key === "Escape" ||
+    (event.ctrlKey && !event.metaKey && !event.shiftKey && event.key.toLowerCase() === "c")
+  );
 }
 
 /** Single-line selection snapshot for search probes across NFC/NFD forms. */
@@ -317,8 +337,9 @@ export function createPane(
 
   // onData also carries terminal capability replies. Only actual browser
   // input or our explicit paste path can enable Codex's output heuristic.
-  term.onKey(({ key }) => {
+  term.onKey(({ key, domEvent }) => {
     keyInput = key;
+    if (isInterruptKey(domEvent)) events.onInterruptKey?.(id);
   });
   const markBrowserInput = (event: Event) => {
     // IME finalization may send onData in a later task, after this DOM event.
@@ -337,7 +358,7 @@ export function createPane(
   function pasteUserText(text: string): void {
     userInput = true;
     try {
-      term.paste(text);
+      term.paste(sanitizeTerminalPaste(text));
     } finally {
       userInput = false;
     }

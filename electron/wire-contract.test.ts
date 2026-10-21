@@ -25,6 +25,7 @@ import { parseRegistrySnapshot } from "../src/lib/agent-registry";
 import { EMPTY_SNAPSHOT, parseClaudeAgents } from "./agent-registry/claude-registry";
 
 const MAIN = readFileSync("electron/main.ts", "utf8");
+const PRELOAD = readFileSync("electron/preload.ts", "utf8");
 const MENU = readFileSync("electron/menu.ts", "utf8");
 // The `desktop_environment`, `shell_open_url` and `store_*` handlers moved out
 // of `main.ts` into their own `electron/ipc/register-*.ts` modules — the
@@ -32,6 +33,35 @@ const MENU = readFileSync("electron/menu.ts", "utf8");
 const SERVICES = readFileSync("electron/ipc/register-services.ts", "utf8");
 const SHELL = readFileSync("electron/ipc/register-shell.ts", "utf8");
 const STORE = readFileSync("electron/ipc/register-store.ts", "utf8");
+
+describe("security lifecycle wiring", () => {
+  it("installs the app image boundary before boot can create a window", () => {
+    const boot = MAIN.slice(MAIN.indexOf("app.whenReady().then(async () =>"));
+    expect(boot).toContain("session.defaultSession.webRequest");
+    expect(boot).toContain("app.isPackaged ? undefined : DEV_SERVER_URL");
+    expect(boot.indexOf("installAppImagePolicy(")).toBeLessThan(boot.indexOf("createWindow("));
+  });
+  it("binds transfer reservations to the authenticated source before opening or offering", () => {
+    const open = MAIN.slice(
+      MAIN.indexOf("ipcMain.handle(CHANNELS.openPaneWindow"),
+      MAIN.indexOf("ipcMain.handle(CHANNELS.offerTransfer"),
+    );
+    expect(open).toContain("coordinator.reserveDestination(token, labelOf(event), label)");
+    expect(open.indexOf("coordinator.reserveDestination")).toBeLessThan(
+      open.indexOf("createWindow(label)"),
+    );
+    expect(MAIN).toContain("coordinator.reserveDestination(token, labelOf(event), targetLabel)");
+  });
+
+  it("builds update confirmation from all main-owned panes and dirty files", () => {
+    const updater = MAIN.slice(MAIN.indexOf("const updater = registerUpdater("));
+    expect(updater).toContain("censusOrDeny(coordinator.allPanes())");
+    expect(updater).toContain("infos === null ? null : censusFor(0, infos, dirtyFiles.all())");
+    const app = readFileSync("src/ui/app.tsx", "utf8");
+    expect(app).toContain("confirmInstall: confirmUpdateInstall");
+    expect(app).not.toContain("confirmClose(manager.allPaneIds(), defaultPtyClient, UPDATE_COPY");
+  });
+});
 
 describe("window_boot_mode", () => {
   const registry = new WindowRegistry();
@@ -222,7 +252,10 @@ describe("the preload bridge's channel allowlist", () => {
     // A handler the bridge does not know about is a feature that silently
     // stops working the moment it is called — the allowlist is only safe if
     // this stays exhaustive.
-    const missing = [...registered].filter((channel) => !INVOKABLE_CHANNELS.has(channel));
+    const preloadOnly = new Set(["grant_dropped_workspace"]);
+    const missing = [...registered].filter(
+      (channel) => !INVOKABLE_CHANNELS.has(channel) && !preloadOnly.has(channel),
+    );
 
     expect(missing).toEqual([]);
   });
@@ -233,6 +266,13 @@ describe("the preload bridge's channel allowlist", () => {
     const orphans = [...INVOKABLE_CHANNELS].filter((channel) => !registered.has(channel));
 
     expect(orphans).toEqual([]);
+  });
+
+  it("keeps dropped workspace grants behind the preload File API", () => {
+    expect(MAIN).toContain('ipcMain.handle("grant_dropped_workspace"');
+    expect(PRELOAD).toContain("webUtils.getPathForFile(file)");
+    expect(PRELOAD).toContain('ipcRenderer.invoke("grant_dropped_workspace", path)');
+    expect(INVOKABLE_CHANNELS.has("grant_dropped_workspace")).toBe(false);
   });
 
   it("refuses an unknown channel instead of forwarding it", () => {

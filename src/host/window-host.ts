@@ -51,6 +51,12 @@ export function droppedFilePaths(files: readonly File[]): string[] {
     .filter((path): path is string => typeof path === "string" && path.length > 0);
 }
 
+/** Validate an OS-backed drop, grant image access, and return its workspace root. */
+export async function grantDroppedWorkspace(file: File): Promise<string | null> {
+  const root: unknown = await hostBridge()?.grantDroppedWorkspace?.(file);
+  return typeof root === "string" && root.length > 0 ? root : null;
+}
+
 /**
  * Whether a DOM drop can yield a path at all. Only Electron's preload answers;
  * Tauri delivers drops natively and the browser preview has no paths. Read at
@@ -61,8 +67,13 @@ export function canResolveDroppedPaths(): boolean {
 }
 
 /** The preload bridge, for the one thing that is not invoke/listen. */
-function hostBridge(): { getPathForFile?: (file: File) => string } | undefined {
-  return (globalThis as { __deckHost?: { getPathForFile?: (file: File) => string } }).__deckHost;
+interface HostBridge {
+  getPathForFile?: (file: File) => string;
+  grantDroppedWorkspace?: (file: File) => Promise<string | null>;
+}
+
+function hostBridge(): HostBridge | undefined {
+  return (globalThis as { __deckHost?: HostBridge }).__deckHost;
 }
 
 class DeckWindow {

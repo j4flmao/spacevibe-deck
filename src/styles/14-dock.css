@@ -45,8 +45,18 @@
    (DL-19.4); the value here is only the fallback for a mount with no `App`
    around it (the gallery, this panel's own isolated tests). */
 
+/* The stage's right inset is the dock plus the diff column, when one is docked
+   left of it (`--diff-w`, published by `App` from the open column; DL-19.11).
+   Every rule that stops a stage child at the dock's edge reads this one
+   variable. It is declared on the stage itself, where both `--dock-w` and
+   `--diff-w` are written, and not on `:root`, where `calc` would resolve
+   against the wrong element. */
+.stage--dock {
+  --stage-inset: calc(var(--dock-w) + var(--diff-w, 0px));
+}
+
 .stage--dock .stage__tabs {
-  right: var(--dock-w);
+  right: var(--stage-inset);
 }
 
 .dock-panel {
@@ -58,7 +68,9 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: var(--sidebar-bg);
+  /* The stage's `--bg`, not the rail's `--sidebar-bg` (owner, 2026-10-15): only
+     the navigation rail keeps a colour of its own (DL-18.7, DL-19.2). */
+  background: var(--bg);
   /* DL-19.2: the seam is a single hairline, never a shadow. */
   border-left: 1px solid var(--hair);
   /* DL §7's panel slide-over, and the resting state is the CLOSED one: the
@@ -124,9 +136,8 @@
   transition: background var(--duration) var(--ease);
 }
 
-/* Full `--accent`, the sidebar seam's reason exactly: this line has
-   `--sidebar-bg` on one side, and a 60% mix of it reads as a lighter
-   hairline instead of a lit seam. */
+/* Full `--accent`, the sidebar seam's reason exactly: a 60% mix reads as a
+   lighter hairline instead of a lit seam. */
 .dock-panel__grip:hover::after,
 .dock-panel__grip.is-dragging::after {
   background: var(--accent);
@@ -262,6 +273,12 @@
      be the one wash in the dock with no corner. */
   border-radius: var(--radius-tab);
   transition: background var(--duration) var(--ease);
+}
+
+/* DL-19.9: an ignored entry shown by Show ignored files rests at the hint tone.
+   Before the hover and active rules, so those raise it like any other row. */
+.file-tree__row.is-ignored {
+  color: var(--text-faint);
 }
 
 /* DL-21.2: hover is the quieter wash — the same signifier used everywhere
@@ -602,6 +619,9 @@
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
+  /* DL-20.1's 28px clause, as the tree's rows take it: hover and the open
+     row's wash share the tab corner. */
+  border-radius: var(--radius-tab);
   transition: background var(--duration) var(--ease);
 }
 
@@ -610,23 +630,22 @@
   color: var(--text-primary);
 }
 
+/* DL-19.9: the row whose diff is open. DL-21.1's full wash, set after the hover
+   rule so a hovered selection stays selected. */
+.changes-row.is-selected {
+  background: var(--tab-active-bg);
+  color: var(--text-primary);
+}
+
 .changes-row:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
 
-/* A deleted file is shown, not pressable (plan C8). */
-.changes-row.is-deleted {
-  cursor: default;
-}
-
+/* A deleted file is struck through and still pressable: its diff is the old side. */
 .changes-row.is-deleted .changes-row__name {
   color: var(--text-faint);
   text-decoration: line-through;
-}
-
-.changes-row.is-deleted:hover {
-  background: transparent;
 }
 
 .changes-row__mark {
@@ -700,7 +719,7 @@
   min-width: 0;
   width: 0;
   color: var(--text-primary);
-  background: var(--sidebar-bg);
+  background: var(--bg);
   border: none;
   font: inherit;
   font-size: var(--type-meta);
@@ -763,32 +782,4 @@
   justify-content: flex-end;
   padding: 6px 10px 0;
   flex-shrink: 0;
-}
-
-.usage-dock__details {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 6px 3px 8px;
-  border: 0;
-  border-radius: var(--radius-tab);
-  background: transparent;
-  color: var(--text-muted);
-  font-family: var(--ui-font);
-  font-size: var(--type-meta);
-  cursor: pointer;
-  /* DL-21.5: state changes ride the shared motion pair. */
-  transition:
-    background var(--duration) var(--ease),
-    color var(--duration) var(--ease);
-}
-
-.usage-dock__details:hover {
-  background: var(--state-hover-bg);
-  color: var(--text-primary);
-}
-
-.usage-dock__details:focus-visible {
-  outline: 2px solid var(--text-muted);
-  outline-offset: 1px;
 }

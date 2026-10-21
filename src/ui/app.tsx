@@ -7,20 +7,13 @@ import { createAgentInstallHost } from "../launcher/agent-install-host";
 import { registerAgentInstallHost } from "../launcher/agent-install-store";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { useSignal, useSignalEffect } from "@preact/signals";
-import { quickAgentChoices, toggleQuickAgent } from "../settings/quick-agent-choices";
-import { quickAgentOptions } from "../settings/quick-agents";
-import { activeCategory } from "./settings/active-category-store";
+import { launchPageAgents, quickAgentOptions } from "../settings/quick-agents";
+import { openSettingsAt } from "./settings/settings-focus-store";
 import { listen, type UnlistenFn } from "../host/bridge";
 import { getCurrentWindow, currentWindowLabel } from "../host/window-host";
 import { ask, message, open as openDialog } from "../host/dialog-host";
 import { installQuitGuard } from "../lib/quit-guard";
-import {
-  confirmClose,
-  QUIT_COPY,
-  UPDATE_COPY,
-  WINDOW_CLOSE_COPY,
-  type ConfirmCopy,
-} from "../terminal/close-guard";
+import { QUIT_COPY, WINDOW_CLOSE_COPY, type ConfirmCopy } from "../terminal/close-guard";
 import {
   flushSettingsSave,
   initSettings,
@@ -86,8 +79,18 @@ import { UsageConsentModal } from "./usage-consent-modal";
 import { ensureTelemetryStateLoaded, usageConsentOpen } from "../telemetry/consent-store";
 import { installUsageCounterEffects } from "../telemetry/usage-counters";
 import { OpenBoard } from "../open-board/open-board";
-import { clearDraft, newTaskDraft, taskDraftTouched } from "../launcher/launcher-store";
-import { agentLaunchCommand } from "../lib/launch-command";
+import { WorkspaceDrop } from "./workspace-drop";
+import {
+  clearDraft,
+  newTaskDraft,
+  selectDraftWorkspace,
+  taskDraftTouched,
+} from "../launcher/launcher-store";
+import {
+  agentLaunchCommand,
+  agentLaunchCommandChoices,
+  type LaunchCommandChoices,
+} from "../lib/launch-command";
 import type { NewTaskDraft } from "../launcher/new-task-draft";
 import { composeLaunchCommand } from "../launcher/compose-launch-command";
 import { mergeRuntimeDefaults, runtimeFor } from "../launcher/runtime-catalog";
@@ -178,10 +181,13 @@ import { createUpdateController, type UpdateController } from "../updater/update
 import { activeUpdateController } from "../updater/active-update-controller";
 import { appVersion, loadAppVersion } from "../updater/app-version";
 import { feedbackUrl, SEND_FEEDBACK_ACTION } from "../lib/feedback-url";
+import { available as cloneHostAvailable } from "../host/clone-host";
+import { cloneFormRequest, getCloneController } from "../open-board/clone-session";
 import { UpdateAction } from "../updater/update-action";
 // It answers the Electron host and fails soft in a browser preview.
 import {
   checkForUpdate,
+  confirmUpdateInstall,
   relaunchDeck,
   reportUpdateError,
 } from "../updater/electron-updater-adapter";
@@ -193,7 +199,6 @@ import { defaultLinkClient } from "../terminal/link-client";
 import { buildOpenEditorRequest } from "../lib/editor-command";
 import {
   activeWorkspace,
-  dirtyPaths,
   dockCollapseArmed,
   dockWidthLive,
   setActiveWorkspace,
@@ -203,6 +208,9 @@ import {
   type FileSurfaceController,
 } from "../files/file-surface-controller";
 import { ExplorerTab } from "../files/ui/explorer-tab";
+import { DiffColumn } from "../files/ui/diff-column";
+import { diffColumnFolded, diffColumnInset } from "../files/changes/diff-layout";
+import { closeDiffColumn } from "../files/changes/diff-column-focus";
 import { CreateEntryDialog } from "../files/ui/create-entry-dialog";
 import { available as fileCreateAvailable } from "../host/file-create-host";
 import { available as gitChangesAvailable } from "../host/git-changes-host";
@@ -224,18 +232,14 @@ import {
   clearWindowRecord,
   flushSessionJournal,
   initSessionJournal,
-  resumeSessionJournal,
-  sessionArchive,
   suspendSessionJournal,
 } from "../terminal/session-journal";
-import { readLastSession, resumeWorkspace } from "../terminal/session-restore";
+import { readLastSession } from "../terminal/session-restore";
 import { lastSession, summarizeLastSession } from "../terminal/last-session-store";
 import type { WindowRecord } from "../lib/session-schema";
 import { discardLastSession, reopenLastSession } from "./last-session-actions";
-import { worktreeForPath } from "../repositories/repository-model";
 import { DesktopChrome } from "./desktop-chrome";
 import {
-  archivedWorkspaceResumeAvailable,
   boardClosesAfterResume,
   bootOpensTheBoard,
   agentBoardClosesWithLastTab,
@@ -255,7 +259,7 @@ import {
   workspaceOrphanedByClose,
   workspacesOrphanedByClose,
 } from "./app-policy";
-import { railResumeDeps, restoreDeps } from "./app-restore-deps";
+import { restoreDeps, resumeArchivedWorktree } from "./app-restore-deps";
 
 interface TaskLaunchAttempt {
   readonly tabKey: number;
@@ -293,6 +297,8 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
   const stagesRef = useRef<HTMLDivElement>(null);
   const resumingWorkspacesRef = useRef<ReadonlySet<string>>(new Set());
   const taskOperationPending = useSignal<LauncherPending | null>(null);
+  const workspaceDropChecking = useSignal(false);
+  const boardSelectionPending = useSignal(false);
   const taskOperationFlight = useRef<Promise<LaunchTaskOutcome> | null>(null);
   const launchAttempt = useSignal<TaskLaunchAttempt | null>(null);
   const tabsRef = useRef<TabManager | null>(null);
@@ -305,6 +311,9 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
       // the strip's status without either module knowing about the other.
       beforeActivate: () => {
         agentLaunchPage.close();
+        // A folded diff column lies over the document panel, so the document
+        // about to take the keyboard would be one the user cannot see.
+        if (diffColumnFolded.value) closeDiffColumn();
         if (!settings.value.dockOpen || settings.value.dockTab !== "explorer") {
           updateSettings({ dockOpen: true, dockTab: "explorer" });
         }
@@ -334,18 +343,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
     updaterRef.current = createUpdateController({
       platform: getDesktopEnvironment().platform,
       check: checkForUpdate,
-      confirmInstall: () => {
-        const manager = tabsRef.current;
-        // Installing an update is a FOURTH exit, which the quit/window-close/
-        // tab-close set did not count: `app_relaunch` calls `app.exit(0)` and
-        // never reaches `before-quit`, so main's dirty registry is never
-        // consulted on this path. The renderer therefore has to supply the
-        // unsaved-file list itself. It is empty until a file surface exists,
-        // and correct the moment one does.
-        return manager === null
-          ? Promise.resolve(false)
-          : confirmClose(manager.allPaneIds(), defaultPtyClient, UPDATE_COPY, dirtyPaths());
-      },
+      confirmInstall: confirmUpdateInstall,
       flush: flushSettingsSave,
       relaunch: relaunchDeck,
       report: (message, error) => {
@@ -499,6 +497,15 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
    */
   const toggleSettings = (): void => {
     toggleSettingsPanel(restoreFocusAfterSettings);
+  };
+
+  /** File ▸ Clone Repository…: the Open Board, opened on its Clone form. */
+  const openCloneForm = (): void => {
+    if (!cloneHostAvailable) {
+      return;
+    }
+    cloneFormRequest.value += 1;
+    boardOpen.value = true;
   };
 
   /**
@@ -658,52 +665,14 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
   };
 
   /** Restore the newest archived tab set belonging to one legacy rail row. */
-  const resumeArchivedWorktree = (path: string): void => {
-    const manager = tabsRef.current;
-    if (manager === null || !archivedWorkspaceResumeAvailable(resumingWorkspacesRef.current)) {
-      return;
-    }
-    const newestPrefixMatch = Object.entries(sessionArchive.value)
-      .filter(([key]) => worktreeForPath([path], key) === path)
-      .reduce<[string, (typeof sessionArchive.value)[string]] | undefined>(
-        (best, current) =>
-          best === undefined || current[1].savedAt > best[1].savedAt ? current : best,
-        undefined,
-      );
-    const entry = sessionArchive.value[path] ?? newestPrefixMatch?.[1];
-    if (entry === undefined) {
-      reportPersistError("Couldn't find that archived workspace.");
-      return;
-    }
-
-    resumingWorkspacesRef.current = new Set([path]);
-    suspendSessionJournal();
-    void resumeWorkspace(railResumeDeps(manager), entry, path)
-      .then((resumed) => {
-        if (!resumed) {
-          reportPersistError("Couldn't resume that workspace.");
-        }
-      })
-      .catch((error: unknown) => {
-        console.warn("Failed to resume archived workspace:", error);
-        reportPersistError("Couldn't resume that workspace.");
-      })
-      .finally(() => {
-        resumeSessionJournal();
-        // The restore's signal changes were intentionally ignored while the
-        // journal was suspended. Capture the complete result before another
-        // archived restore can start; a concurrent quit/close suspension still
-        // makes this a no-op through the journal's reference count.
-        return flushSessionJournal()
-          .catch((error: unknown) => {
-            console.warn("Failed to capture restored workspace:", error);
-            reportPersistError("Couldn't save that restored workspace.");
-          })
-          .finally(() => {
-            resumingWorkspacesRef.current = new Set();
-          });
-      });
-  };
+  const resumeArchivedWorktreeForRail = (path: string): void =>
+    resumeArchivedWorktree(path, {
+      manager: tabsRef.current,
+      resumingWorkspaces: resumingWorkspacesRef.current,
+      setResumingWorkspaces: (paths) => {
+        resumingWorkspacesRef.current = paths;
+      },
+    });
 
   // The rail's useful five-session snapshot: loaded at boot — the same request
   // that decides whether the host supports sessions at all — and kept current
@@ -711,6 +680,16 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
   // (`recent-activity-sync.ts`), so a sentence in the sidebar is the one the
   // agent said last rather than the one it said at launch.
   useEffect(() => installRecentActivitySync(), []);
+  // The window's clone job outlives the Open Board, so its controller is
+  // attached here for the window's whole life, not when the board mounts.
+  useEffect(() => {
+    if (!cloneHostAvailable) {
+      return;
+    }
+    const controller = getCloneController();
+    void controller.init();
+    return () => controller.dispose();
+  }, []);
 
   // The rail's tails: a debounced sync that re-reads a pane's newest turn only
   // when that pane's state actually moved. Inert off Electron, and the install
@@ -745,6 +724,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
       onOpenTaskLauncher: openTaskLauncher,
       onRequestAttentionFocus: (tabIndex) => requestAttentionFocus(tabIndex),
       onToggleSettings: () => toggleSettings(),
+      onCloneRepository: openCloneForm,
       onToggleUsage: () => toggleUsage(),
       onOpenUsage: () => openUsage(),
       onToggleMissionControl: () => missionControlRef.current.toggle(),
@@ -1264,6 +1244,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
     pending: LauncherPending,
     operation: () => Promise<LaunchTaskOutcome>,
   ): Promise<LaunchTaskOutcome> {
+    if (workspaceDropChecking.value) return Promise.resolve("spawn-failed");
     if (taskOperationFlight.current !== null) {
       return taskOperationFlight.current;
     }
@@ -1500,7 +1481,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
           element.inert = false;
       },
       retarget: (path) => manager.captureAgentLaunchTarget(path, roots()),
-      launch: async (agentId, canCommit, placement, current) => {
+      launch: async (agentId, canCommit, placement, current, override) => {
         const result = await manager.launchAgentAtTarget(
           placement === "new-space"
             ? { kind: "new-space", workspacePath: current.workspacePath }
@@ -1508,6 +1489,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
           agentId,
           canCommit,
           roots,
+          override,
         );
         // A space the launch created beside the folder's others — the `New
         // space` press, or a captured new-space target (RAIL4) — is named
@@ -1587,6 +1569,22 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
   /** The live agent choices shared by both launcher surfaces. */
   const launcherAgents = () =>
     agentOptions(detectedAgents.value, settings.value.customAgents, settings.value.disabledAgents);
+
+  /** Each launch-page agent's commands (PAGE3/PAGE4): the page never reads settings itself. */
+  const launchPageCommands = (): Readonly<Record<string, LaunchCommandChoices>> => {
+    const { launchProfiles, defaultLaunchProfiles, customAgents } = settings.value;
+    return Object.fromEntries(
+      launcherAgents().flatMap((agent) => {
+        const choices = agentLaunchCommandChoices(
+          agent.id,
+          launchProfiles,
+          defaultLaunchProfiles,
+          customAgents,
+        );
+        return choices === null ? [] : [[agent.id, choices]];
+      }),
+    );
+  };
 
   /** Editor confirm: save the preset, then materialize a new tab. */
   async function handleEditorCreate(name: string, artifact: PresetArtifact): Promise<void> {
@@ -2319,11 +2317,9 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
     return () => setUsageCoverInert(false);
   }, [usageCovering, dockPresence.mounted, dockPresence.entered]);
 
-  // After `dockPainted`, which is half of what decides the corner's colour.
   useTitleBarOverlaySync({
     settings: settings.value,
     sidebar,
-    dockPainted,
     settingsOpen: settingsOpen.value,
   });
   // The chrome carries the dock's hide control only while the column is gone
@@ -2403,8 +2399,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
       void tabsRef.current?.openQuickAgent(null, workspacePath);
     },
     onManageAgents: () => {
-      activeCategory.value = "agents";
-      settingsOpen.value = true;
+      openSettingsAt("agents");
     },
     onSplitHere: (workspacePath) => {
       agentLaunchPage.close();
@@ -2495,7 +2490,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
               onOpenWorkspace: openTaskBoard,
               openWorkspaceDisabled: taskOperationPending.value !== null,
               onFocusAttention: requestAttentionFocus,
-              onResumeWorktree: resumeArchivedWorktree,
+              onResumeWorktree: resumeArchivedWorktreeForRail,
             }}
             onCloseTab={(index) => void closeTab(index)}
             // Close model table row 1: the agent row's ✕ closes that pane, and
@@ -2555,6 +2550,9 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
           // catching up when the pointer is released.
           style={{
             "--dock-w": `${dockWidth()}px`,
+            // The open diff column's width, docked left of the dock; 0 while it
+            // is closed or folded over the Explorer (DL-19.11).
+            "--diff-w": `${diffColumnInset.value}px`,
           }}
         >
           {/* DL-18.6: sidebar mode's half of the frame row. The stage spans
@@ -2642,10 +2640,17 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
             <AgentLaunchPage
               target={agentLaunchPage.request.value.target}
               contextRow={launchContextRow(agentLaunchPage.request.value.target)}
-              agents={quickAgentOptions(launcherAgents(), settings.value.quickAgentIds)}
+              agents={launchPageAgents(launcherAgents(), settings.value.quickAgentIds, {
+                probed: agentsProbed.value,
+                disabledAgents: settings.value.disabledAgents,
+              })}
+              commands={launchPageCommands()}
               resolved={agentsProbed.value}
               pending={agentLaunchPage.pending.value}
-              error={agentLaunchPage.error.value}
+              error={agentLaunchPage.failure.value?.message ?? null}
+              onRetry={() => {
+                void agentLaunchPage.retry();
+              }}
               active={
                 !settingsOpen.value &&
                 !boardOpen.value &&
@@ -2654,18 +2659,15 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
                 !agentQuickPickerOpen.value &&
                 !usageConsentOpen.value
               }
-              onRun={(id) => {
-                void agentLaunchPage.run(id);
+              onRun={(id, override) => {
+                void agentLaunchPage.run(id, "target", override);
               }}
-              onRunInNewSpace={(id) => {
-                void agentLaunchPage.run(id, "new-space");
+              onRunInNewSpace={(id, override) => {
+                void agentLaunchPage.run(id, "new-space", override);
               }}
-              choices={quickAgentChoices()}
-              onToggleChoice={toggleQuickAgent}
               onBack={() => agentLaunchPage.close(true)}
               onSettings={() => {
-                activeCategory.value = "agents";
-                settingsOpen.value = true;
+                openSettingsAt("agents");
               }}
             />
           )}
@@ -2689,6 +2691,17 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
           {/* DL-35.1: Mission Control covers the stage above a document or the
               browser (the latter hidden through `overlayCoversPane`). */}
           {missionControl.view}
+          {/* Left of the dock, while a Changes row is selected and only while the
+              dock is at rest open, so it never floats where a sliding dock used
+              to be. Before the panel in the DOM, so the dock's resize grip, which
+              overhangs its inner edge, stays on top of the column's seam. */}
+          {dockPresence.entered ? (
+            <DiffColumn
+              controller={fileController}
+              dockWidth={dockWidth()}
+              onFocusReleased={() => tabsRef.current?.focusActive()}
+            />
+          ) : null}
           {/* Gated on the `dockOpen` setting. The column hosts three
               surfaces since 2026-08-16, so `App` picks the body — that is
               what keeps `DockPanel` from importing every feature it can
@@ -2765,7 +2778,13 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
               canRetryDelivery={canRetryTaskDelivery}
               canFocusOpenedAgent={launchTargetExists}
               hasUserDraftContent={taskDraftTouched.value}
-              externalPending={taskOperationPending.value}
+              externalPending={
+                taskOperationPending.value ??
+                (workspaceDropChecking.value ? "selecting-workspace" : null)
+              }
+              onPendingChange={(pending) => {
+                boardSelectionPending.value = pending;
+              }}
               onRetryDelivery={handleRetryTaskPrompt}
               onFocusOpenedAgent={focusTaskLaunchTarget}
               onClearDraft={clearTaskLaunchDraft}
@@ -2838,6 +2857,19 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
             </div>
           ) : null}
           <PersistErrorBar />
+          <WorkspaceDrop
+            enabled={taskOperationPending.value === null && !boardSelectionPending.value}
+            onChecking={(checking) => {
+              workspaceDropChecking.value = checking;
+            }}
+            onSelect={(path, paths) => {
+              for (const root of [...paths].reverse()) recordWorkspaceOpen(root);
+              selectDraftWorkspace(path);
+              settingsOpen.value = false;
+              usageOpen.value = false;
+              openTaskBoard();
+            }}
+          />
           <UsagePage open={usageOpen.value} onClose={closeUsage} />
           <SettingsScreen open={settingsOpen.value} onClose={closePanel} />
         </main>

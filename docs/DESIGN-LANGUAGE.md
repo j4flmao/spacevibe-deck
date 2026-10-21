@@ -108,9 +108,12 @@ through `color-mix`.
 - **DL-3.2** `--green` means on / enabled / success. `--red` means danger / destructive /
   error. `--yellow` means needs your eyes: a question, a permission wait, or a finished run
   nobody has checked — one step below `--red`'s failure. None of them is decoration.
-  A diff's line counts are the one place green and red mean added and removed: `+N` in
-  `--green`, `−M` in `--red`, a zero side in the count's neutral ink
-  ([`DiffCounts`](../src/files/ui/changes-list.tsx)).
+  A diff is the one place green and red mean added and removed. Its counts print `+N` in
+  `--green` and `−M` in `--red`, a zero side in the count's neutral ink
+  ([`DiffCounts`](../src/files/ui/changes-list.tsx)); in the diff column an added line or word
+  sits on a low `--green` wash and a removed one on a low `--red` wash, taken from the live
+  theme ([`monacoThemeFor`](../src/files/editor-host.ts)), so syntax colour stays legible on
+  top.
   Why: the owner wants the two counts apart at a glance (2026-10-10), as every diff tool shows
   them.
 - **DL-3.3** Structure comes from hairlines and background steps, not from color or
@@ -144,7 +147,9 @@ through `color-mix`.
   `--board-font` (the §31 code stack, declared once in `01-tokens.css`). The terminal's
   own font comes from the user's `fontFamily` setting through
   [`toFontStack`](../src/terminal/pane.ts); no chrome token reads it, and `--board-font`
-  never does either.
+  never does either. One exception in chrome: the launch page's command preview (DL-32.6)
+  prints the exact command in `--board-font`, because a shell line's flags, quotes and spaces
+  must read exactly as they will run.
 - **DL-4.2** Values use `font-variant-numeric: tabular-nums` so changing numbers do not
   jitter.
 - **DL-4.3** No `text-transform: uppercase`, no all-caps spelling used as styling and no
@@ -379,6 +384,7 @@ the rail.
 - **DL-11.3** Retired.
 - **DL-11.4** Rail items are text only, with no icons, in sentence-case `--ui-font` (DL-4.1,
   DL-4.4). The rail item is the category name, so a section does not repeat it as a sub-heading.
+  Above the items sits one search field (DL-11.8); it is the only control in the rail.
 - **DL-11.5** A destructive action is an ordinary rail category, last in the registry, with the
   same title, sentence and grouped surface as the rest (DL-11.6). Its row keeps `--red` (DL-3.2),
   which DL-3.7's achromatic Settings surface does not override. No destructive action, no category.
@@ -387,9 +393,10 @@ the rail.
   `--type-title` / `--text-faint` with a 58-character measure, a hairline, then one surface
   holding every row: `--chrome-1`, 1px `--hair` edge, `--radius-surface`, no shadow (DL-1.3).
   Groups inside it are separated by a rule, not another box. The column measure is
-  `min(680px, 100% - 80px)`, centred. Row padding is 10px block, 12px once a description gives
+  [`min(1050px, 100% - 80px)`](../src/styles/11-settings-screen.css), centred and shared by every
+  category. Row padding is 10px block, 12px once a description gives
   the key two lines. Appearance and Agents use separate groups with the same surface, edge and
-  radius at `min(1080px, 100% - 80px)`; Appearance puts controls beside a read-only terminal
+  radius within that shared column; Appearance puts controls beside a read-only terminal
   specimen of the current settings, stacking below 1100px. The outer disabled fieldset, focus
   trap, Back/Escape and draggable header are shared. Anchors:
   [`settings-screen.tsx`](../src/ui/settings/settings-screen.tsx),
@@ -397,6 +404,14 @@ the rail.
 - **DL-11.7** Below 720px the rail narrows to 132px and its label truncates, with `title`
   carrying the whole name; the document swaps its centring gutters for 18px of edge padding
   (Deck's minimum is 480px).
+- **DL-11.8** A setting that differs from its default carries a 5px `--text-muted` dot after its
+  label, so the mark stays achromatic (DL-3.7). The same dot sits on a Studio group title that is
+  one setting (colour mode) and on an agent's name; it marks exactly what the page's **reset
+  page** action would restore, so layout and data keys never carry it. The rail's search field
+  matches the label text the rows print (the registry is their one source), washes matching
+  rows with the selection wash (DL-21.1), and `Esc` clears it before it closes Settings. Anchors:
+  [`11-settings-search.css`](../src/styles/11-settings-search.css),
+  [`settings-changes.ts`](../src/settings/settings-changes.ts).
 
 ## 12. Editable lists
 
@@ -542,20 +557,24 @@ counted, and the table has no interaction.
 
 ## 16. Usage overview
 
-The usage overview leads with the cost figure, then current allowance, then history. Allowance
+The usage overview leads with current allowance, then the cost figure, then history. Allowance
 comes from limit readings, cost from recorded token history; neither is a subscription invoice.
 
-- **DL-16.1** The page runs **Estimated API cost → per-agent accounting and pricing details →
-  Remaining allowance → cost period → Cost over time**; the selector sits beside the chart it
-  names and still scopes the figure above it. The
-  [allowance table](../src/ui/usage/remaining-allowance.tsx) shows actual returned durations,
-  visible reset times and remaining percentages; missing, expired, failed and unsupported
-  readings stay unknown, a measured zero stays zero. Allowance ignores the cost period, stays
+- **DL-16.1** The page runs **Remaining allowance → Estimated API cost with its cost period →
+  per-agent accounting and pricing details → Cost over time**. The
+  [allowance list](../src/ui/usage/remaining-allowance.tsx) is one block per agent and one hairline
+  tile per returned window: label, the remaining percentage as the figure (22px, 600), a 4px bar
+  of what remains in the agent's colour and a visible `Resets in …` countdown, with the exact
+  reset date in a tooltip.
+  Missing, expired, failed and unsupported readings stay unknown, a measured zero stays zero. At
+  30% or less the bar warms to yellow; at 15% or less it and the percentage turn red and a **Low**
+  word says so. While a new period loads, the cost figures dim to 60% and the allowance does not. Allowance ignores the cost
+  period, which is why it sits above the period control and not between the cost blocks; it stays
   visible while token history loads or is stale, and keeps DL-33.1's treatment in the sidebar.
 - **DL-16.2** The compact figure has the sentence-case label **Estimated API cost**, tabular
   numbers and a visible API-equivalent disclaimer. The
-  [Overview treatment](../src/styles/12-usage.css) puts it first, separated from the allowance
-  and chart by a hairline, on flat surfaces and theme tokens. A partial estimate discloses the
+  [Overview treatment](../src/styles/12-usage.css) puts it second, separated from the allowance
+  above by a hairline, on flat surfaces and theme tokens. A partial estimate discloses the
   excluded models and tokens; an absent amount is a dash, never zero.
 - **DL-16.3** A **share bar** sits under any row that names a part of a stated total: a
   full-width track 4px tall, radius 2px (a capsule, not a DL-20.1 value),
@@ -579,18 +598,22 @@ comes from limit readings, cost from recorded token history; neither is a subscr
   **Chart data** is a keyboard-accessible disclosure with semantic row/column headers and exact
   formatted values, including missing and unpriced data. Colour and hover never carry meaning
   alone.
-- **DL-16.7** The [cost-period selector](../src/ui/usage/usage-range-selector.tsx) sits between
-  allowance and chart. Today, 7 days, 30 days and All update the chart, total, per-agent amounts,
+- **DL-16.7** The [cost-period selector](../src/ui/usage/usage-range-selector.tsx) sits on the
+  right of the **Estimated API cost** label, so it scopes everything under that heading and
+  nothing above it. Today, 7 days, 30 days and All update the chart, total, per-agent amounts,
   shares, tokens and price omissions together; allowance and reset times do not change.
   **Chart data** and **Pricing details** disclosures are allowed. The selector is segmented, not
   a §6 `cycle` pill, so every period is visible at once. Options are sentence-case `--ui-font`
-  (DL-4.1, DL-4.4) on one row; the selected one wears the 4% `--fg` wash of DL-5.1 and DL-11.2,
-  with no filled pill, chip, underline, border or shadow. The selected option stays visible
+  (DL-4.1, DL-4.4) on one row; the selected one is a badge: a 12% `--fg` wash at
+  `--radius-control` with no border, underline or shadow, and no weight change, so choosing an option
+  never moves its neighbours. The selected option stays visible
   beside every historical figure, an empty period says which period is empty, and the selection
   resets when the screen closes (DL-13.6).
 - **DL-16.8** The dock's Usage tab stays a summary and carries one quiet **Details** control that
   opens the [usage page](../src/ui/usage/usage-page.tsx). The page is a full-bleed `--bg` surface
   laid over the whole stage, the way Settings lies over the window: only the rail stays uncovered. The
+  [inner content box](../src/styles/12-usage.css) is centered and capped at 1050px, shrinking with
+  the stage on smaller windows; the background still covers the stage. The
   stage strip, an open dock and a diff column go under it and the dock is inert until it closes
   (owner, 2026-10-15: a page that takes the content area leaves no terminal chrome or side panel
   showing), and no pane is unmounted or resized. In the sidebar layout its header stands in the
@@ -600,6 +623,22 @@ comes from limit readings, cost from recorded token history; neither is a subscr
   trapped, because the rail stays live; pressing a rail card, a tab-bar tab (top layout) or a new
   tab closes the page and then navigates. It fades and settles under DL-1.2 and sits at the document surface's
   layer, below the board, Settings and the modals.
+- **DL-16.9** The details page adds **Totals** after the cost timeline: a `dl` of five plain
+  figures, no card and no bar: Processed tokens, Cached input (with `N% of input` beneath),
+  Uncached input (every input token that was not a cache read, cache writes included), Output and
+  Cache savings. A figure is 22px, 600, tabular, over a micro-size muted label; three columns, five
+  once the page is 640px wide (a container query, not the window's). Cache savings is the priced
+  part only: an unpriced model's reads add nothing and the figure says `excludes unpriced models`;
+  with none priced it is `—`, never zero (DL-15.6). Totals follow the cost period (DL-16.7).
+  Why: the dock shows what the period cost; this answers what the cache saved and how the tokens
+  split, which fits no 420px column.
+- **DL-16.10** **Models** follows Totals as a §15 metric table: Model (agent glyph plus the
+  scanner's raw model string), Cost, Share and Tokens, biggest cost first, at most eight rows and a
+  `+N more models` note under it. Shares run over priced cost and sum to exactly 100.0; an unpriced
+  model sorts last with `—` for cost and share, and a model with no tokens is left out. The table is
+  read-only (DL-15.2), follows the cost period, and an empty period says so in its single spanning
+  cell. The repository tiles come after it: the ten biggest by cost, then a `+N more repositories`
+  note; the rest still count in every share.
 
 ## 17. Shortcut rows
 
@@ -653,15 +692,17 @@ actions. §11 covers a full-window screen and §13 an anchored popover; neither 
 - **DL-18.6** The tabs are the frame row's stage-side occupant in both layouts: `.tabbar` in
   top-tab mode, `.stage__strip` in sidebar mode, the same `TabStrip` in a `--frame-h` row.
   `.tabbar` closes with a 1px `--seam-divider` bottom edge; `.stage__strip` is transparent on
-  `--bg` with no line under it, parted from the work area by the stage gutter alone. Its right edge stops at the docked panel when one is open (DL-19.1, `--explorer-w`).
+  `--bg` with no line under it, parted from the work area by the pane cards' edges alone. Its right edge stops at the docked panel when one is open (DL-19.1, `--explorer-w`).
   The rail lists no documents; documents stay in the Explorer and the strip names stage surfaces.
-- **DL-18.7** The stage is the focal surface in every theme. The terminal and document
-  surface keep the theme's `--bg`; the navigation frame and rail and every docked side panel
-  share the derived `--sidebar-bg`, which never equals `--bg` (light and pure-black
-  overrides included; [`derive-colors.ts`](../src/lib/derive-colors.ts)). On a dark theme the
-  columns rise off the stage: `--sidebar-bg`, then `--chrome-1`, `--chrome-2` and
-  `--tab-active-bg` stand above it, each measured from the sidebar rather than from `--bg`,
-  in steps of 3/6/10 (light themes use 5/9/15 and their columns recede). `--input-bg` still
+- **DL-18.7** The navigation column is the one surface with a colour of its own (owner,
+  2026-10-15). The navigation frame and rail paint the derived `--sidebar-bg`, which never
+  equals `--bg` (light and pure-black overrides included;
+  [`derive-colors.ts`](../src/lib/derive-colors.ts)); the terminal, the document surface,
+  the stage gutter, every docked side panel and the full-window pages share the theme's
+  `--bg`. On a dark theme the navigation column rises off the stage: `--sidebar-bg`, then
+  `--chrome-1`, `--chrome-2` and `--tab-active-bg` stand above it, each measured from the
+  sidebar rather than from `--bg`, in steps of 3/6/10 (light themes use 5/9/15 and the column
+  recedes). `--input-bg` still
   recedes toward the stage; `--seam-raised` sits on the same ladder.
   Why: the dark steps stay narrow because the sidebar already spends 8% of DL-3.5's headroom.
 - **DL-18.8** The browser is a stage surface, not a docked column: one chip on the strip, a
@@ -720,8 +761,8 @@ actions. §11 covers a full-window screen and §13 an anchored popover; neither 
 - **DL-18.12** A pane is a card on the stage gutter. `--stage-gutter` is 4px on all four
   edges of the work area and between panes
   ([`06-stage-panes.css`](../src/styles/06-stage-panes.css)); the card's 6px corner is
-  `--radius-tab` (DL-20.1). The gutter paints `--sidebar-bg` (DL-18.7) and the card carries a
-  1px `--seam-split` border. It is a real `border`, not DL-1.3's inset hairline: xterm fills
+  `--radius-tab` (DL-20.1). The gutter paints `--bg` like the card (DL-18.7), so the card's
+  1px `--seam-split` border alone draws it. It is a real `border`, not DL-1.3's inset hairline: xterm fills
   the padding box and would paint over an inset line. The document surface takes the same
   gutter and radius; the browser tab is the exception, its web content being a native view
   that CSS cannot round. `.window--sidebar > .stage` carries the shell's one vertical line, a
@@ -740,8 +781,9 @@ covering it; the file explorer is the resident instance.
 - **DL-19.1** A docked panel is a column of the stage, not an overlay. The terminal grid's
   bounds shrink by exactly the panel's width, so panes resize around it.
 - **DL-19.2** The seam is a single `--hair` border on the panel's inner edge (DL-3.3), with
-  no shadow, gradient or second rule. The background step from `--bg` to `--sidebar-bg`
-  separates the regions and keeps the panel on the navigation sidebar's plane (DL-18.7).
+  no shadow, gradient or second rule. The panel stands on the stage's `--bg`, so that
+  hairline alone separates the regions; only the navigation column has its own colour
+  (DL-18.7).
 - **DL-19.3** The header is the tab row (DL-19.7), built from the window's own controls at
   the tab bar's 13px chrome icon size (DL-14.2). It is `--frame-h` tall with
   `box-sizing: border-box`, closing on the same pixel row as the stage strip beside it. A
@@ -785,9 +827,13 @@ covering it; the file explorer is the resident instance.
   24px box would overflow the 22px data row, whose height every virtual-list index is computed
   from ([`TreeRootActions`](../src/files/ui/tree-root-actions.tsx)). The explorer's tree-root
   cluster is New file and New folder (omitted when the host cannot create), Show hidden
-  files, Refresh and Collapse all: 89px at DL-19.4's floor, and the root's name truncates
-  first. Show hidden files is a toggle: `aria-pressed` carries its state and its glyph shows
-  it (`EyeSlash` hidden, `Eye` shown), with no wash; its tooltip is the name alone. The
+  files, Show ignored files, Refresh and Collapse all: 107px at DL-19.4's floor, and the
+  root's name truncates first. Show hidden files and Show ignored files are toggles:
+  `aria-pressed` carries the state and the glyph shows it (`EyeSlash` hidden, `Eye` shown;
+  `FunnelSimpleX` ignored entries hidden, `FunnelSimple` shown), with no wash; each tooltip is
+  the name alone. An entry the repository ignores, shown by the second toggle, rests at
+  `--text-faint` (DL-3.4's hint), is raised by hover and the mark like any row, and carries an
+  "Ignored" description so colour is not the only cue. The
   Explorer has two views and shows its switch above that row: a `role="tablist"` of two
   chips, Files and Changes, in a 28px row with DL-21.1's wash on the active chip at
   `--radius-tab`, walked with ←/→ ([`ExplorerSwitch`](../src/files/ui/explorer-switch.tsx)).
@@ -796,6 +842,8 @@ covering it; the file explorer is the resident instance.
   Changes chip the folder cannot serve is disabled with its reason, because a hidden entry
   cannot say why (DL-21.4); on a host that cannot serve the read the switch is omitted
   (DL-19.7).
+  The row whose diff is open carries DL-21.1's wash at `--radius-tab` and is `aria-selected`;
+  a deleted row is pressable, since its diff is the old side.
   Why: the wash is DL-21.1's selection signifier, and a filter is not a selection.
 - **DL-19.10** Opening a document splits the Explorer's existing width into a narrower list
   and a document panel on its left, so the list stays against the window edge; it creates no top-strip chip. The panel's Open files
@@ -805,8 +853,23 @@ covering it; the file explorer is the resident instance.
   `--text-primary`, and it is `aria-selected`; DL-21.3's ring composes with it. When the
   document changes, the tree opens the folders above it and scrolls only as far as the row
   needs, never moving keyboard focus or the roving tab stop and never opening the dock. A
-  document outside the root, under an excluded name, or a dot-path while hidden files are off
-  marks nothing and changes no filter. The mark remains while the terminal has keyboard focus.
+  document outside the root, under an ignored path while Show ignored files is off, or a
+  dot-path while hidden files are off marks nothing and changes no filter. The mark remains while the terminal has keyboard focus.
+- **DL-19.11** The diff column is the Changes list's transient second docked column. It
+  stands directly left of the Explorer and follows DL-19.1 and DL-19.2: the grid's right inset
+  is the dock plus the column, with one `--hair` seam on its inner edge. Its header is
+  `--frame-h` tall like DL-19.3 and names the file, its status mark and its counts, then
+  `2/5`, ‹ ›, Open file and ×, icon-only with DL-23.10 tooltips; the directory and the status
+  word live in tooltips. DL-19.5's status line sits under it. Its width is half the space
+  left of the Explorer, at most 960px; when that half is under 400px the column lies over the
+  Explorer below the dock's tab row and the grid keeps its width. It appears and leaves
+  without motion, keeps its width while moving between files, and closes from ×, from Esc
+  inside it, whenever the Changes list stops being shown, and, while it lies over the
+  Explorer, whenever a document opens there, so the document taking the keys is the one on
+  screen. The body is a read-only Monaco
+  diff in the editor's theme and font ([`DiffColumn`](../src/files/ui/diff-column.tsx)).
+  Why: every width change resizes each pane's terminal, so the column changes width only when
+  the window or the dock does.
 
 ## 23. Action tooltips and the `More` menu
 
@@ -1016,7 +1079,7 @@ shadow.
 - **DL-27.13** Retired. Replaced by DL-27.28.
 - **DL-27.14** On Electron the identity row (`toggle → logo → Deck`) is followed by a create row
   outside the scrolling list: three equal 24px buttons reading `Worktree`, `Folder`, `Agent`
-  ([`rail-create-row.tsx`](../src/ui/rail-create-row.tsx)), in `--type-body` with `CHROME_ICON`
+  ([`rail-create-row.tsx`](../src/ui/rail-create-row.tsx)), in `--type-body` with `ROW_ICON`
   and DL-23 tooltips that name the target. `Worktree` and `Folder` carry a `--hair` outline.
   `Agent` is the primary verb: last in DOM order so focus follows the eye, drawing `Plus` on the
   launcher's filled skin (`--text-primary` ground, `--bg` label). `Agent` opens the launch page
@@ -1309,23 +1372,48 @@ The launcher is the compact launch page plus the Open Board's agent cards, shari
   applied to host-only workspace actions and the runtime selector).
 - **DL-32.6** The compact agent launcher is a transient stage page
   ([page](../src/launcher/agent-launch-page.tsx),
-  [context row](../src/launcher/agent-launch-context.tsx)): compact cards with the existing
-  agent logos and no profile or recent badges. The sidebar and strip keep their
+  [context row](../src/launcher/agent-launch-context.tsx)): compact tiles with the existing
+  agent logos and no profile or recent badges, and no eyebrow, heading, `Add agent` card or
+  footer; which agents show is chosen in Settings → Agents. The sidebar and strip keep their
   places and the page owns no strip item. Covered content stays mounted but inert and the native
   browser is hidden. Back and Escape return without creating a process; Settings returns focus
   to the page.
-  A card is a tile on an `auto-fill, minmax(176px, 1fr)` grid: 20px logo, 12px name, `ArrowRight`
-  on one line. Its press takes initial focus and is `Split` (`Run` when the folder has no tab);
-  nothing is remembered and no modifier changes it. While the folder has a tab, a 34px icon-only
-  `PlusCircle` button on the right edge starts a `New space` (`launchAgentAtTarget` with a
-  `new-space` target), with a DL-13.7 hover tip (400ms for
-  a pointer, at once on keyboard focus, no native `title`) and `aria-label`
-  `Run <agent> in a new space`. A missing agent shows `Not installed`, disabled, with no icon.
+  A tile is a fixed 74px `--radius-control` card on an `auto-fill, minmax(176px, 1fr)` grid: a
+  20px logo and 12px name on top, `ArrowRight` bottom-right in `--text-faint`, `--text-primary`
+  on hover or focus (colour only; nothing moves, DL §7). One press covers the tile; it takes
+  initial focus and is `Split` (`Run` when the folder has no tab); nothing is remembered and no
+  modifier changes it. While the folder has a tab, a 24px icon-only `PlusCircle` button at the
+  tile's bottom-left starts a `New space` (`launchAgentAtTarget` with a `new-space` target), with
+  a DL-13.7 hover tip (400ms for a pointer, at once on keyboard focus, no native `title`) and
+  `aria-label` `Run <agent> in a new space`. The `Terminal` tile follows the installed agents. A
+  missing agent follows it as a dimmed tile: `Not installed` bottom-left, a disabled press and
+  the Install / Get control bottom-right at full contrast, with no `New space` button and no
+  arrow.
   The context row has no field labels (DL-32.2): a workspace popover (DL-13.1, `Open folder…`
   first), a checkout popover (the repository's checkouts by branch; absent for a folder git does
   not know) and a placement chip, `Split beside <agent>` when the focused pane belongs to the
-  chosen checkout, else `New space`. The chip is identity, not a control. Changing workspace or
-  checkout re-targets in place and starts nothing; the launch does what the chip says.
+  chosen checkout, else `New space`. The triggers are 28px `--radius-tab` pills on `--input-bg`
+  with a `--hair` border (`--hair-strong` on hover); the chip follows them after a decorative
+  `→` as the same pill without a hover, because it is identity, not a control. Changing
+  workspace or checkout re-targets in place and starts nothing; the launch does what the chip
+  says.
+  A preview line is pinned to the bottom of the page (sticky on `--bg` under its hairline, so
+  tiles scroll beneath it and it stays in view on a long page; a short page rests it at the
+  bottom). It is a single line: it prints the command the hovered or keyboard-focused tile would
+  type, in `--board-font` (DL-4.1's exception), then `in <checkout path>` and where it lands:
+  the chip's words for a press, `New space` for the `PlusCircle` button. The command is never
+  truncated; the path gives way first, with an ellipsis and its full text in `title`. The
+  `Terminal` tile reads in plain words and a missing tile says nothing; with nothing shown, the
+  line says how to see the command. It is not a live region: the shown tile's controls name it
+  with `aria-describedby`. At its right end a profile chip (`Default profile`, or `Custom
+  profile` once a pick differs from a default) opens a DL-13.1 popover upward from the chip,
+  listing each installed agent's launch commands, a check on the active one and `default` on the
+  default, then `Edit profiles in Settings…`; only the command list scrolls, so that row stays
+  reachable. The chip is omitted when no installed agent is on the page (DL-32.5). A pick changes the
+  preview and the next launch from this visit only: it is page state, and leaving the page
+  forgets it. A launch that fails before its pane exists puts its message in an alert above the
+  tiles with a `Retry` that repeats the same agent, placement and pick; no exit code is shown,
+  because Deck does not watch the process after spawn.
 - **DL-32.7** Agent panes carry one compact identity header. On Electron the
   [pane header](../src/terminal/pane-agent-header.tsx) is logo · the sidebar's latest message
   (one line, ellipsis, full text on hover), with no buttons (DL-32.8). It
@@ -1616,6 +1704,7 @@ section therefore means naming DL, or the gate does not see the citation.
 | Spaces and Mission Control are a shipping surface | `building` | built and unit-verified, native walk and owner eye review owed | §35 landed 2026-09-28 on `feat/mission-control`: `tsc`, `npm test`, `npm run build` and `generate:menu:check` green; no `electron:dev` walk yet. It replaced this row's previous claim, "the Agent Board is a shipping surface", closed the same day when the Board was retired behind `AGENT_BOARD_RETIRED` (§34's retirement note) |
 | Space workflow refinements are a shipping surface | `building` | built, unrun and unwalked; owner eye review owed | 2026-10-03 on `main` (4478840, 664edc5, 0fab403, 0c743a2): launch cards (DL-32.6), auto-named spaces and project capsules and the edge marker (DL-35.3). No `tsc`, `npm test` or `electron:dev` run yet. The walk must cover five agents on one card row, the New space tip by keyboard, a worktree inside its repository's capsule, and a red edge dot with enough spaces to scroll |
 | The launch page's context row is a shipping surface | `building` | built and unit-verified, native walk and owner eye review owed | 2026-10-08 on `feat/launch-page-context` (DL-32.6 amended): the workspace and checkout popovers, the placement chip and `Open folder…`. No gallery specimen exists for the launch page. The walk must cover changing the workspace and the checkout, seeing the chip follow, `Open folder…`, and launching from a re-targeted page |
+| The launch page's tiles, preview and profile popover are a shipping surface | `building` | built, unit-verified and driven in the Electron app; owner eye review owed | 2026-10-11 on `feat/launch-page-details` (DL-32.6 and DL-4.1 amended): the 74px tiles with the bottom-left `New space` button, dimmed missing tiles carrying Install, the context pills, the pinned monospace command preview, the profile chip and its upward popover, and the failure alert with Retry. Driven in the running Electron app on 2026-10-11 with `playwright-core`, a scratch `userData` and stub agents: the tiles and pills; 10 dimmed missing tiles with Install; the hover and focus preview; `New space` from the ⊕; Escape closing the popover before the page; a pick typing the picked command; Install from a tile (a fake installer); a failed launch with Retry; and 780px with two columns. No gallery specimen. Still owed: the owner's eye review, the light theme, Windows, Tauri's Open board (it shares the tiles) and `electron:smoke` |
 | Space names are a shipping surface | `building` | built and unit-verified, native walk and owner eye review owed | 2026-09-29 on `feat/space-names`: the strip (DL-35.3), the shelf (DL-35.1) and the rail row (DL-27.15's amendment) rename and render a name. The walk must cover the floating strip field over a short name and a 40-character one, the shelf field inside a 96px thumbnail, and a named and an unnamed space in one folder |
 | Every needs-you surface of a space wears the rail's two inks | `building` | the strip's marks do; the rest stay single red, owner decision owed | 2026-10-06 on `feat/rail-row-badge`: the marks and the current space's under-dot paint `--status-unread` for a question and `--red` for a failure (DL-35.3). DL-35.3 also says the shelf counts wear the same two colours, but `.mc-space__needs` paints `--red` for both (its `data-tone` is emitted and the stylesheet never reads it); the miniature's cells and the hidden-needs edge dot are single red too. Unwalked in `electron:dev` |
 | The collapsed rail is a shipping surface | `building` | built and unit-verified, native walk and owner eye review owed | 2026-10-07 on `feat/rail-collapsed` (DL-27.29, DL-18.9 amended): the avatar column, its needs-you badge and current mark, the flyout and `toggle-sidebar` (⌘B, Ctrl+Shift+L). No `electron:dev` walk. The walk must cover the traffic lights over a 52px column on macOS, a drag past the floor and back out, an avatar flyout over the browser tab, Esc returning focus to the avatar, and ⌘B from a terminal, a document and the tree |

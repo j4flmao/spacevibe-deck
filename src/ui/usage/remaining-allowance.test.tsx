@@ -34,13 +34,12 @@ it("shows true remaining amounts, returned windows, visible resets and associate
   mount();
   expect(host.textContent).toContain("68%");
   expect(host.textContent).toContain("42%");
-  expect([...host.querySelectorAll('th[scope="col"]')].map((node) => node.textContent)).toEqual([
-    "Agent",
-    "5-hour",
-    "Weekly",
-  ]);
-  expect(host.querySelectorAll('th[scope="row"]')).toHaveLength(2);
+  expect(
+    [...host.querySelectorAll(".usage-allowance__label")].map((node) => node.textContent),
+  ).toEqual(["5-hour", "Weekly"]);
+  expect(host.querySelectorAll(".usage-allowance__agent")).toHaveLength(2);
   expect(host.querySelectorAll("time")).toHaveLength(2);
+  expect(host.querySelector("time")?.getAttribute("title")).toMatch(/\d{1,2}:\d{2}/);
   expect(host.textContent).toContain("Resets in 10m");
   expect(host.textContent).toContain("Limit unavailable");
 });
@@ -86,4 +85,24 @@ it.each([
   mount(fixture(patch));
   expect(host.textContent).toContain(expected);
   expect(host.querySelector("strong")).toBeNull();
+});
+it("warms the bar under 30% and turns it red with a Low word under 15%", () => {
+  const props = fixture();
+  const withUsed = (usedPercent: number) =>
+    mount({
+      ...props,
+      snapshot: [
+        {
+          ...props.snapshot[0],
+          windows: [{ durationMinutes: 300, usedPercent, resetsAtMs: now + 600_000 }],
+        },
+      ],
+    });
+  const fill = () => host.querySelector<HTMLElement>(".usage-allowance__fill")?.style.background;
+  withUsed(75);
+  expect(fill()).toContain("--allowance-warm");
+  expect(host.textContent).not.toContain("Low");
+  withUsed(90);
+  expect(fill()).toContain("--allowance-low");
+  expect(host.textContent).toContain("Low");
 });

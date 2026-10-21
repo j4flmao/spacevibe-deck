@@ -58,4 +58,14 @@ contextBridge.exposeInMainWorld("__deckHost", {
       return "";
     }
   },
+  grantDroppedWorkspace: async (file: File): Promise<string | null> => {
+    try {
+      const path = webUtils.getPathForFile(file);
+      if (path.length === 0) return null;
+      const root: unknown = await ipcRenderer.invoke("grant_dropped_workspace", path);
+      return typeof root === "string" && root.length > 0 ? root : null;
+    } catch {
+      return null;
+    }
+  },
 });

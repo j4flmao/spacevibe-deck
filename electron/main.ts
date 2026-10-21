@@ -10,7 +10,8 @@ initCrashReporting();
 // main process" dialog.
 for (const stream of [process.stdout, process.stderr]) stream.on("error", () => {});
 
-import { createCodexIntegration } from "./agent-hooks/codex-integration";
+import { codexSignalsEnabled, createCodexIntegration } from "./agent-hooks/codex-integration";
+import { createOpencodeIntegration } from "./agent-hooks/opencode-integration";
 /**
  * Electron main process — the host.
  *
@@ -34,6 +35,7 @@ import {
   dialog,
   ipcMain,
   Notification,
+  session,
   shell,
   type IpcMainInvokeEvent,
 } from "electron";
@@ -54,6 +56,9 @@ import { MainDirtyRegistry } from "./dirty-registry";
 import { createMenuState } from "./menu-state";
 import { registerSettingsIpc } from "./settings-ipc";
 import { registerServices } from "./ipc/register-services";
+import { resolveRoot } from "./fs/path-guard";
+import { droppedWorkspaceRoot } from "./fs/dropped-workspace";
+import { ImageWorkspaceGrants } from "./image-workspace-grants";
 import { registerThemes } from "./ipc/register-themes";
 import { registerExplorer } from "./ipc/register-explorer";
 import { registerStore } from "./ipc/register-store";
@@ -62,12 +67,19 @@ import { registerBrowser, reactGrabSource } from "./ipc/register-browser";
 import { registerShell } from "./ipc/register-shell";
 import { registerUpdater } from "./ipc/register-updater";
 import { registerTelemetry } from "./ipc/register-telemetry";
+import { registerAccount } from "./ipc/register-account";
+import { registerClone } from "./ipc/register-clone";
+import { createCloneService } from "./git/clone";
 import { registerDevServers } from "./ipc/register-dev-servers";
 import { registerChanges } from "./ipc/register-changes";
 import { registerAgentSignals } from "./ipc/register-agent-signals";
 import { createHookServer } from "./agent-hooks/hook-server";
-import { createOpencodeClients } from "./agent-hooks/opencode-client";
 import { createClaudeIntegration } from "./agent-hooks/claude-integration";
+import { provisionAgentShell } from "./agent-shell/provision";
+import { bootstrapLaunch, type AgentShellPaths } from "./agent-shell/shell-bootstrap";
+import { createCodexCapabilities } from "./agent-shell/codex-capabilities";
+import { hooksSupported } from "./agent-hooks/hooks-supported";
+import { installAppImagePolicy } from "./app-image-policy";
 
 // __dirname is `dist-electron/electron`, so the Vite output is two levels up.
 const RENDERER_DIR = path.join(__dirname, "..", "..", "dist");
@@ -100,6 +112,27 @@ const quitFlight = new QuitFlight();
 // at the same time, and each guards only its own panes.
 const closeFlight = new CloseFlight();
 const stores = new StoreRegistry(app.getPath("userData"));
+const MAX_IMAGE_ROOTS_PER_WINDOW = 64;
+const activeImageRootsBySender = new Map<number, Set<string>>();
+const imageWorkspaceGrants = ImageWorkspaceGrants.open(stores);
+
+// This channel is reachable only through the preload's File-backed method;
+// it is intentionally excluded from the general renderer invoke allowlist.
+ipcMain.handle("grant_dropped_workspace", async (event, droppedPath: unknown) => {
+  const canonical = await droppedWorkspaceRoot(droppedPath);
+  if (canonical === null) return null;
+  const grants = await imageWorkspaceGrants;
+  if (!(await grants.grant(canonical))) return null;
+  const active = activeImageRootsBySender.get(event.sender.id) ?? new Set<string>();
+  active.add(canonical);
+  while (active.size > MAX_IMAGE_ROOTS_PER_WINDOW) {
+    const oldest = active.values().next().value;
+    if (oldest === undefined) break;
+    active.delete(oldest);
+  }
+  activeImageRootsBySender.set(event.sender.id, active);
+  return canonical;
+});
 
 /**
  * Emit to one window by label. Returns false when there was no live window to
@@ -150,37 +183,66 @@ const browserPanels = new BrowserPanels({
 
 // ---------------------------------------------- Agent-signal contract layer
 // Stage 2 (`docs/internals/terminal.md`):
-// a loopback endpoint the CLI hooks Deck installs post to, and one opencode
-// subscription per pane. Both deliver through the coordinator, so an event
-// reaches the window that owns the pane and no other. Created BEFORE the PTY
+// a loopback endpoint the CLI hooks and Deck's opencode plugin post to. It
+// delivers through the coordinator, so an event reaches the window that owns
+// the pane and no other. Created BEFORE the PTY
 // manager because every shell learns the endpoint's port at spawn.
 const hookServer = createHookServer({
   tokenFor: (paneId) => pty.hookTokenOf(paneId),
+  ttyFor: (paneId) => pty.ttyNameOf(paneId),
   emitToOwner: (paneId, payload) => {
-    const enabled =
-      payload.agent === "codex" ? codexIntegration.enabled() : claudeIntegration.enabled();
+    const integration =
+      payload.agent === "codex"
+        ? codexIntegration
+        : payload.agent === "opencode"
+          ? opencodeIntegration
+          : claudeIntegration;
+    const enabled = integration.enabled();
     if (enabled) coordinator.deliver(paneId, EVENTS.hookEvent, payload);
   },
 });
-const opencodeClients = createOpencodeClients({
-  emitToOwner: (paneId, payload) => coordinator.deliver(paneId, EVENTS.hookEvent, payload),
-});
 const claudeIntegration = createClaudeIntegration({ userData: app.getPath("userData") });
 const codexIntegration = createCodexIntegration({ userData: app.getPath("userData") });
+const opencodeIntegration = createOpencodeIntegration({ userData: app.getPath("userData") });
+
+/** The wrappers and shell bootstrap, written at boot; null leaves panes on `$SHELL -l`. */
+let agentShell: AgentShellPaths | null = null;
+
+/** What the installed Codex accepts; re-probed whenever the integrations sync. */
+const codexCapabilities = createCodexCapabilities();
+
+let probedWithCodexSignals: boolean | null = null;
+
+/**
+ * Register or remove both hook sets, and follow the opencode switch. Codex is re-probed at boot
+ * and whenever its switch flips, without holding the caller up: discovery starts a login shell.
+ */
+async function syncAgentIntegrations(settings: unknown): Promise<void> {
+  const codexOn = codexSignalsEnabled(settings);
+  if (hooksSupported() && probedWithCodexSignals !== codexOn) {
+    probedWithCodexSignals = codexOn;
+    void codexCapabilities.refresh();
+  }
+  await Promise.all([
+    claudeIntegration.sync(settings),
+    codexIntegration.sync(settings),
+    opencodeIntegration.sync(settings),
+  ]);
+}
 
 const pty = new PtyManager({
   emitToOwner: (paneId, event, payload) => coordinator.deliver(paneId, event, payload),
   register: (paneId, label) => coordinator.register(paneId, label),
   unregister: (paneId) => {
     coordinator.unregister(paneId);
-    // A pane's generation and its opencode subscription die with its PTY.
+    // A pane's generation dies with its PTY.
     hookServer.forgetPane(paneId);
-    opencodeClients.detach(paneId);
   },
   assertOwner: (paneId, label) => coordinator.assertAccess(paneId, label),
   hookPort: () => hookServer.port(),
   hookScript: () => claudeIntegration.scriptPath(),
   codexHookScript: () => codexIntegration.scriptPath(),
+  agentShell: () => agentShell,
 });
 
 /** The label of the window that sent an IPC message. Every pane command needs
@@ -311,6 +373,7 @@ function createWindow(label: string): BrowserWindow {
     // resolvable so the native view can be detached from its content view.
     browserPanels.close(label);
     windows.delete(label);
+    activeImageRootsBySender.delete(senderId);
     // Same reason as `render-process-gone`: closing a window while one of its
     // Shortcuts rows is recording must not leave the app without accelerators.
     menuState.setRecording(senderId, false);
@@ -327,6 +390,7 @@ function createWindow(label: string): BrowserWindow {
     // unsaved, and ⌘Q would ask about a window that no longer exists.
     dirtyFiles.forgetWindow(label);
     watchers.forgetWindow(label);
+    void cloneService.releaseOwner(label);
     // Crash path: no close event fired and no busy guard ran, so the panes this
     // window still owned would otherwise outlive it with nobody reading them.
     for (const paneId of coordinator.handleWindowDestroyed(label)) {
@@ -408,19 +472,52 @@ ipcMain.handle(CHANNELS.ptyCwds, (_event, payload: unknown) => {
 });
 
 // -------------------------------------------------------------- Services
-registerServices({ labelOf, setRecording: menuState.setRecording });
+registerServices({
+  labelOf,
+  setRecording: menuState.setRecording,
+  imageRootsFor: async (senderId) => {
+    const grants = await imageWorkspaceGrants;
+    return [...(activeImageRootsBySender.get(senderId) ?? [])].filter(
+      (root) => resolveRoot(root) === root && grants.has(root),
+    );
+  },
+  activateImageRootFor: async (senderId, root) => {
+    if (typeof root !== "string") return false;
+    const canonical = resolveRoot(root);
+    if (canonical === null || !(await imageWorkspaceGrants).has(canonical)) return false;
+    const active = activeImageRootsBySender.get(senderId) ?? new Set<string>();
+    active.add(canonical);
+    while (active.size > MAX_IMAGE_ROOTS_PER_WINDOW) {
+      const oldest = active.values().next().value;
+      if (oldest === undefined) break;
+      active.delete(oldest);
+    }
+    activeImageRootsBySender.set(senderId, active);
+    return true;
+  },
+});
 
 // ------------------------------------------------- Agent-signal adapters
 registerAgentSignals({
-  config: () => ({
-    // POSIX only: the hook script is `sh` + `curl`. Windows keeps the
-    // fallback (spec §8) until a PowerShell script exists.
-    claudeSettingsPath: null,
-    hookPort: hookServer.port(),
-  }),
-  opencode: opencodeClients,
-  assertOwner: (paneId, label) => coordinator.assertAccess(paneId, label),
-  labelOf,
+  config: async () => {
+    const shellBootstrap =
+      hooksSupported() &&
+      agentShell !== null &&
+      bootstrapLaunch(process.env.SHELL || "/bin/zsh", agentShell) !== null;
+    // Where no wrapper runs, a probe started by a Signals change must land before a launch reads
+    // the answer, and a Codex upgraded or downgraded since the last probe is probed again. A
+    // wrapper probes for itself, so window init never waits on a login shell for it.
+    const codex = await codexCapabilities.forLaunch(shellBootstrap);
+    return {
+      // POSIX only: the hook script is `sh` + `curl`. Windows keeps the
+      // fallback (spec §8) until a PowerShell script exists.
+      claudeSettingsPath: null,
+      hookPort: hookServer.port(),
+      shellBootstrap,
+      codexBypassHookTrust: codex.bypassHookTrust,
+      codexNoDaemon: codex.noDaemon,
+    };
+  },
 });
 
 // ------------------------------------------------- Dev server discovery
@@ -440,7 +537,7 @@ registerSettingsIpc({
   emitTo,
   adoptMenuKeymap: menuState.adoptMenuKeymap,
   syncAgentSettings: async (settings) => {
-    await Promise.all([claudeIntegration.sync(settings), codexIntegration.sync(settings)]);
+    await syncAgentIntegrations(settings);
   },
 });
 
@@ -450,6 +547,21 @@ registerSettingsIpc({
 // no id and start no timer. Registered above the quit block because the quit
 // chain below sends the best-effort final snapshot.
 const telemetry = registerTelemetry({ stores, windows, emitTo });
+
+// ------------------------------------------------------------- Account
+// Optional Google account (spec 2026-10-20-accounts). Signed out by default,
+// and signed out sends nothing.
+registerAccount({ userData: app.getPath("userData"), windows, emitTo });
+
+// ------------------------------------------------------------- Clone
+// Clone & add workspace (plan 2026-10-20-clone-workspace-mvp). A job belongs to
+// the window that started it: closing the window cancels it, and a committed
+// quit (`will-quit`, never the cancelable `before-quit`) cancels all of them.
+const cloneService = createCloneService();
+registerClone({ service: cloneService, labelOf, emitTo });
+app.once("will-quit", () => void cloneService.dispose());
+// `app.exit()` skips `will-quit`; the service signals its children synchronously.
+process.once("exit", () => void cloneService.dispose());
 
 // ------------------------------------------------------------------ Quit
 ipcMain.handle(CHANNELS.confirmQuit, (_event, { requestId }) => {
@@ -516,7 +628,7 @@ ipcMain.handle(CHANNELS.windowBootMode, (event) => registry.bootMode(labelOf(eve
  * crossed the IPC boundary. The contract is frozen in that shape; do not fold
  * these back into an object.
  */
-ipcMain.handle(CHANNELS.openPaneWindow, (_event, payload) => {
+ipcMain.handle(CHANNELS.openPaneWindow, (event, payload) => {
   // Flat arguments, never a wrapper object — the frozen contract. Optional
   // keys are read off the payload rather than destructured in the signature
   // so the contract test does not read them as required.
@@ -526,8 +638,8 @@ ipcMain.handle(CHANNELS.openPaneWindow, (_event, payload) => {
     screenY?: number;
   };
   const label = registry.allocateLabel();
+  coordinator.reserveDestination(token, labelOf(event), label);
   registry.reserveAdoption(label, token);
-  coordinator.reserveDestination(token, label);
   const window = createWindow(label);
   if (screenX !== undefined && screenY !== undefined) {
     window.setPosition(Math.round(screenX), Math.round(screenY));
@@ -539,19 +651,23 @@ ipcMain.handle(CHANNELS.openPaneWindow, (_event, payload) => {
 // Rust's `target_label`) and the renderer already sends it. Caught by
 // `scripts/electron-ipc-contract.test.ts` on its first run — the same class of
 // mismatch that shipped `open_pane_window`.
-ipcMain.handle(CHANNELS.offerTransfer, (_event, { token, targetLabel }) => {
+ipcMain.handle(CHANNELS.offerTransfer, (event, { token, targetLabel }) => {
   if (!windows.has(targetLabel)) {
     // Must fail loudly: after staging, `transfer:settled` is the source's only
     // signal, and a silent success would leave it waiting for the timeout.
     throw new Error(`Window ${targetLabel} no longer exists`);
   }
-  coordinator.reserveDestination(token, targetLabel);
+  coordinator.reserveDestination(token, labelOf(event), targetLabel);
   emitTo(targetLabel, EVENTS.transferOffer, { token });
 });
 
 // --------------------------------------------------------------- Updater
 const updater = registerUpdater({
   labelOf,
+  census: async () => {
+    const infos = await censusOrDeny(coordinator.allPanes());
+    return infos === null ? null : censusFor(0, infos, dirtyFiles.all());
+  },
   // The same order `confirm_quit` uses below. An install exit skips that
   // handler entirely, so without this the PTYs would die with the process and
   // the debounced stores would never reach disk.
@@ -567,7 +683,21 @@ const updater = registerUpdater({
 
 registerStore({ stores, windows, emitTo });
 
-registerDialogs();
+registerDialogs({
+  grantWorkspaceRoot: async (senderId, root) => {
+    const grants = await imageWorkspaceGrants;
+    const persisted = await grants.grant(root);
+    if (!persisted) return;
+    const active = activeImageRootsBySender.get(senderId) ?? new Set<string>();
+    active.add(root);
+    while (active.size > MAX_IMAGE_ROOTS_PER_WINDOW) {
+      const oldest = active.values().next().value;
+      if (oldest === undefined) break;
+      active.delete(oldest);
+    }
+    activeImageRootsBySender.set(senderId, active);
+  },
+});
 
 registerBrowser({ labelOf, browserPanels });
 
@@ -606,6 +736,10 @@ app.on("second-instance", () => {
 
 // ------------------------------------------------------------------ Boot
 app.whenReady().then(async () => {
+  installAppImagePolicy(
+    session.defaultSession.webRequest,
+    app.isPackaged ? undefined : DEV_SERVER_URL,
+  );
   // Before any pane spawns: a restored `claude --resume` must find the
   // `claude.exe` that Claude Code's native Windows installer leaves off PATH.
   if (process.platform === "win32") {
@@ -614,6 +748,8 @@ app.whenReady().then(async () => {
   // Every initial shell must inherit a bound endpoint and the installation's
   // hook script. Registration failure keeps registry-based discovery available.
   await hookServer.listen();
+  // Same reason: the wrappers must exist before any pane's shell asks for them.
+  agentShell = await provisionAgentShell(app.getPath("userData"));
   // Read the stored rebinds BEFORE the first window exists. `createWindow`
   // rebuilds the menu itself, so resolving afterwards would install the
   // shipped accelerators first and correct them a moment later — a window in
@@ -623,7 +759,7 @@ app.whenReady().then(async () => {
     .then(async (store) => {
       const settings = store.get("settings");
       menuState.adoptMenuKeymap(settings);
-      await Promise.all([claudeIntegration.sync(settings), codexIntegration.sync(settings)]);
+      await syncAgentIntegrations(settings);
     })
     .catch((error: unknown) => {
       // Defaults are already installed; an unreadable settings file must not

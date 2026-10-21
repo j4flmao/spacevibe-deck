@@ -38,18 +38,22 @@ import {
   probeNames,
   resolveAgentCommand,
 } from "../lib/agent-catalog";
-import { agentLaunchCommand, resolveLaunchCommand } from "../lib/launch-command";
+import {
+  agentLaunchCommand,
+  agentLaunchCommandChoices,
+  resolveLaunchCommand,
+} from "../lib/launch-command";
 import { countAgentLaunch } from "../telemetry/usage-counters";
 import { createAgentRegistrySync } from "./agent-registry-sync";
 import { agentRegistry as fetchAgentRegistry } from "../host/agent-registry-host";
 import { UNAVAILABLE_REGISTRY } from "../lib/agent-registry";
-import { augmentLaunchCommand, needsOpencodePort } from "../lib/launch-augment";
+import { augmentLaunchCommand } from "../lib/launch-augment";
+import { commandAgentId } from "../lib/launch-profile";
 import {
   agentSignalConfig as fetchSignalConfig,
   available as signalsHostAvailable,
   listenHookEvents as listenHostHookEvents,
   NO_SIGNAL_CONFIG,
-  opencodeAttach as hostOpencodeAttach,
 } from "../host/agent-signals-host";
 import { contractSignalOf, type HookEvent } from "../lib/agent-signal-map";
 import { lastSessionIdFor, noteExplicitTail } from "./session-tail-store";
@@ -67,11 +71,7 @@ import { installFileDrop } from "./file-drop";
 import { createTerminalManager, type TerminalManager } from "./terminal-manager";
 import { createPaneInfoPoller } from "./pane-info-poller";
 import { createAgentActivity } from "./agent-activity";
-import {
-  createAgentAttentionTracker,
-  type AttentionKind,
-  type PaneAttentionSnapshot,
-} from "./agent-attention";
+import { createAgentAttentionTracker, type PaneAttentionSnapshot } from "./agent-attention";
 import { createAgentNotifier, type AgentNotifier } from "./agent-notifier";
 import type { PaneAttentionSignal } from "./pane";
 import { popClosedTab, pushClosedTab, type ClosedTabSnapshot } from "./closed-tabs";
@@ -359,8 +359,6 @@ export function createTabManager(
   // cannot (Tauri, the browser preview), and `null` disables that half.
   let signalConfig = NO_SIGNAL_CONFIG;
   const signalConfigFetch = deps.signalConfig === undefined ? fetchSignalConfig : deps.signalConfig;
-  const opencodeAttach =
-    deps.opencodeAttach === undefined ? hostOpencodeAttach : deps.opencodeAttach;
   const hookEventsListen = deps.hookEvents === undefined ? listenHostHookEvents : deps.hookEvents;
   // Stages 1–3 are Electron-only (spec §8): a host with no `agent_signal_config`
   // — Tauri, the browser preview, the test harness — arms the user's command
@@ -373,7 +371,7 @@ export function createTabManager(
    * its CLI report to Deck (spec §4 stage 2; `launch-augment.ts`). The user's
    * own command is what `launchCommandByPane` and the journal hold — the
    * augmented string exists only here and in the shell it is typed into.
-   * An opencode pane asks main for a port first. Claude obtains its session
+   * Claude obtains its session
    * identity from SessionStart or the registry, including manual launches.
    */
   async function prepareLaunch({ id, command }: AgentLaunchEntry): Promise<AgentLaunchEntry> {
@@ -383,16 +381,21 @@ export function createTabManager(
     if (command === null) {
       return { id, command: null };
     }
-    let opencodePort: number | null = null;
-    if (opencodeAttach !== null && needsOpencodePort(command, adapters)) {
-      opencodePort = await opencodeAttach(id).catch(() => null);
+    // What the installed Codex accepts can change while Deck runs (an upgrade, or
+    // the switch flipping, which makes main re-probe), so a Codex launch asks again
+    // instead of trusting the answer fetched at start.
+    if (signalConfigFetch !== null && commandAgentId(command) === "codex" && adapters.codex) {
+      signalConfig = await signalConfigFetch().catch(() => signalConfig);
     }
     const augmented = augmentLaunchCommand(command, {
       adapters,
       platform,
       claudeSettingsPath: signalConfig.claudeSettingsPath,
       sessionId: null,
-      opencodePort,
+      hooksSupported: signalConfig.hooksSupported,
+      shellBootstrap: signalConfig.shellBootstrap,
+      codexBypassHookTrust: signalConfig.codexBypassHookTrust,
+      codexNoDaemon: signalConfig.codexNoDaemon,
     });
     return { id, command: augmented.command };
   }
@@ -415,7 +418,7 @@ export function createTabManager(
   }
 
   /**
-   * One accepted hook post or server event for a pane of this window. The
+   * One accepted hook post for a pane of this window. The
    * map decides what it means; the tracker decides whether it applies (gate
    * and generation); a `Stop`'s sentence goes straight to the tail store.
    */
@@ -443,6 +446,7 @@ export function createTabManager(
     if (ownerOf(event.paneId) === undefined) {
       return;
     }
+    if (event.agent === "opencode" && !settings.value.agentSignalAdapters.opencode) return;
     const signal = contractSignalOf(event);
     if (signal === null) {
       return;
@@ -658,16 +662,6 @@ export function createTabManager(
     return tabs.flatMap((tab) => tab.manager.paneIds());
   }
 
-  // Per-pane identity of the last ATTENTION KIND actually forwarded to the
-  // notifier — the dedupe key `maybeNotify` uses below. The tracker bumps
-  // `revision` on ANY visible-signature change, including a PHASE-ONLY
-  // re-emit of an already-latched kind (e.g. the agent→shell poll's
-  // working→idle, or `pty:exit`'s idle→exited) — neither changes `attention`.
-  // Deduping on raw revision alone (the notifier's own layer) would still
-  // fire on those, so this map is the layer that actually prevents the
-  // duplicate: only a NEWLY raised or ESCALATED kind gets forwarded.
-  const lastNotifiedKind = new Map<number, AttentionKind>();
-
   /**
    * What each pane launched with. Process classification recovers the BINARY a
    * pane is running, never the flags it was given, so this map is the only
@@ -675,56 +669,19 @@ export function createTabManager(
    */
   const launchCommandByPane = new Map<number, string>();
 
-  /**
-   * ONE choke point for every tracker transition that might be worth a
-   * native notification — every call site below that gets a non-null
-   * snapshot back from a tracker mutation routes it here. Label derivation
-   * mirrors the sidebar's own `tab.name ?? workspaceLabel(tab.workspacePath)`
-   * (workspace-sidebar.tsx) — never raw terminal/OSC text.
-   *
-   * Dedupes on the ATTENTION LATCH IDENTITY, not the raw snapshot revision:
-   * `snap.attention === "none"` only resets `lastNotifiedKind` (so a future
-   * re-raise of any kind notifies again) and never itself notifies; a
-   * `snap.attention` equal to the last-forwarded kind is a phase-only
-   * re-emit of the same latched attention and is dropped. Only a kind that
-   * differs from the last one forwarded (a fresh latch, or an escalation)
-   * reaches `notifier.maybeNotify` — which still owns the actionable-kind +
-   * background + unsent-revision policy as a harmless second layer.
-   */
+  /** Label tracker transitions for the notifier; labels never include raw terminal/OSC text. */
   function maybeNotify(id: number, snap: PaneAttentionSnapshot): void {
-    const prevKind = lastNotifiedKind.get(id) ?? "none";
-    lastNotifiedKind.set(id, snap.attention);
-    if (snap.attention === "none") {
-      return; // reset only — a future re-raise of any kind will notify
-    }
-    if (snap.attention === prevKind) {
-      return; // same latched kind re-emitted (phase-only change) — no dup
-    }
     const owner = tabs.find((t) => t.manager.paneIds().includes(id));
     const label =
       (owner ? overrides.get(owner.key)?.name : undefined) ??
       (owner?.workspacePath == null ? "Unknown" : workspaceLabel(owner.workspacePath));
-    notifier.maybeNotify({
+    notifier.notifyLatchTransition({
       paneId: id,
       revision: snap.revision,
       kind: snap.attention,
       workspaceLabel: label,
       agentLabel: snap.agentLabel,
     });
-  }
-
-  /** Forget latch-identity dedupe state for panes outside `live`. */
-  function pruneNotifiedKinds(live: readonly number[]): void {
-    const keep = new Set(live);
-    const doomed: number[] = [];
-    for (const id of lastNotifiedKind.keys()) {
-      if (!keep.has(id)) {
-        doomed.push(id);
-      }
-    }
-    for (const id of doomed) {
-      lastNotifiedKind.delete(id);
-    }
   }
 
   /** Forget the launch command of panes outside `live`. */
@@ -759,7 +716,6 @@ export function createTabManager(
       activity.prune(live);
       tracker.prune(live);
       notifier.prune(live);
-      pruneNotifiedKinds(live);
       pruneLaunchCommands(live);
       pruneTaskPromptPanes(live);
       // Every pane of every tab is polled now, so a long session would
@@ -781,12 +737,21 @@ export function createTabManager(
         syncViews();
       }
     },
+    onPaneInterrupt(id: number): void {
+      // Escape / Ctrl+C: the key already went to the PTY. If the tracker was showing explicit
+      // work or a hook request, it now reads idle until the agent's next hook says otherwise.
+      const interruptSnap = tracker.noteInterrupt(id);
+      if (interruptSnap !== null) {
+        maybeNotify(id, interruptSnap);
+        syncViews();
+      }
+    },
     onPaneFocus(id: number): void {
       if (!windowFocused) return; // only ack when the window is foreground
       const ackSnap = tracker.acknowledge(id); // clears attention+unread, not phase
       if (ackSnap !== null) {
         // Routes through the same choke point so its "none" resets
-        // `lastNotifiedKind` — a genuinely NEW error/warning/etc. raised
+        // notifier latch identity — a genuinely NEW error/warning/etc. raised
         // after this ack must notify again. Acknowledge only happens while
         // the window is foreground, and the notifier is background-only, so
         // this call itself never sends; it only maintains the reset state.
@@ -935,7 +900,7 @@ export function createTabManager(
    * panel (spec §5.5).
    *
    * Routes through `maybeNotify` for the reason `onPaneFocus` does: that
-   * function dedupes on the latch identity in `lastNotifiedKind`, and only a
+   * notifier dedupes on latch identity, and only a
    * `"none"` snapshot resets it. Acking without the call would leave the key
    * at the acked kind, and this pane's next request of that kind would be
    * dropped as a phase-only re-emit.
@@ -1108,7 +1073,6 @@ export function createTabManager(
     activity.prune(live);
     tracker.prune(live);
     notifier.prune(live);
-    pruneNotifiedKinds(live);
     pruneLaunchCommands(live);
     pruneTaskPromptPanes(live);
     poller.prune(live);
@@ -1514,6 +1478,22 @@ export function createTabManager(
     return id === null ? null : { owner, paneId: id };
   }
 
+  /**
+   * A launch-page pick (PAGE4) is typed into a live shell, so it is accepted only
+   * while the agent is launchable and still lists that exact command.
+   */
+  function pageProfileCommand(agentId: string, picked: string): string | null {
+    if (pageAgentCommand(agentId) === null) return null;
+    const current = settings.value;
+    const choices = agentLaunchCommandChoices(
+      agentId,
+      current.launchProfiles,
+      current.defaultLaunchProfiles,
+      current.customAgents,
+    );
+    return choices?.commands.includes(picked) === true ? picked : null;
+  }
+
   async function launchAgentAtTarget(
     target: AgentLaunchTarget,
     agentId: string,
@@ -1530,14 +1510,29 @@ export function createTabManager(
       return { kind: "failed", message: "This install command cannot be run." };
     // The Terminal card runs no command: the pane stays a bare shell.
     const shell = agentId === TERMINAL_LAUNCH_ID;
-    const command = install ? override.command : shell ? null : pageAgentCommand(agentId);
+    const profile = override?.kind === "profile" ? override.command : null;
+    const command = install
+      ? override.command
+      : shell
+        ? null
+        : profile !== null
+          ? pageProfileCommand(agentId, profile)
+          : pageAgentCommand(agentId);
     if (!shell && command === null)
       return {
         kind: "failed",
-        message: "This agent is no longer available. Choose another agent.",
+        message:
+          profile !== null && pageAgentCommand(agentId) !== null
+            ? "That launch command is no longer available. Choose another."
+            : "This agent is no longer available. Choose another agent.",
       };
     const valid = () =>
-      !disposed && canCommit() && (shell || install || pageAgentCommand(agentId) === command);
+      !disposed &&
+      canCommit() &&
+      (shell ||
+        install ||
+        (profile !== null ? pageProfileCommand(agentId, profile) : pageAgentCommand(agentId)) ===
+          command);
     const finishStartupSpawn = beginWindowsStartupSpawn();
     try {
       const created = await createPageLaunchPane(target, valid, checkoutRoots);
@@ -2270,7 +2265,6 @@ export function createTabManager(
     activity.prune(live);
     tracker.prune(live);
     notifier.prune(live);
-    pruneNotifiedKinds(live);
     pruneLaunchCommands(live);
     poller.prune(live);
     registrySync.prune(live);
@@ -2664,6 +2658,7 @@ export function createTabManager(
     // the close+focus-return flow it already owns for every other overlay.
     // Missing `onToggleSettings` = safe no-op, never a direct write.
     "toggle-settings": () => deps.onToggleSettings?.(),
+    "clone-repository": () => deps.onCloneRepository?.(),
     // Seam style, like `toggle-settings` above and unlike `toggle-prompts`
     // below: this one opens a full-window surface that must close Settings,
     // return focus on Escape, and refuse to open under a modal draft. All
@@ -3449,7 +3444,7 @@ export function createTabManager(
         }
       }),
     );
-    // Stage 2: the launch config, then the hook/server events. The config is
+    // Stage 2: the launch config, then the hook events. The config is
     // awaited so the first launch after boot is augmented; the subscription
     // is registered like every other host listener.
     if (signalConfigFetch !== null) {

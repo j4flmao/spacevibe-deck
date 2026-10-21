@@ -15,7 +15,7 @@ export function BrowserSection() {
   const current = settings.value;
 
   return (
-    <ConfigRow label="Home address" desc="Used when there is no previous page to restore">
+    <ConfigRow settingKey="browserHomeUrl" desc="Used when there is no previous page to restore">
       <CommitInput
         value={current.browserHomeUrl}
         placeholder="http://localhost:3000"

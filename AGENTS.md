@@ -7,7 +7,8 @@ Deck is a terminal for running many agent CLIs side by side. The host is Electro
 `electron/`; the renderer is Preact + xterm.js and reaches it through the facades in
 `src/host/`. The Tauri host Electron replaced was removed on 2026-10-12, so a comment that
 still cites a `src-tauri/` file names where code was ported from, not a live twin. Everything
-in this repo — UI strings, comments, docs, and commits — is **English only**.
+in this repo — UI strings, comments, docs, and commits — is **English only**, except the
+landing's translated copy (R1).
 
 Read [docs/internals/overview.md](docs/internals/overview.md) before your first change. The
 documentation index is [docs/README.md](docs/README.md).
@@ -66,6 +67,10 @@ same change as the code once the owner has reviewed the result by eye. Gallery s
 prototypes and design proposals are not bound by patterns at all: propose the strongest
 design and list the patterns it would replace, rather than shrinking the idea to fit.
 
+A plan may list its expected forks up front. Once the owner approves the plan, a fork it
+names is authorized the same way as an Operating contract: take the listed option without
+asking again. A fork the plan does not name still stops the run.
+
 Record a resolved fork on the issue that owns the work, with the alternative you turned down
 and why — a fork nobody can reconstruct is a decision that will be re-litigated.
 
@@ -83,6 +88,8 @@ and why — a fork nobody can reconstruct is a decision that will be re-litigate
 | `npm test`                    | Vitest suite                                                                                                                                                            |
 | `npm run build`               | TypeScript + shipping renderer bundle                                                                                                                                   |
 | `npm run lint`                | oxlint + prettier check; max-lines stays a warning (101 pre-existing over-length files are backlog)                                                                     |
+| [`scripts/check-changed.sh [files]`](scripts/check-changed.sh) | prettier, `tsc`, oxlint and the sibling tests on the files you touched (default: the whole working-tree diff) |
+| [`scripts/sync-origin.sh`](scripts/sync-origin.sh) | fetch, then dirty files, last commits and ahead/behind against `origin/main` — before a push or rebase |
 | `npm run prototype:gallery`   | visual comparison gallery at `127.0.0.1:5175`                                                                                                                           |
 | `npm run build:landing`       | landing production build                                                                                                                                                |
 | `npm run video:render`        | render marketing video from DOM stage                                                                                                                                   |
@@ -109,6 +116,22 @@ refactors, tests and docs skip it. The
 `session.json`), never Playwright MCP or a browser tab on `npm run dev`, and a report of each
 flow walked with its result. Screenshots go to scratch, not the repo.
 
+## Repo skills
+
+Skills live in [`.claude/skills/`](.claude/skills/); Codex reads the same folders through the
+`.agents/skills` link. Invoke one yourself when its trigger fires — do not wait to be asked — and
+stop where the table says.
+
+| Skill                                                                     | Run it when                                                                                              | It stops at                                       |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| [`test-deck-app`](.claude/skills/test-deck-app/SKILL.md)                   | a new feature or UI-flow change is about to be reported done (the E2E gate above)                        | the flow report                                   |
+| [`landing-sync`](.claude/skills/landing-sync/SKILL.md)                     | before `npm run release:cut`                                                                             | the drift report; landing edits wait for the owner |
+| [`clean-worktrees`](.claude/skills/clean-worktrees/SKILL.md)               | once per session, when worktrees made by hand under `../spacevibe-deck-worktrees/` still exist and you are about to add one (scratch worktrees under `/tmp` do not count) | the report; it never blocks your `git worktree add`, and each removal needs the owner's yes |
+| [`respond-to-pr-comments`](.claude/skills/respond-to-pr-comments/SKILL.md) | the owner asks to handle a PR's comments, or a PR this session opened gets review comments              | drafted replies; posting needs the owner's yes    |
+
+None of these is wired into the [unattended routine](#unattended-routine) yet:
+`test-deck-app`'s launch recipe is macOS-only, and `respond-to-pr-comments` is not enabled there.
+
 ## Sessions and checkouts
 
 Several agent sessions run against this repo at once. The owner's standing rule (2026-09-26):
@@ -116,15 +139,25 @@ Several agent sessions run against this repo at once. The owner's standing rule 
 - **One writer per checkout.** At most one session edits this primary checkout at a time. A
   short fix that finishes in one pass works here, on `main`.
 - **A parallel coding session works in its own worktree** — this is standing authorization to
-  branch: `git worktree add ../../spacevibe-deck-worktrees/<slug> -b <type>/<slug> main`, then
-  `npm install` inside it. If `git status` shows fresh changes you did not make, stop and ask
-  whether to move to a worktree instead of editing around them.
+  branch. The owner starts one with `claude --worktree <slug>`; an agent already in a session
+  calls `EnterWorktree`. Both create `.claude/worktrees/<slug>/` on branch `worktree-<slug>`
+  from the remote default branch, and copy the gitignored files listed in
+  [`.worktreeinclude`](.worktreeinclude). Run `npm install` inside the new worktree: it is a
+  fresh checkout with no `node_modules`. Codex has no `EnterWorktree`: run
+  `git worktree add .claude/worktrees/<slug> -b worktree-<slug> origin/main`, copy the files
+  listed in `.worktreeinclude`, then work in that path.
+- **Foreign changes mean a worktree, without asking.** If `git status` shows fresh changes you
+  did not make, move to a worktree (`EnterWorktree`, or the Codex command above) and continue
+  there; do not edit around them and do not stop to ask.
 - **One `electron:dev` at a time.** Dev runs share the owner's real userData and the Vite port
   across checkouts.
 - **Merge the same day.** Rebase on `main`, fast-forward `main` to the branch, then
   `git worktree remove` and delete the branch. Write the `CHANGELOG.md` entry on `main` at merge
-  time, not on the branch. Keep at most three worktrees alive; work that stays open overnight
-  records why in its plan.
+  time, not on the branch. There is no cap on live worktrees: Claude Code removes a clean
+  unnamed one when the session exits and asks about a named or dirty one. Worktrees made by hand
+  under `../spacevibe-deck-worktrees/` stay until
+  [`clean-worktrees`](.claude/skills/clean-worktrees/SKILL.md) has cleared them; work that
+  stays open overnight records why in its plan.
 
 ## Unattended routine
 
@@ -156,7 +189,10 @@ checkouts"; everything else in this file still applies.
 
 ## Repo rules
 
-- **R1. English only** for strings, comments, docs and commit messages.
+- **R1. English only** for strings, comments, docs and commit messages. The one exception is
+  the landing's localized copy: the non-English strings in
+  [`copy.js`](marketing/landing-prototype/src/copy.js) and the guide translations under
+  `marketing/landing-prototype/docs/translations/`.
 - **R2. Design language has two tiers.** Tests enforce the DL invariants. The DL patterns
   describe shipped surfaces, and a redesign may replace them. Cite a rule in a comment only
   when the code would look wrong without the reason. A cited number must stay declared.
@@ -222,7 +258,20 @@ index is [docs/README.md](docs/README.md).
   maintainer would get wrong without it. It is the one place in the repository that still
   takes new documentation.
 - `docs/user/` helps users accomplish tasks, in the voice of the shipped product, with no
-  implementation detail and no contributor tooling. A UI tweak needs no entry.
+  implementation detail and no contributor tooling. These files are the public docs page at
+  `deck.spacevibe.dev/docs`, rendered by
+  [`docs-render.js`](marketing/landing-prototype/src/docs-render.js) on every deploy of
+  `main`. A change to what a user sees, clicks or reads — a label, a control, where something
+  lives, a flow, a shortcut — updates its guide in the same commit; a purely visual tweak
+  (colour, spacing, motion) needs no entry. A guide link that names no real heading fails the
+  landing build.
+- Each guide also has translations under `marketing/landing-prototype/docs/translations/<locale>/`
+  (published at `/<locale>/docs`), written in that language's natural voice with the app's UI
+  labels, chords and paths left exactly as the app shows them. A translation records the
+  English it was made from; once the English changes, that locale's page shows the English
+  guide until the translation catches up. Update the translation in the same commit when you
+  can, then mark it current with `npm run docs:translations -- --stamp <locale>/<guide>`;
+  `npm run docs:translations` lists what is behind.
 - `docs/operations/` is the maintainer runbook: setup, release, debugging. Every page under
   `internals/` and `operations/` opens with the "For maintainers" callout.
 - Do not write file catalogs, field or method enumerations, control-flow narration, or

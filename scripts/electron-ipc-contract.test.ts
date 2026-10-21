@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { INVOKABLE_CHANNELS } from "../electron/ipc/channels";
 
 /**
  * The one gate that crosses the IPC boundary.
@@ -21,6 +22,7 @@ import { join } from "node:path";
 const HANDLER = /ipcMain\.handle\(\s*([^,]+),\s*(?:async\s*)?\(([^)]*)\)/g;
 const INVOKE = /invoke<[^>]*>\(\s*['"]([^'"]+)['"](?:\s*,\s*\{([^}]*)\})?/g;
 const INVOKE_UNTYPED = /(?<!\w)invoke\(\s*['"]([^'"]+)['"](?:\s*,\s*\{([^}]*)\})?/g;
+const TAURI_ONLY_CHANNELS = new Set(["read_image_as_data_url"]);
 
 function filesUnder(dir: string, extensions: readonly string[]): string[] {
   const found: string[] = [];
@@ -230,6 +232,44 @@ describe("Electron IPC contract", () => {
     }
   });
 
+  it("ignored_paths carries the flat { root, directory, names } payload on both sides", () => {
+    // The ignore-aware tree's verdict read, pinned like `create_entry` above so
+    // the generic scanner provably reaches it.
+    const sites = callSites.filter((site) => site.channel === "ignored_paths");
+    expect(sites.length).toBeGreaterThan(0);
+    for (const site of sites) {
+      expect(site.keys).toEqual(["root", "directory", "names"]);
+    }
+    const ignoredHandlers = handlers.filter((handler) => handler.channel === "ignored_paths");
+    expect(ignoredHandlers.length).toBeGreaterThan(0);
+    for (const handler of ignoredHandlers) {
+      expect(handler.required).toEqual(["root", "directory", "names"]);
+    }
+  });
+
+  it("carries the three clone channels flat on both sides, with no owner key", () => {
+    // The owner is the sending window, resolved in main; a payload key naming
+    // one would let a renderer claim another window's job.
+    const expected: Record<string, string[]> = {
+      clone_start: ["requestId", "repository", "parent", "name"],
+      clone_status: [],
+      clone_cancel: ["jobId"],
+    };
+    for (const [channel, keys] of Object.entries(expected)) {
+      const sites = callSites.filter((site) => site.channel === channel);
+      expect(sites.length).toBeGreaterThan(0);
+      for (const site of sites) {
+        expect(site.keys).toEqual(keys);
+      }
+      const registered = handlers.filter((handler) => handler.channel === channel);
+      for (const handler of registered) {
+        expect(handler.required).toEqual(keys);
+      }
+    }
+    expect(handlers.some((handler) => handler.channel === "clone_start")).toBe(true);
+    expect(handlers.some((handler) => handler.channel === "clone_cancel")).toBe(true);
+  });
+
   it("git_changes carries the flat { root } payload on both sides", () => {
     // The Changes list's snapshot read, pinned like `create_entry` above so the
     // generic scanner provably reaches it.
@@ -255,6 +295,21 @@ describe("Electron IPC contract", () => {
     expect(watchHandlers.length).toBeGreaterThan(0);
     for (const handler of watchHandlers) {
       expect(handler.required).toEqual(["root"]);
+    }
+  });
+
+  it("git_head_file carries the flat { root, path } payload on both sides", () => {
+    // The diff column's HEAD-side read; `path` is root-relative, so the root
+    // travels with it like every Explorer call.
+    const sites = callSites.filter((site) => site.channel === "git_head_file");
+    expect(sites.length).toBeGreaterThan(0);
+    for (const site of sites) {
+      expect(site.keys).toEqual(["root", "path"]);
+    }
+    const headHandlers = handlers.filter((handler) => handler.channel === "git_head_file");
+    expect(headHandlers.length).toBeGreaterThan(0);
+    for (const handler of headHandlers) {
+      expect(handler.required).toEqual(["root", "path"]);
     }
   });
 
@@ -378,8 +433,39 @@ describe("Electron IPC contract", () => {
       }
     }
     const unhandled = [
-      ...new Set(callSites.map((site) => site.channel).filter((channel) => !handled.has(channel))),
+      ...new Set(
+        callSites
+          .map((site) => site.channel)
+          .filter((channel) => !TAURI_ONLY_CHANNELS.has(channel) && !handled.has(channel)),
+      ),
     ];
     expect(unhandled).toEqual([]);
+  });
+
+  it("keeps the legacy image read Tauri-only", () => {
+    const channel = "read_image_as_data_url";
+    const sites = callSites.filter((site) => site.channel === channel);
+    expect(sites.map((site) => site.file).sort()).toEqual([
+      "src/files/markdown-image-source.ts",
+      "src/ui/controls/logo-row.tsx",
+    ]);
+    expect(INVOKABLE_CHANNELS.has(channel)).toBe(false);
+    const registered = filesUnder("electron", [".ts"]).some((file) => {
+      if (file.endsWith(".test.ts")) return false;
+      const source = readFileSync(file, "utf8");
+      return [...source.matchAll(/ipcMain\.handle\(\s*([^,]+),/g)].some(
+        (match) => resolveChannelName(match[1], channels) === channel,
+      );
+    });
+    expect(registered).toBe(false);
+    for (const site of sites) {
+      const source = readFileSync(site.file, "utf8");
+      expect(
+        source.includes("if (!electronAvailable)") ||
+          /electronAvailable\s*\?[\s\S]*?:[\s\S]*?invoke<string>\("read_image_as_data_url"/.test(
+            source,
+          ),
+      ).toBe(true);
+    }
   });
 });

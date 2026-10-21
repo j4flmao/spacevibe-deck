@@ -43,6 +43,7 @@ keeps two processes from sharing one `userData`.
 | `electron/updater/`    | electron-updater lifecycle and the cross-window check flight                     |
 | `electron/telemetry/`  | Consent state, day buffers, the daily POST                                       |
 | `electron/git.ts`, `worktrees.ts`, `git/worktree.ts` | `git_branch`, repository scans, `git worktree add` via `execFile` |
+| `electron/git/clone.ts` | `git clone` jobs owned by the window that started them: progress, cancellation, leftovers |
 | `electron/agents.ts`, `links.ts`, `external-apps.ts`, `images.ts`, `prompt-assets.ts`, `github-star.ts`, `themes.ts` | Discovery, path resolution, external apps, images, prompt assets, `gh`, the themes folder |
 | `electron/ipc/`        | The channel table and one `register-*.ts` per service                            |
 
@@ -127,6 +128,22 @@ The renderer may open only the allowlisted stores `settings.json`, `workspaces.j
   which is the one authoritative path; the reply exists only to detect a failed write.
 - Every write is atomic through one implementation in `electron/fs/write.ts`.
 - `saveAll` on quit uses `allSettled`, so one failing store cannot skip the rest.
+
+The optional Google account is the one place a credential lives in this app, so
+[`electron/account/`](../../electron/account/service.ts) keeps the whole session in main:
+supabase-js runs there, refreshes there, and persists through `account.json`, which is
+encrypted with `safeStorage` and, like `telemetry.json`, is not in the renderer's store
+allowlist. Windows receive only the display state (`signed-out`, `signing-in`, or
+`signed-in` with email, name and plan) from `account_state` and `account:state-changed`;
+a token that crossed IPC would be readable by any script running in any renderer. When the OS cannot encrypt, the session stays in memory
+for that run rather than reaching disk in the clear. See the
+[spec](../specs/2026-10-20-accounts.md) for the requirements.
+
+The [storage scope](../../electron/account/session-store.ts) is revoked and its pending
+writes drain before local teardown: a cancelled SDK client must never write or discard
+the next client's credential. Failed credential deletion is reported in the existing
+signed-out reason rather than claimed as durable logout by the
+[account service](../../electron/account/service.ts).
 
 ## Load-bearing seams (R4)
 

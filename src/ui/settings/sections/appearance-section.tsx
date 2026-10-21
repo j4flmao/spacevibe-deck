@@ -30,7 +30,7 @@ export function AppearanceSection() {
   return (
     <div class="appearance-studio">
       <div class="appearance-studio__controls">
-        <SettingsGroup title="Color mode" description="Choose a light or dark workspace.">
+        <SettingsGroup settingKey="themeId" description="Choose a light or dark workspace.">
           <ThemeModeSelector presentation="cards" />
         </SettingsGroup>
         <SettingsGroup title="Terminal text" description="Shared with the built-in editor.">
@@ -38,7 +38,7 @@ export function AppearanceSection() {
             value={current.fontFamily}
             onChange={(fontFamily) => updateSettings({ fontFamily })}
           />
-          <ConfigRow label="Font size">
+          <ConfigRow settingKey="fontSize">
             <span class="cfg-btn cfg-step" role="group" aria-label="Font size">
               <button
                 type="button"
@@ -63,7 +63,7 @@ export function AppearanceSection() {
           </ConfigRow>
         </SettingsGroup>
         <SettingsGroup title="Workspace">
-          <ConfigRow label="Tab bar position" desc="Where the tab list sits">
+          <ConfigRow settingKey="tabBarPosition" desc="Where the tab list sits">
             <AgentChoiceValue
               label="Tab bar position"
               value={current.tabBarPosition}
@@ -72,13 +72,13 @@ export function AppearanceSection() {
             />
           </ConfigRow>
           <ToggleRow
-            label="Show pane bar"
+            settingKey="showPaneBar"
             desc="Pane name bar inside splits"
             checked={current.showPaneBar}
             onToggle={() => updateSettings({ showPaneBar: !current.showPaneBar })}
           />
           <ToggleRow
-            label="Show status bar"
+            settingKey="showStatusBar"
             desc="Branch, path and window readout along the bottom"
             checked={current.showStatusBar}
             onToggle={() => updateSettings({ showStatusBar: !current.showStatusBar })}

@@ -1,6 +1,6 @@
 import { invoke } from "../host/bridge";
 import { useSignal } from "@preact/signals";
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { open } from "../host/dialog-host";
 import {
   agentForWorkspace,
@@ -18,11 +18,15 @@ import {
 } from "../terminal/agent-detection-store";
 import { agentOptions, BUILTIN_AGENTS, probeNames, type CustomAgent } from "../lib/agent-catalog";
 import { settings } from "../settings/settings-store";
-import { removeWorkspaceRecents, workspacesData } from "./workspaces-store";
+import { recordWorkspaceOpen, removeWorkspaceRecents, workspacesData } from "./workspaces-store";
 import type { SessionEntry } from "../lib/session-history";
 import { formatShortcutBinding } from "../lib/shortcut-label";
 import { BoardComposer, type LastSessionOffer } from "./board-composer";
 import { CreateWorkspaceForm } from "./create-workspace-form";
+import { CloneWorkspaceForm } from "./clone-workspace-form";
+import { getCloneController } from "./clone-session";
+import { useCloneBoard } from "./use-clone-board";
+import { available as cloneAvailable } from "../host/clone-host";
 import { OpenBoardWorktreeForm } from "./open-board-worktree-form";
 import { available as worktreeHostAvailable } from "../host/worktree-host";
 import {
@@ -85,6 +89,7 @@ export interface OpenBoardProps {
   hasUserDraftContent: boolean;
   /** An operation started by the sibling Quick Launch surface. */
   readonly externalPending?: LauncherPending | null;
+  readonly onPendingChange?: (pending: boolean) => void;
   onFocusOpenedAgent(): void;
   onClearDraft(): void;
   /** Resolves false when the history entry could not materialize. */
@@ -98,10 +103,10 @@ export interface OpenBoardProps {
 }
 
 /**
- * Home composes a task. Workspace and worktree are destination-creation
+ * Home composes a task. Workspace, clone and worktree are destination-creation
  * subviews that return to that same draft without starting a process.
  */
-type BoardView = "home" | "sessions" | "workspace" | "worktree";
+type BoardView = "home" | "sessions" | "workspace" | "clone" | "worktree";
 
 function agentLabel(id: string, customAgents: readonly CustomAgent[]): string {
   const builtin = BUILTIN_AGENTS.find((agent) => agent.id === id);
@@ -150,6 +155,7 @@ export function OpenBoard({
   canFocusOpenedAgent,
   hasUserDraftContent,
   externalPending = null,
+  onPendingChange,
   onFocusOpenedAgent,
   onClearDraft,
   onResumeSession,
@@ -358,7 +364,10 @@ export function OpenBoard({
   const folderDrop = useWorkspaceDrop({
     enabled:
       view.value === "home" && !opening.value && pending.value === null && externalPending === null,
-    onSelect: selectWorkspace,
+    onSelect: async (path, paths) => {
+      await selectWorkspace(path);
+      for (const root of [...paths].reverse()) recordWorkspaceOpen(root);
+    },
     onError: (message) => {
       notice.value = message;
     },
@@ -367,6 +376,13 @@ export function OpenBoard({
     opening.value || folderDrop.checking
       ? "selecting-workspace"
       : (pending.value ?? externalPending);
+  const locallyPending = opening.value || folderDrop.checking || pending.value !== null;
+  const pendingObserver = useRef(onPendingChange);
+  pendingObserver.current = onPendingChange;
+  useLayoutEffect(() => {
+    pendingObserver.current?.(locallyPending);
+    return () => pendingObserver.current?.(false);
+  }, [locallyPending]);
   /* oxlint-disable react-hooks/exhaustive-deps -- `notice` is the output being cleared; only the recovery transition drives this effect */
   useEffect(() => {
     if (recoveryWasAvailable.current && !recoveryAvailable) {
@@ -389,6 +405,11 @@ export function OpenBoard({
   function openWorkspaceForm(): void {
     notice.value = null;
     view.value = "workspace";
+  }
+
+  function openCloneForm(): void {
+    notice.value = null;
+    view.value = "clone";
   }
 
   async function pickWorkspaceParent(): Promise<string | null> {
@@ -418,7 +439,24 @@ export function OpenBoard({
    * old flow that substitution is now VISIBLE before anything is pressed,
    * which is what the removed config view could not offer.
    */
-  async function selectWorkspace(path: string): Promise<void> {
+  /** Lets a double-click wait for the selection its first click began. */
+  const lastSelection = useRef<Promise<void>>(Promise.resolve());
+  function selectWorkspace(path: string): Promise<void> {
+    const idle = !opening.value;
+    const run = selectWorkspaceNow(path);
+    if (idle) lastSelection.current = run;
+    return run;
+  }
+
+  /** Double-click on a recent: the draft's agent, or a shell when none can run. */
+  async function openRecent(path: string): Promise<void> {
+    await lastSelection.current;
+    if (newTaskDraft.value.workspacePath !== path) await selectWorkspace(path);
+    if (newTaskDraft.value.workspacePath !== path) return;
+    await runLaunch("open", newTaskDraft.value.agentId === null ? TERMINAL_LAUNCH_ID : undefined);
+  }
+
+  async function selectWorkspaceNow(path: string): Promise<void> {
     if (opening.value) {
       return;
     }
@@ -480,6 +518,13 @@ export function OpenBoard({
     const starred = settings.value.defaultAgent;
     return runs(starred) ? (starred as string) : (runnable[0]?.id ?? null);
   }
+
+  useCloneBoard({
+    openForm: openCloneForm,
+    isFormOpen: () => view.value === "clone",
+    leaveForm: goHome,
+    selectWorkspace,
+  });
 
   function removeRecentRows(paths: readonly string[]): void {
     if (paths.length === 0) {
@@ -657,6 +702,17 @@ export function OpenBoard({
             />
           </div>
         </main>
+      ) : view.value === "clone" ? (
+        <main class="nt-board">
+          <div class="nt-board__content nt-board__content--subview">
+            <CloneWorkspaceForm
+              controller={getCloneController()}
+              home={home}
+              onPickParent={pickWorkspaceParent}
+              onBack={goHome}
+            />
+          </div>
+        </main>
       ) : view.value === "worktree" ? (
         <OpenBoardWorktreeForm
           recents={recents}
@@ -694,6 +750,7 @@ export function OpenBoard({
           homeDir={home}
           openFolderShortcut={openFolderShortcut}
           canCreateWorkspace={workspaceCreateAvailable}
+          canCloneRepository={cloneAvailable}
           canCreateWorktree={worktreeHostAvailable}
           canBrowseSessions={canBrowseSessions}
           alive={groups.alive}
@@ -714,11 +771,13 @@ export function OpenBoard({
           describeCombo={describeCombo}
           onDraftChange={updateDraft}
           onSelectWorkspace={selectWorkspace}
+          onOpenWorkspace={openRecent}
           onRunAgent={(id) => void runLaunch("open", id)}
           canDropFolder={folderDrop.available}
           draggingFolder={folderDrop.dragging}
           onPickFolder={() => void pickFolder()}
           onCreateWorkspace={openWorkspaceForm}
+          onCloneRepository={openCloneForm}
           onCreateWorktree={openWorktreeForm}
           onManageAgents={onManageAgents}
           onBrowseSessions={openSessions}
