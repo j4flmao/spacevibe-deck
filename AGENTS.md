@@ -131,6 +131,7 @@ stop where the table says.
 
 None of these is wired into the [unattended routine](#unattended-routine) yet:
 `test-deck-app`'s launch recipe is macOS-only, and `respond-to-pr-comments` is not enabled there.
+`night-runner` and `night-planner` run only from their routines; never invoke them in a session.
 
 ## Sessions and checkouts
 
@@ -166,6 +167,10 @@ nobody watches, on a fresh clone of `origin/main`. For it these rules replace "S
 checkouts"; everything else in this file still applies. Nobody can answer a question during the
 run: anything that needs the owner becomes an issue comment, and the run stops.
 
+- **The task lives in skills.** The runner follows [`night-runner`](.claude/skills/night-runner/SKILL.md)
+  and the planner follows [`night-planner`](.claude/skills/night-planner/SKILL.md); each routine
+  prompt only points at its skill, so change the skill on `main`, not the routine. Neither
+  routine may edit these skills or this section: a task that needs it is a fork.
 - **Terms.** A *night PR* has its head in this repo (not a fork), author `mxrsv`, and a head ref
   matching `^claude/[0-9]+-`. A *trace comment* is an issue comment by `mxrsv` with
   `performed_via_github_app.slug == "claude"` whose first line starts with `night-shift:`. The
