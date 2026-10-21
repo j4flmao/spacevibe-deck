@@ -72,23 +72,45 @@ The hybrid is Inbox with Ribbon's dock: `?option=inbox` (dock open), `?option=in
 
 ## Open decisions
 
+Each decision carries the evidence from a second scout of seven more reference apps
+(13 in total, read 2026-10-22). The evidence informs; it decides nothing.
+
 - **OD-1 Tree or inbox.** The [navigation rail refresh](2026-10-06-navigation-rail-refresh.md)
   chose the project-first tree over an attention-first rail on 2026-10-06. Accepting LAY-1/3
   supersedes that decision; shipping the inbox as a second rail mode beside the tree is the
   alternative.
+  _Reference evidence:_ 7 of 13 let the user switch between project and status grouping or
+  filter by status; 2 default to status sections; the rest default to a project or workspace
+  tree.
 - **OD-2 ⌘⇧A.** Today it jumps straight to the pane that needs you (user guides document
   this). Options: the switcher replaces the jump, or a tap jumps and a hold opens the
   switcher. Either changes a documented shortcut.
+  _Reference evidence:_ the most common pair is a tap "next needing me" key plus a separate
+  queue view (an inbox, an activity list or a title-bar dropdown). One app has an
+  attention-filtered hold-and-release switcher. Four let a permission or question be answered
+  from the queue without opening the agent. In Deck that would need a structured reply
+  channel per CLI, not keystrokes written into the PTY.
 - **OD-3 Dock root.** The Explorer and Changes root today is the selected tab's
   `workspacePath`, fixed when the tab was created; LAY-6 needs the focused pane's checkout.
   Whether that re-rooting touches tab materialization must be confirmed before it is built.
+  _Reference evidence:_ 11 of 13 scope the review panel to the selected agent or task. The two
+  exceptions are a terminal-native app, whose diff is a pane scoped to the terminal's
+  repository, and an editor, whose panels are project-wide.
 - **OD-4 Dock default and width.** At 1280px the 300px rail and the 340px dock leave 640px
   for the stage. Default open or closed, and whether the dock narrows, are open.
+  _Reference evidence:_ defaults are split. Widths cluster at 295–340px. Every app has an
+  explicit narrow-window rule: a sheet, a full/split/hidden cycle, an overflow menu, a minimum
+  terminal width, or showing only the active session.
 - **OD-5 Where the rail footer's tools go.** Session history, Token usage, Explorer, Prompts,
   Browser and Settings (design language §28) are not placed in the mock beyond Settings.
+  _Reference evidence:_ there is no consensus: sidebar header, sidebar footer, title bar, or a
+  right-side tool strip, which is used by the two most tool-heavy apps. A command palette
+  exists in nearly all.
 - **OD-6 Space marks and ⌘1–9.** The mock's stage bar draws no space marks. Digits keep
   counting spaces unless the owner decides otherwise; routing them to rail rows goes through
   the tab seam and is a fork.
+  _Reference evidence:_ 6 of 13 point the digits at the agent or task list, 2 at tabs, 2 at
+  panes or tool windows, and 3 bind none.
 
 ## Out of scope
 
