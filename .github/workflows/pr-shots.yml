@@ -59,11 +59,14 @@ jobs:
         run: npm run build && npm run electron:build
 
       # The same capture `npm run shoot` does, minus its rebuild. `--no-sandbox`: the runner's
-      # unprivileged user namespace is restricted, and this is a throwaway VM.
+      # unprivileged user namespace is restricted, and this is a throwaway VM. It goes last:
+      # `shoot.ts` reads its output dir from `argv[2]`, and a switch before the script shifts it.
+      # A failed capture leaves the process alive, hence the timeout.
       - name: Shoot
+        timeout-minutes: 5
         run: |
           xvfb-run -a -s "-screen 0 1440x900x24" \
-            node_modules/electron/dist/electron --no-sandbox dist-electron/electron/shoot.cjs shots 5
+            node_modules/electron/dist/electron dist-electron/electron/shoot.cjs shots 5 --no-sandbox
           ls shots/*.png
 
       - name: Upload screenshots

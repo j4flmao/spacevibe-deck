@@ -172,11 +172,16 @@ checkouts"; everything else in this file still applies.
   beyond its acceptance criteria.
 - **A fork stops the run.** If the task touches an area under [Forks](#forks), write no code:
   comment on the issue with the fork and the question, and remove `claude-ready`.
-- **One issue, one branch, one PR.** Branch `agent/<issue>-<slug>`; never push to `main`. Open
-  the PR against `main` with the template filled in and `Closes #<issue>`.
-- **Green before the PR.** `npm run lint`, `npm test`, `npm run build` and
-  `npm run electron:build`. Anything still red after a fix attempt: open the PR as a draft and
-  put the failing output under Evidence.
+- **One issue, one branch, one PR.** Branch `claude/<issue>-<slug>` (cloud sessions push
+  `claude/` branches); never push to `main`. Open the PR against `main` with the template
+  filled in and `Closes #<issue>`.
+- **Green before the PR, against a baseline.** Run `npm test` on the clean clone before
+  changing anything; a test that fails there too is pre-existing (the cloud sandbox has no
+  IPv6), so list it under Evidence and do not chase it. Then `npm run lint`, `npm test`,
+  `npm run build` and `npm run electron:build`. A new failure still red after a fix attempt:
+  open the PR as a draft with the failing output under Evidence.
+- **GitHub through REST.** The cloud proxy refuses GraphQL, so `gh pr` and `gh issue` fail
+  with 403; use `gh api` (REST) or the session's built-in GitHub tools.
 - **`CHANGELOG.md` rides in the PR.** The exception to "write it on `main` at merge time", so
   the owner can merge from a phone: a user-facing change adds its `## Unreleased` entry.
 - **Screenshots come from CI.** [`pr-shots.yml`](.github/workflows/pr-shots.yml) comments
