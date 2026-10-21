@@ -19,7 +19,8 @@ requirements of Changes and of the Explorer improvements, and carries CHANGES1â€
 When an agent finishes a turn, the owner checks what it changed before committing it, without
 leaving Deck: which files changed and the diff of each, read beside the agent's terminal. The
 same queue closes the Explorer gaps that get in the way of supervising agents. Deck stays
-read-only towards git and never types into a pane on the user's behalf.
+read-only towards git and types into a pane only when the user sends a
+[diff line comment](2026-10-21-diff-line-comments.md) (owner, 2026-10-21).
 
 ## Decisions so far (owner, 2026-10-09 and 2026-10-10)
 
@@ -84,8 +85,9 @@ read-only towards git and never types into a pane on the user's behalf.
   proves no read while hidden.
 - **CHG4**: A clean checkout shows an explicit empty state, not a blank list. A folder git does
   not know hides the Changes entry point, or disables it with a tooltip saying why.
-- **CHG5** (CHANGES3): Nothing stages, commits, pushes, merges, reverts or discards, and nothing
-  is typed into any pane. Sending feedback to an agent is a separate, later decision.
+- **CHG5** (CHANGES3): Nothing stages, commits, pushes, merges, reverts or discards. Nothing is
+  typed into any pane except a diff line comment the user sends, whose target and delivery the
+  [diff line comments spec](2026-10-21-diff-line-comments.md) owns (owner, 2026-10-21).
 
 ### Diff column
 
@@ -260,6 +262,6 @@ colours (3) and the second docked column (4).
 
 Staging, committing, pushing, reverting hunks, PR creation and conflict UI; a per-turn diff;
 comparing a worktree against `main` or another base branch; git markers on tree rows; a line
-comment sent to an agent (task 3 of the 2026-09-24 plan, which needs its own agreed target and
-delivery behaviour); multi-select, compact folders and filter-in-tree; a Tauri implementation
+comment sent to an agent (owned by the [diff line comments spec](2026-10-21-diff-line-comments.md));
+multi-select, compact folders and filter-in-tree; a Tauri implementation
 of any new host channel.
