@@ -32,7 +32,7 @@ the release PR, and frozen at the tag — never an auto-generated commit list.
   in **Recent workspaces** opens that workspace in the rail with its remembered agent, or a
   terminal when no agent can run. A single click still only selects it.
 - **Drop files or folders to add workspaces.** Drop onto Deck's chrome or the
-  [Open Board](src/open-board/use-workspace-drop.ts) to save folders as workspaces;
+  Open board to save folders as workspaces;
   files use their containing folder. A batch adds each folder once and selects
   the first without starting an agent. Terminal drops still insert paths.
 
