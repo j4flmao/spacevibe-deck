@@ -48,11 +48,14 @@ export function DiffStageShell({
   agent,
   review,
   label,
+  onClose,
   children,
 }: {
   readonly agent: MockAgent;
   readonly review: Review;
   readonly label: string;
+  /** Set by a shell that owns the way back; Esc and ⌘⇧D then leave the diff through it. */
+  readonly onClose?: () => void;
   readonly children: ComponentChildren;
 }) {
   const showDiff = useSignal(true);
@@ -62,10 +65,12 @@ export function DiffStageShell({
       if (event.key === "Escape" && showDiff.value) {
         event.preventDefault();
         if (review.composing.value) review.discard();
+        else if (onClose) onClose();
         else showDiff.value = false;
       } else if (event.metaKey && event.shiftKey && event.key.toLowerCase() === "d") {
         event.preventDefault();
-        showDiff.value = !showDiff.value;
+        if (onClose) onClose();
+        else showDiff.value = !showDiff.value;
       }
     };
     window.addEventListener("keydown", onKey);

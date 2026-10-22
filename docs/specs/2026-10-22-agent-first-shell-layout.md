@@ -40,8 +40,10 @@ Three mocks were built on one shared fixture so they differ in layout only:
 
 The hybrid is Inbox with Ribbon's dock: `?option=inbox` (dock open), `?option=inbox&dock=0`
 (without it). Surface boards then compared options per functional surface
-(`?surface=dock|changes|diff|browser`). The picked dock shape is `?surface=dock&option=c`;
-`?option=inbox` still mounts Ribbon's tabbed dock.
+(`?surface=dock|changes|diff|browser`). `?option=hybrid` composes the picks into the inbox
+shell: the stacked-sections dock holding the folder-tree Changes, the hunk review queue on the
+stage, and the browser beside the focused agent's terminal (`&stage=diff|browser`).
+`?option=inbox` keeps Ribbon's tabbed dock for comparison.
 
 ## Requirements of the hybrid
 

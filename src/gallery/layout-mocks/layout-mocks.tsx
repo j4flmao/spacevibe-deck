@@ -6,12 +6,14 @@ import { ToggleGroup, ToggleGroupItem } from "../../ui/controls/toggle-group";
 import { TooltipProvider } from "../../ui/controls/tooltip";
 import { AGENTS, DEFAULT_FOCUS } from "./layout-fixture";
 import { OptionFilmstrip } from "./option-filmstrip";
+import { OptionHybrid } from "./option-hybrid";
 import { OptionInbox } from "./option-inbox";
 import type { OptionProps } from "./option-props";
 import { OptionRibbon } from "./option-ribbon";
 import { SurfaceBar, SurfaceBoard, surfaceById } from "./surface-board";
 
 const OPTIONS = [
+  { id: "hybrid", label: "Hybrid", view: OptionHybrid },
   { id: "inbox", label: "Inbox", view: OptionInbox },
   { id: "ribbon", label: "Ribbon", view: OptionRibbon },
   { id: "filmstrip", label: "Filmstrip", view: OptionFilmstrip },
@@ -20,14 +22,15 @@ type OptionId = (typeof OPTIONS)[number]["id"];
 
 /**
  * URL contract, so every capture is reproducible:
- * `?option=inbox|ribbon|filmstrip&mode=dark|light&overlay=<name>&focus=<agent id>&bare=1`.
+ * `?option=hybrid|inbox|ribbon|filmstrip&mode=dark|light&overlay=<name>&focus=<agent id>&bare=1`;
+ * the hybrid also takes `&stage=diff|browser`.
  * `?surface=<id>&option=<a|b|c>` opens a surface board instead (no `option` compares panels).
  * `bare=1` hides the switcher for screenshots.
  */
 export function LayoutMocks() {
   const params = new URLSearchParams(window.location.search);
   const option = useSignal<OptionId>(
-    OPTIONS.find((item) => item.id === params.get("option"))?.id ?? "inbox",
+    OPTIONS.find((item) => item.id === params.get("option"))?.id ?? "hybrid",
   );
   const dark = useSignal(params.get("mode") !== "light");
   const focusParam = params.get("focus");

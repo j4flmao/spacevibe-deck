@@ -247,16 +247,23 @@ function Pane({
   );
 }
 
-export function OptionInbox({ initialFocus, overlay, slots, dockOpen: dockDefault }: OptionProps) {
+export function OptionInbox({
+  initialFocus,
+  overlay,
+  slots,
+  dockOpen: dockDefault,
+  dock,
+}: OptionProps) {
   const focusId = useSignal(initialFocus);
   const projectId = useSignal<string | null>(null);
   const quietOpen = useSignal(sectionOf(agentById(initialFocus)) === "quiet");
   const switcherOpen = useSignal(overlay === "switcher");
   const highlight = useSignal(switcherEntries()[0]?.id ?? initialFocus);
   // The hybrid: the inbox rail plus the agent-scoped dock. `?dock=0` opens without it.
-  const dockOpen = useSignal(
+  const ownDock = useSignal(
     dockDefault ?? new URLSearchParams(window.location.search).get("dock") !== "0",
   );
+  const dockOpen = dock ?? ownDock;
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -297,6 +304,7 @@ export function OptionInbox({ initialFocus, overlay, slots, dockOpen: dockDefaul
   const focused = agentById(focusId.value);
   const { space, checkout, project } = placeOf(focused);
   const panes = space.paneIds.map(agentById);
+  const stage = slots?.stage?.(focused, focusAgent);
   const filterLabel = PROJECTS.find((item) => item.id === projectId.value)?.name ?? "All projects";
 
   return (
@@ -379,6 +387,7 @@ export function OptionInbox({ initialFocus, overlay, slots, dockOpen: dockDefaul
           <IconButton label="Settings" keys={["⌘", ","]}>
             <HugeiconsIcon icon={Settings02Icon} strokeWidth={2} aria-hidden="true" />
           </IconButton>
+          {slots?.footer?.(focused, focusAgent)}
         </div>
       </aside>
 
@@ -417,8 +426,8 @@ export function OptionInbox({ initialFocus, overlay, slots, dockOpen: dockDefaul
             <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} aria-hidden="true" />
           </IconButton>
         </header>
-        {slots?.stage ? (
-          <div className="flex min-h-0 flex-1">{slots.stage(focused, focusAgent)}</div>
+        {stage != null ? (
+          <div className="flex min-h-0 flex-1">{stage}</div>
         ) : (
           <div
             className={cn(

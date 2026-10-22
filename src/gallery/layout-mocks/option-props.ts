@@ -1,3 +1,4 @@
+import type { Signal } from "@preact/signals";
 import type { ComponentChildren } from "preact";
 import type { MockAgent } from "./layout-fixture";
 
@@ -8,8 +9,10 @@ import type { MockAgent } from "./layout-fixture";
 export interface ShellSlots {
   /** The right column. Replaces the agent dock; the stage bar's dock toggle still hides it. */
   readonly dock?: (agent: MockAgent, focus: (id: string) => void) => ComponentChildren;
-  /** The stage body under the bar. Replaces the focused space's panes. */
+  /** The stage body under the bar. Replaces the focused space's panes; null keeps them. */
   readonly stage?: (agent: MockAgent, focus: (id: string) => void) => ComponentChildren;
+  /** Extra buttons in the rail footer, after Settings. */
+  readonly footer?: (agent: MockAgent, focus: (id: string) => void) => ComponentChildren;
   /** Drawn above the whole shell, for floating or overlay placements. */
   readonly overlay?: (agent: MockAgent, focus: (id: string) => void) => ComponentChildren;
 }
@@ -24,4 +27,6 @@ export interface OptionProps {
   readonly slots?: ShellSlots;
   /** Surface boards only: whether the dock starts open (default: open, or `?dock=0`). */
   readonly dockOpen?: boolean;
+  /** The hybrid only: a dock state the caller owns, so opening a stage view can fold it. */
+  readonly dock?: Signal<boolean>;
 }

@@ -148,13 +148,18 @@ export function deliveryOf(agent: MockAgent): string {
 }
 
 /** One review session over the focused checkout's files; every option drives the same state. */
-export function useReview(agent: MockAgent, options: { readonly split?: boolean } = {}) {
+/** `file` is the index the review opens on (default 0). */
+export function useReview(
+  agent: MockAgent,
+  options: { readonly split?: boolean; readonly file?: number } = {},
+) {
   const files = diffFiles(agent);
   const targets = targetsFor(agent);
-  const fileIndex = useSignal(0);
-  const range = useSignal<Range | null>(files[0] ? defaultRange(files[0]) : null);
+  const start = files[options.file ?? 0] ? (options.file ?? 0) : 0;
+  const fileIndex = useSignal(start);
+  const range = useSignal<Range | null>(files[start] ? defaultRange(files[start]) : null);
   const composing = useSignal(files.length > 0);
-  const text = useSignal(files[0] ? defaultComment(files[0]) : "");
+  const text = useSignal(files[start] ? defaultComment(files[start]) : "");
   const targetId = useSignal(
     targets.find((item) => item.agent.id === agent.id)?.agent.id ?? targets[0]?.agent.id,
   );

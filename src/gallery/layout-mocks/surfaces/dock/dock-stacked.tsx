@@ -1,4 +1,5 @@
 import { signal } from "@preact/signals";
+import type { ComponentChildren } from "preact";
 import { cn } from "cn";
 import { useEffect, useState } from "preact/hooks";
 import { Button } from "../../../../ui/controls/button";
@@ -63,13 +64,14 @@ function Section({
   );
 }
 
-function Sections({
-  agent,
-  onFocus,
-}: {
+/** `changes` replaces the Changes section's body, for the hybrid that composes the picks. */
+interface DockProps {
   readonly agent: MockAgent;
   readonly onFocus: (id: string) => void;
-}) {
+  readonly changes?: ComponentChildren;
+}
+
+function Sections({ agent, onFocus, changes }: DockProps) {
   const sum = changeTotals(agent);
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -79,7 +81,7 @@ function Sections({
         </div>
       ) : null}
       <Section id="changes" title="Changes" count={sum.files ? String(sum.files) : undefined}>
-        <ToolBody tool="changes" agent={agent} onFocus={onFocus} />
+        {changes ?? <ToolBody tool="changes" agent={agent} onFocus={onFocus} />}
       </Section>
       <Section id="space" title="In this space">
         <SpaceList agent={agent} onFocus={onFocus} />
@@ -100,11 +102,10 @@ function Sections({
 function Column({
   agent,
   onFocus,
+  changes,
   className,
   onClose,
-}: {
-  readonly agent: MockAgent;
-  readonly onFocus: (id: string) => void;
+}: DockProps & {
   readonly className?: string;
   readonly onClose?: () => void;
 }) {
@@ -122,19 +123,13 @@ function Column({
           </Button>
         ) : null}
       </header>
-      <Sections agent={agent} onFocus={onFocus} />
+      <Sections agent={agent} onFocus={onFocus} changes={changes} />
     </aside>
   );
 }
 
 /** Narrow rule: a slim edge handle; opening draws the column as a sheet over the stage. */
-function Sheet({
-  agent,
-  onFocus,
-}: {
-  readonly agent: MockAgent;
-  readonly onFocus: (id: string) => void;
-}) {
+function Sheet({ agent, onFocus, changes }: DockProps) {
   const [open, setOpen] = useState(
     () => new URLSearchParams(window.location.search).get("sheet") === "1",
   );
@@ -187,6 +182,7 @@ function Sheet({
           <Column
             agent={agent}
             onFocus={onFocus}
+            changes={changes}
             onClose={() => setOpen(false)}
             className="fixed inset-y-0 right-0 z-40 shadow-lg"
           />
@@ -196,18 +192,12 @@ function Sheet({
   );
 }
 
-function DockStacked({
-  agent,
-  onFocus,
-}: {
-  readonly agent: MockAgent;
-  readonly onFocus: (id: string) => void;
-}) {
+export function DockStacked({ agent, onFocus, changes }: DockProps) {
   const narrow = useWindowWidth() < NARROW_BELOW;
   return narrow ? (
-    <Sheet agent={agent} onFocus={onFocus} />
+    <Sheet agent={agent} onFocus={onFocus} changes={changes} />
   ) : (
-    <Column agent={agent} onFocus={onFocus} />
+    <Column agent={agent} onFocus={onFocus} changes={changes} />
   );
 }
 

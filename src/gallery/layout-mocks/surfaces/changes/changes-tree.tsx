@@ -45,7 +45,14 @@ function filesUnder(node: DirNode): MockFileChange[] {
 const INDENT = 10;
 const STEP = 14;
 
-export function TreeChanges({ agent }: { agent: MockAgent }) {
+/** `onOpen` hears a pressed file, for a shell that opens its diff. */
+export function TreeChanges({
+  agent,
+  onOpen,
+}: {
+  agent: MockAgent;
+  onOpen?: (change: MockFileChange) => void;
+}) {
   const changes = changesOf(agent);
   const closed = useSignal<ReadonlySet<string>>(new Set());
   const selected = useSignal<string | null>(null);
@@ -90,7 +97,10 @@ export function TreeChanges({ agent }: { agent: MockAgent }) {
         agent={agent}
         indent={INDENT + depth * STEP + 6}
         selected={selected.value === change.path}
-        onSelect={() => (selected.value = change.path)}
+        onSelect={() => {
+          selected.value = change.path;
+          onOpen?.(change);
+        }}
       />
     )),
   ];

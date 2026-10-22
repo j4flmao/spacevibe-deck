@@ -7,7 +7,7 @@ import { AgentLogo } from "../../agent-parts";
 import { AGENT_NAME, agentById, type MockAgent } from "../../layout-fixture";
 import { DiffCode } from "./diff-code";
 import { DiffComposer, SendNotice } from "./diff-composer";
-import { useReview } from "./diff-data";
+import { diffFiles, useReview, type Review } from "./diff-data";
 import { CommentButton, Counts, SplitToggle } from "./diff-parts";
 import { DiffStageShell } from "./diff-stage-shell";
 
@@ -16,15 +16,40 @@ interface Step {
   readonly hunk: number;
 }
 
-/** Option c: one hunk at a time with a progress count, a queue list and a side composer. */
-export function DiffQueue({ agent }: { readonly agent: MockAgent }) {
-  const review = useReview(agent);
+/** The file's hunk holding the review's opening range, so the composer's lines are on screen. */
+function startStep(review: Review, steps: readonly Step[], file: number): number {
+  const from = review.range.value?.from;
+  const holding = steps.findIndex(
+    (step) =>
+      step.file === file && review.files[file].hunks[step.hunk].rows.some((row) => row.id === from),
+  );
+  return holding >= 0 ? holding : steps.findIndex((step) => step.file === file);
+}
+
+/**
+ * Option c: one hunk at a time with a progress count, a queue list and a side composer.
+ * `startPath` opens on that file's first hunk; `onClose` hands the way back to the shell.
+ */
+export function DiffQueue({
+  agent,
+  startPath,
+  onClose,
+}: {
+  readonly agent: MockAgent;
+  readonly startPath?: string;
+  readonly onClose?: () => void;
+}) {
+  const startFile = diffFiles(agent).findIndex((file) => file.change.path === startPath);
+  const review = useReview(agent, { file: Math.max(startFile, 0) });
   const steps: readonly Step[] = review.files.flatMap((file, fileIndex) =>
     file.hunks.map((_, hunk): Step => ({ file: fileIndex, hunk })),
   );
-  // The queue opens mid-way: the first hunk is reviewed, the second is under the composer.
-  const at = useSignal(Math.min(1, steps.length - 1));
-  const reviewed = useSignal<readonly number[]>(steps.length > 1 ? [0] : []);
+  // Without a start file the queue opens mid-way: the first hunk is reviewed, the second is
+  // under the composer.
+  const at = useSignal(
+    startFile >= 0 ? startStep(review, steps, startFile) : Math.min(1, steps.length - 1),
+  );
+  const reviewed = useSignal<readonly number[]>(startFile < 0 && steps.length > 1 ? [0] : []);
   const step = steps[at.value];
   const file = review.files[step.file];
   const hunk = file.hunks[step.hunk];
@@ -62,7 +87,7 @@ export function DiffQueue({ agent }: { readonly agent: MockAgent }) {
   const done = reviewed.value.length;
   const zoneRange = review.range.value;
   return (
-    <DiffStageShell agent={agent} review={review} label="Back to review">
+    <DiffStageShell agent={agent} review={review} label="Back to review" onClose={onClose}>
       <header className="flex h-12 shrink-0 items-center gap-4 border-b px-4">
         <span className="shrink-0 text-xs font-medium text-foreground tabular-nums">
           Hunk {at.value + 1} of {steps.length}

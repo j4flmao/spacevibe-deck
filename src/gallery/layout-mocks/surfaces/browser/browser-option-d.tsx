@@ -37,13 +37,24 @@ function initialPlacement(): Placement {
  * the stage. One browser state serves every placement, so the port and a picked element
  * survive the switch, and sending from the stage puts the terminal back to show the line land.
  */
-export function BrowserPaired({ agent }: { readonly agent: MockAgent }) {
+export function BrowserPaired({
+  agent,
+  onClose,
+}: {
+  readonly agent: MockAgent;
+  /** Set by a shell that owns the way back; Close and ⌘⇧I then leave through it. */
+  readonly onClose?: () => void;
+}) {
   const browser = useBrowser("picked");
   const placement = useSignal<Placement>(initialPlacement());
   const flipped = useSignal(false);
   const sent = useSignal<readonly TermLine[]>([]);
   const name = AGENT_NAME[agent.kind];
   const stage = placement.value === "stage";
+  const close = () => {
+    if (onClose) onClose();
+    else placement.value = "closed";
+  };
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -53,12 +64,14 @@ export function BrowserPaired({ agent }: { readonly agent: MockAgent }) {
         placement.value = placement.value === "stage" ? "beside" : "stage";
       } else if (event.key.toLowerCase() === "i") {
         event.preventDefault();
-        placement.value = placement.value === "closed" ? "beside" : "closed";
+        if (placement.value === "closed") placement.value = "beside";
+        else if (onClose) onClose();
+        else placement.value = "closed";
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [placement]);
+  }, [placement, onClose]);
 
   const reopen = (
     <Button variant="outline" size="sm" onClick={() => (placement.value = "beside")}>
@@ -134,11 +147,7 @@ export function BrowserPaired({ agent }: { readonly agent: MockAgent }) {
       >
         <Glyph icon={stage ? ArrowShrink01Icon : ArrowExpand01Icon} />
       </ToolButton>
-      <ToolButton
-        label="Close preview"
-        keys={OPEN_KEYS}
-        onClick={() => (placement.value = "closed")}
-      >
+      <ToolButton label="Close preview" keys={OPEN_KEYS} onClick={close}>
         <Glyph icon={Cancel01Icon} />
       </ToolButton>
     </div>
