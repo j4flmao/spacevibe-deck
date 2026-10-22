@@ -39,15 +39,15 @@ Three mocks were built on one shared fixture so they differ in layout only:
 | Ribbon    | No rail; agents as a chip row in the top bar; agent-scoped dock                                         | Dock taken into the hybrid   |
 | Filmstrip | Project column; stage keeps its split; every other agent as a text-snapshot card in a right column    | Not pursued for now          |
 
-The first hybrid was Inbox with Ribbon's dock: `?option=inbox` (dock open),
-`?option=inbox&dock=0` (without it). Surface boards then compared options per functional
-surface (`?surface=dock|changes|diff|browser|rail`). The rail board holds four options built
+The first hybrid was Inbox with Ribbon's dock. Surface boards then compared options per
+functional surface (`?surface=dock|changes|diff|browser|rail|settings`); after the owner's
+picks the unchosen options were removed from the gallery (they stay in git history) and the
+overview at `index.html` composes the picks into one shell. The rail board holds four options built
 from a scout of how thirteen reference apps build their sidebar: A flat inbox with lifecycle,
 B list with an Organize menu, C project-first, D compact with an icon rail. The owner picked C
-and asked for B's Organize menu on it (`?surface=rail&option=c`). `?option=hybrid` composes the picks into the inbox
-shell: the stacked-sections dock holding the folder-tree Changes, the hunk review queue on the
-stage, and the browser beside the focused agent's terminal (`&stage=diff|browser`).
-`?option=inbox` keeps Ribbon's tabbed dock for comparison.
+and asked for B's Organize menu on it (`?surface=rail&option=c`). The overview is the stacked-sections dock holding the folder-tree Changes, the hunk review
+queue on the stage, the browser beside the focused agent's terminal (`?stage=diff|browser`),
+rail C and the Command-style Settings.
 
 ## Requirements of the hybrid
 
@@ -94,6 +94,19 @@ stage, and the browser beside the focused agent's terminal (`&stage=diff|browser
   composition-chosen text pair meets WCAG 2.2 AA in light and dark. The only motion that loops
   is the working mark and the needs-input ripple, within the design language's §1 budget.
 - **LAY-9 Window sizes.** The layout holds at 1440×900 and at 1280×800 with the dock open.
+- **LAY-10 Regions.** The rail and the dock share one surface (the `sidebar` token) with no
+  gap between them and the stage. The stage's panes sit flush, each on the terminal background
+  and separated by 1px borders: no gap, no corner radius, no card. The breadcrumb bar carries a
+  1px border below it and the dock a 1px border on its left.
+- **LAY-11 Themes live in Settings.** There is no theme control on the stage or over the
+  panes. Settings, opened from the rail footer or ⌘,, uses the Command structure (one search
+  field, area chips, live rows); its Appearance area holds the theme gallery: Mode (System,
+  Light, Dark), a light and a dark slot when the mode follows the system, cards grouped Light
+  and Dark with a live hover preview, import and export. The theme model, the token list and
+  the built-in set belong to [the settings and theme overhaul](2026-10-17-settings-theme-overhaul.md);
+  the gallery's eight candidates (Deck Dark, Graphite, Midnight, Forest, Dusk, Deck Light, Paper,
+  Mist) are mock content, each an explicit map of about forty tokens including eight terminal
+  inks.
 
 ## Open decisions
 
@@ -253,3 +266,4 @@ shapes. Ribbon's chip bar and Filmstrip, kept in the gallery as considered alter
 | AC-4 | The switcher and ⌘⇧A behave as OD-2 decides, by keyboard and pointer; the user guides and keyboard-shortcut page match.                                                 |
 | AC-5 | Measured text contrast meets AA for every composition-chosen pair in both modes; stock pairs below it follow the parent specification's contrast decision.             |
 | AC-6 | No PTY, IPC, persistence or tab-materialization change. The affected design-language patterns (§27 rail, §28 footer, §35 spaces) are rewritten in the same change.     |
+| AC-7 | Rail and dock render on the same surface token; panes are flush with 1px borders, no gap and no radius, in every built-in theme. |
