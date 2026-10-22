@@ -113,8 +113,10 @@ rail C and the Command-style Settings.
   and Dark with a live hover preview, import and export. The theme model, the token list and
   the built-in set belong to [the settings and theme overhaul](2026-10-17-settings-theme-overhaul.md);
   the gallery's eight candidates (Deck Dark, Graphite, Midnight, Forest, Dusk, Deck Light, Paper,
-  Mist) are mock content, each an explicit map of about forty tokens including eight terminal
-  inks.
+  Mist) are mock content, each an explicit map in the gallery's shadcn-style token names (about forty,
+  including eight terminal inks). The shipping schema is the one in the overhaul spec: the design
+  language's role names, opaque hex, terminal ANSI 16 and editor colours (slice T1); the gallery's
+  names and oklch values are converted, not shipped.
 
 ## Open decisions
 
