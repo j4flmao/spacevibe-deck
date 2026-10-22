@@ -5,6 +5,13 @@ User-facing release notes. The release workflow's `promote` job publishes the
 platform-limitations header), so each section is written for users, reviewed in
 the release PR, and frozen at the tag — never an auto-generated commit list.
 
+## Unreleased
+
+- **Retired themes open in Dark.** Tokyo Night, Dracula, One Dark and Catppuccin Mocha are
+  gone, and a profile still set to one of them opens in Dark. Colour overrides saved by an
+  older version no longer apply. A terminal theme file from the themes folder now recolours
+  only the terminal; Deck's own chrome and editor stay on Dark or Light.
+
 ## 2.13.0
 
 - **Safer terminal paste and Markdown.** Pasted text can no longer break out of its protected
