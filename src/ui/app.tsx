@@ -239,6 +239,7 @@ import { lastSession, summarizeLastSession } from "../terminal/last-session-stor
 import type { WindowRecord } from "../lib/session-schema";
 import { discardLastSession, reopenLastSession } from "./last-session-actions";
 import { DesktopChrome } from "./desktop-chrome";
+import { AttentionSwitcher, BrowserSideSlot, DockSections, HunkQueue } from "./shell-mounts";
 import {
   boardClosesAfterResume,
   bootOpensTheBoard,
@@ -2680,6 +2681,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
               popover is `right: 0` and 320px wide, so it opens INSIDE the
               surface and the user types into something they cannot see. */}
           <BrowserSurface hidden={panelObscured()} onClose={closeBrowserTab} />
+          <BrowserSideSlot />
           {/* The Agent Board, on the stage the same way the other two are
               (spec §4.1) — its own component owns the mount condition, so it
               is testable without an `<App>` harness. `boardView` is built once
@@ -2737,6 +2739,8 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
               )}
             </DockPanel>
           ) : null}
+          <DockSections />
+          <HunkQueue />
           {boardOpen.value ? (
             <OpenBoard
               canBrowseSessions={sessionsSupported.value}
@@ -2870,6 +2874,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
               openTaskBoard();
             }}
           />
+          <AttentionSwitcher />
           <UsagePage open={usageOpen.value} onClose={closeUsage} />
           <SettingsScreen open={settingsOpen.value} onClose={closePanel} />
         </main>
