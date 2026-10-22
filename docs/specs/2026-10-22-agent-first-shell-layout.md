@@ -93,6 +93,14 @@ rail C and the Command-style Settings.
 - **LAY-8 Visual floor.** Stock preset controls per the parent specification's UI-1. Every
   composition-chosen text pair meets WCAG 2.2 AA in light and dark. The only motion that loops
   is the working mark and the needs-input ripple, within the design language's §1 budget.
+- **LAY-12 Base components.** The shell is built from one library in two tiers, shadcn style.
+  Primitives (in `src/ui/controls`) are generic, carry `variant` and `size`, take `class` for
+  layout only and colour only from theme tokens. Blocks (in `src/ui/blocks`) are Deck-aware
+  compositions of primitives for patterns used by two or more features: the agent row, the
+  foldable section header, the setting row, the selectable theme card and the panel surface;
+  data reaches them through props. A feature composes blocks and primitives and adds only its own
+  logic; it does not hand-build a pattern the library covers. Every primitive and block has a
+  gallery specimen listing its variants in light, dark and each theme state.
 - **LAY-9 Window sizes.** The layout holds at 1440×900 and at 1280×800 with the dock open.
 - **LAY-10 Regions.** The rail and the dock share one surface (the `sidebar` token) with no
   gap between them and the stage. The stage's panes sit flush, each on the terminal background
@@ -267,3 +275,4 @@ shapes. Ribbon's chip bar and Filmstrip, kept in the gallery as considered alter
 | AC-5 | Measured text contrast meets AA for every composition-chosen pair in both modes; stock pairs below it follow the parent specification's contrast decision.             |
 | AC-6 | No PTY, IPC, persistence or tab-materialization change. The affected design-language patterns (§27 rail, §28 footer, §35 spaces) are rewritten in the same change.     |
 | AC-7 | Rail and dock render on the same surface token; panes are flush with 1px borders, no gap and no radius, in every built-in theme. |
+| AC-8 | Every primitive and block has a specimen; new shell UI contains no raw control or hand-built row, section header, setting row, theme card or panel surface where the library has one (a policy test fails otherwise). |
