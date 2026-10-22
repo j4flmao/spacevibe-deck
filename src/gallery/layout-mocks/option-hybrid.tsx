@@ -9,12 +9,15 @@ import { BrowserPaired } from "./surfaces/browser/browser-option-d";
 import { TreeChanges } from "./surfaces/changes/changes-tree";
 import { diffFiles } from "./surfaces/diff/diff-data";
 import { DiffQueue } from "./surfaces/diff/diff-queue";
+import { DockIcon } from "./surfaces/dock/dock-parts";
 import { DockStacked } from "./surfaces/dock/dock-stacked";
+import { GlobalTool, type GlobalToolId } from "./surfaces/global/global-tools";
 
 type StageView =
   | { readonly kind: "panes" }
   | { readonly kind: "diff"; readonly agentId: string; readonly path?: string }
-  | { readonly kind: "browser"; readonly agentId: string };
+  | { readonly kind: "browser"; readonly agentId: string }
+  | { readonly kind: "global"; readonly tool: GlobalToolId };
 
 const PANES: StageView = { kind: "panes" };
 
@@ -28,7 +31,8 @@ function initialView(agentId: string): StageView {
  * The owner's surface picks composed into the inbox shell: the stacked-sections dock holds the
  * folder-tree Changes; pressing a file with a diff opens the hunk queue on the stage; the rail
  * footer's Browser opens the preview beside the focused agent's terminal. Each view goes back to
- * the panes through its own close (Esc, ⌘⇧D, ⌘⇧I); a view belongs to the agent it opened on.
+ * the panes through its own close (Esc, ⌘⇧H, ⌘⇧I); a view belongs to the agent it opened on. The
+ * rail footer's Usage and History are global, so they take the stage without an agent.
  */
 export function OptionHybrid({ initialFocus, overlay }: OptionProps) {
   const view = useSignal<StageView>(initialView(initialFocus));
@@ -55,9 +59,11 @@ export function OptionHybrid({ initialFocus, overlay }: OptionProps) {
       if (!event.metaKey || !event.shiftKey) return;
       const key = event.key.toLowerCase();
       // An open view closes itself on its own chord; this only opens.
-      if (key === "d" && view.value.kind !== "diff") openDiff(focused.current);
+      if (key === "h" && view.value.kind !== "diff") openDiff(focused.current);
       else if (key === "i" && view.value.kind !== "browser")
         show({ kind: "browser", agentId: focused.current });
+      else if (key === "u") show({ kind: "global", tool: "usage" });
+      else if (key === "y") show({ kind: "global", tool: "history" });
       else return;
       event.preventDefault();
     };
@@ -67,6 +73,8 @@ export function OptionHybrid({ initialFocus, overlay }: OptionProps) {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const globalOpen = (tool: GlobalToolId) =>
+    view.value.kind === "global" && view.value.tool === tool;
   const browserOpen = (agentId: string) =>
     view.value.kind === "browser" && view.value.agentId === agentId;
 
@@ -79,7 +87,10 @@ export function OptionHybrid({ initialFocus, overlay }: OptionProps) {
         stage: (agent) => {
           focused.current = agent.id;
           const current = view.value;
-          if (current.kind === "panes" || current.agentId !== agent.id) return null;
+          if (current.kind === "panes") return null;
+          if (current.kind === "global")
+            return <GlobalTool tool={current.tool} onClose={toPanes} />;
+          if (current.agentId !== agent.id) return null;
           return current.kind === "diff" ? (
             <DiffQueue
               key={`${agent.id}:${current.path ?? ""}`}
@@ -107,16 +118,38 @@ export function OptionHybrid({ initialFocus, overlay }: OptionProps) {
           />
         ),
         footer: (agent) => (
-          <ToolButton
-            label="Browser"
-            keys={["⌘", "⇧", "I"]}
-            pressed={browserOpen(agent.id)}
-            onClick={() => {
-              show(browserOpen(agent.id) ? PANES : { kind: "browser", agentId: agent.id });
-            }}
-          >
-            <Glyph icon={BrowserIcon} />
-          </ToolButton>
+          <>
+            <ToolButton
+              label="Token usage"
+              keys={["⌘", "⇧", "U"]}
+              pressed={globalOpen("usage")}
+              onClick={() => {
+                show(globalOpen("usage") ? PANES : { kind: "global", tool: "usage" });
+              }}
+            >
+              <DockIcon name="usage" />
+            </ToolButton>
+            <ToolButton
+              label="Session history"
+              keys={["⌘", "⇧", "Y"]}
+              pressed={globalOpen("history")}
+              onClick={() => {
+                show(globalOpen("history") ? PANES : { kind: "global", tool: "history" });
+              }}
+            >
+              <DockIcon name="history" />
+            </ToolButton>
+            <ToolButton
+              label="Browser"
+              keys={["⌘", "⇧", "I"]}
+              pressed={browserOpen(agent.id)}
+              onClick={() => {
+                show(browserOpen(agent.id) ? PANES : { kind: "browser", agentId: agent.id });
+              }}
+            >
+              <Glyph icon={BrowserIcon} />
+            </ToolButton>
+          </>
         ),
       }}
     />

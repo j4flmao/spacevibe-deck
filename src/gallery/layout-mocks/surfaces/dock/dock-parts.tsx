@@ -49,7 +49,7 @@ export interface ToolSpec {
 }
 
 export const TOOLS: readonly ToolSpec[] = [
-  { id: "changes", label: "Changes", keys: ["⌘", "⇧", "G"] },
+  { id: "changes", label: "Changes", keys: [] },
   { id: "files", label: "Files", keys: ["⌘", "⇧", "B"] },
   { id: "usage", label: "Usage", keys: ["⌘", "⇧", "U"] },
   { id: "history", label: "History", keys: ["⌘", "⇧", "Y"] },
@@ -287,20 +287,13 @@ export function HistoryList({ agent }: { readonly agent: MockAgent }) {
   );
 }
 
-function dollars(cost: string): number {
-  return Number.parseFloat(cost.replace("$", "")) || 0;
-}
-
 export function UsageFacts({ agent }: { readonly agent: MockAgent }) {
-  const { space } = placeOf(agent);
-  const spaceCost = AGENTS.filter((item) => item.spaceId === space.id).reduce(
-    (sum, item) => sum + dollars(item.cost),
-    0,
-  );
+  // The scanner reads Claude Code and Codex transcripts only, keyed by repository: every other
+  // agent has no usage, and two agents of one kind in a repo share their numbers.
+  const scanned = agent.kind === "claude" || agent.kind === "codex";
   const rows: readonly (readonly [string, string])[] = [
-    ["Tokens", agent.tokens],
-    ["Cost", agent.cost],
-    ["This space", `$${spaceCost.toFixed(2)}`],
+    ["Tokens in this repo", scanned ? agent.tokens : "—"],
+    ["Cost in this repo", scanned ? agent.cost : "—"],
     ["Running for", agent.since],
   ];
   return (

@@ -54,7 +54,7 @@ export function DiffStageShell({
   readonly agent: MockAgent;
   readonly review: Review;
   readonly label: string;
-  /** Set by a shell that owns the way back; Esc and ⌘⇧D then leave the diff through it. */
+  /** Set by a shell that owns the way back; Esc and ⌘⇧H then leave the diff through it. */
   readonly onClose?: () => void;
   readonly children: ComponentChildren;
 }) {
@@ -67,7 +67,7 @@ export function DiffStageShell({
         if (review.composing.value) review.discard();
         else if (onClose) onClose();
         else showDiff.value = false;
-      } else if (event.metaKey && event.shiftKey && event.key.toLowerCase() === "d") {
+      } else if (event.metaKey && event.shiftKey && event.key.toLowerCase() === "h") {
         event.preventDefault();
         if (onClose) onClose();
         else showDiff.value = !showDiff.value;
@@ -99,7 +99,7 @@ export function DiffStageShell({
           }}
         >
           {label}
-          <Kbd>⌘⇧D</Kbd>
+          <Kbd>⌘⇧H</Kbd>
         </Button>
       </div>
       <div className="flex min-h-0 flex-1">

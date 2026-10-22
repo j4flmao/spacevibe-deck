@@ -281,6 +281,11 @@ export function OptionInbox({
         }
         return;
       }
+      if (event.metaKey && event.shiftKey && event.key.toLowerCase() === "j") {
+        event.preventDefault();
+        dockOpen.value = !dockOpen.value;
+        return;
+      }
       if (!switcherOpen.value) return;
       if (event.key === "ArrowDown") move(1);
       else if (event.key === "ArrowUp") move(-1);
@@ -414,7 +419,7 @@ export function OptionInbox({
           </nav>
           <IconButton
             label={`Dock, ${checkout.changes.length} changed files`}
-            keys={["⌘", "⇧", "G"]}
+            keys={["⌘", "⇧", "J"]}
             pressed={dockOpen.value}
             onClick={() => {
               dockOpen.value = !dockOpen.value;

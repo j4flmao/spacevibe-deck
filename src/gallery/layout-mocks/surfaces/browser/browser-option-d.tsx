@@ -10,7 +10,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useSignal } from "@preact/signals";
 import { cn } from "cn";
-import { useEffect } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { Button } from "../../../../ui/controls/button";
 import { Input } from "../../../../ui/controls/input";
 import { Kbd, KbdGroup } from "../../../../ui/controls/kbd";
@@ -24,6 +24,8 @@ import { useBrowser } from "./browser-state";
 type Placement = "beside" | "stage" | "closed";
 
 /** Deck's zoom-pane chord: the preview expands the way any pane zooms over its tab. */
+/** Below this stage width (px) the preview stops sitting beside the terminal. */
+const NARROW_STAGE = 900;
 const EXPAND_KEYS = ["⌘", "⇧", "↵"];
 const OPEN_KEYS = ["⌘", "⇧", "I"];
 
@@ -50,7 +52,21 @@ export function BrowserPaired({
   const flipped = useSignal(false);
   const sent = useSignal<readonly TermLine[]>([]);
   const name = AGENT_NAME[agent.kind];
-  const stage = placement.value === "stage";
+  // The wrapper element swaps with the placement, so the effect re-observes on a change.
+  // Under NARROW_STAGE the terminal and the preview cannot share the stage: the preview takes
+  // it, and the agent chip in the toolbar is the way back to the terminal.
+  const frame = useRef<HTMLDivElement>(null);
+  const narrow = useSignal(false);
+  useLayoutEffect(() => {
+    const element = frame.current;
+    if (element === null) return;
+    const observer = new ResizeObserver(() => {
+      narrow.value = element.getBoundingClientRect().width < NARROW_STAGE;
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [narrow, placement.value]);
+  const stage = placement.value === "stage" || narrow.value;
   const close = () => {
     if (onClose) onClose();
     else placement.value = "closed";
@@ -102,7 +118,7 @@ export function BrowserPaired({
             variant="ghost"
             size="sm"
             aria-label={`Put the preview beside ${name}, ${STATE_LABEL[agent.state]}`}
-            onClick={() => (placement.value = "beside")}
+            onClick={() => (narrow.value ? close() : (placement.value = "beside"))}
           >
             <AgentLogo kind={agent.kind} className="size-3.5" />
             {name}
@@ -140,13 +156,15 @@ export function BrowserPaired({
           <Glyph icon={ArrowLeftRightIcon} />
         </ToolButton>
       )}
-      <ToolButton
-        label={stage ? `Beside ${name}` : "Expand to the stage"}
-        keys={EXPAND_KEYS}
-        onClick={() => (placement.value = stage ? "beside" : "stage")}
-      >
-        <Glyph icon={stage ? ArrowShrink01Icon : ArrowExpand01Icon} />
-      </ToolButton>
+      {narrow.value ? null : (
+        <ToolButton
+          label={stage ? `Beside ${name}` : "Expand to the stage"}
+          keys={EXPAND_KEYS}
+          onClick={() => (placement.value = stage ? "beside" : "stage")}
+        >
+          <Glyph icon={stage ? ArrowShrink01Icon : ArrowExpand01Icon} />
+        </ToolButton>
+      )}
       <ToolButton label="Close preview" keys={OPEN_KEYS} onClick={close}>
         <Glyph icon={Cancel01Icon} />
       </ToolButton>
@@ -166,10 +184,19 @@ export function BrowserPaired({
       <NativeView browser={browser} />
     </section>
   );
-  if (stage) return <div className="flex min-w-0 flex-1 flex-col">{preview}</div>;
+  if (stage) {
+    return (
+      <div ref={frame} className="flex min-w-0 flex-1 flex-col">
+        {preview}
+      </div>
+    );
+  }
 
   return (
-    <div className={cn("flex min-w-0 flex-1", flipped.value ? "flex-row-reverse" : "flex-row")}>
+    <div
+      ref={frame}
+      className={cn("flex min-w-0 flex-1", flipped.value ? "flex-row-reverse" : "flex-row")}
+    >
       {terminal}
       <div className="w-px shrink-0 bg-border" />
       {preview}
