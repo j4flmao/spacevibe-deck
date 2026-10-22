@@ -1,9 +1,10 @@
-# Agent-first shell layout (inbox rail and agent dock)
+# Agent-first shell layout (project rail and agent dock)
 
 Date: 2026-10-22
 Status: Direction under evaluation. The owner chose to explore a hybrid of two gallery mocks
-on 2026-10-22; nothing is accepted for production, and no layout decision below is final until
-the owner's eye review (AC-1). This specification does not claim shipped behavior.
+on 2026-10-22 and, after a rail-specific scout, picked rail option C (project-first) with its
+Organize menu the same day; nothing is accepted for production, and no layout decision below is
+final until the owner's eye review (AC-1). This specification does not claim shipped behavior.
 Parent: [Deck-wide shadcn and Base UI migration](2026-10-21-shadcn-base-ui-migration.md), which
 owns component technology, preset styling and the contrast floor. This record owns the shell
 layout only.
@@ -34,28 +35,46 @@ Three mocks were built on one shared fixture so they differ in layout only:
 
 | Option    | Shape                                                                                                  | Status                       |
 | --------- | ------------------------------------------------------------------------------------------------------ | ---------------------------- |
-| Inbox     | Rail grouped by what each agent needs; attention switcher on ⌘⇧A                                        | Base of the hybrid           |
+| Inbox     | Rail grouped by what each agent needs; attention switcher on ⌘⇧A                                        | Superseded as the rail by C  |
 | Ribbon    | No rail; agents as a chip row in the top bar; agent-scoped dock                                         | Dock taken into the hybrid   |
 | Filmstrip | Project column; stage keeps its split; every other agent as a text-snapshot card in a right column    | Not pursued for now          |
 
-The hybrid is Inbox with Ribbon's dock: `?option=inbox` (dock open), `?option=inbox&dock=0`
-(without it). Surface boards then compared options per functional surface
-(`?surface=dock|changes|diff|browser`). `?option=hybrid` composes the picks into the inbox
+The first hybrid was Inbox with Ribbon's dock: `?option=inbox` (dock open),
+`?option=inbox&dock=0` (without it). Surface boards then compared options per functional
+surface (`?surface=dock|changes|diff|browser|rail`). The rail board holds four options built
+from a scout of how thirteen reference apps build their sidebar: A flat inbox with lifecycle,
+B list with an Organize menu, C project-first, D compact with an icon rail. The owner picked C
+and asked for B's Organize menu on it (`?surface=rail&option=c`). `?option=hybrid` composes the picks into the inbox
 shell: the stacked-sections dock holding the folder-tree Changes, the hunk review queue on the
 stage, and the browser beside the focused agent's terminal (`&stage=diff|browser`).
 `?option=inbox` keeps Ribbon's tabbed dock for comparison.
 
 ## Requirements of the hybrid
 
-- **LAY-1 Agent rows, grouped by need.** One rail row per agent across every project, in four
-  sections: Needs you (failed, needs input), Unread (finished, not yet seen), Working, Quiet
-  (done, ended, idle; collapsed by default with a count). Inside a section rows keep a stable
-  order; only a state change moves a row.
-- **LAY-2 Row anatomy.** A state-mark column, the agent's logo, the agent's latest sentence
-  (at most two lines), and a quiet meta line `project / branch`. A needs-input row shows its
-  ask in place of the meta line. Time in state is right-aligned on every row.
-- **LAY-3 Project filter.** "All projects" or one project, as a menu at the top of the rail.
-  The project › checkout › session tree is no longer the primary navigation.
+- **LAY-1 Project-first list.** The rail lists projects, each folding over its agent rows. A
+  folded project speaks with its loudest agent (failed, needs input, working, unread) and a
+  count. Inside a project rows are pinned first, then newest first (or loudest first under the
+  Priority sort). Attention never rearranges the list; it is routed by the pill in LAY-3 and the
+  switcher in LAY-7.
+- **LAY-2 Row anatomy.** A state mark, the title (the user's name for the session, else the
+  agent's latest sentence; one line), then the agent's logo, a branch chip (the folder name for a
+  folder without git) and the time in state, right-aligned. Hover reveals pin, archive and a
+  more menu (Rename, Pin, Mark unread, Copy path, Copy branch, Open in Finder, Archive); the
+  same menu opens on right-click. Double-click or F2 renames in place (Esc cancels, empty
+  restores). Nothing uses a native `title` tooltip.
+- **LAY-3 Rail controls.**
+  - Search is fuzzy over title, branch and project; `/` focuses it and Esc clears it.
+  - The Organize menu groups By project (default), By status (Needs you, Unread, Working,
+    Quiet) or By time, sorts by Last updated or Priority, and toggles Show archived. Outside By
+    project each row names its project.
+  - The "+" menu offers New agent, New worktree (a repository select and a branch input) and
+    Open folder. A project's hover "+" starts an agent there, and its menu offers Move up, Move
+    down, Hide and Remove. Archived and Hidden are collapsed sections at the bottom.
+  - A "N need you" pill in the top bar jumps to the next such session and cycles (⌘⇧A while the
+    rail has focus).
+  - The footer holds Settings, Session history and a Tools menu (Explorer, Prompts, Browser,
+    Token usage with their chords).
+  - ↑/↓ move between rows, Enter selects.
 - **LAY-4 State vocabulary.** `asked` splits into needs input (`requested`, `warning`) and
   unread (`completed` not yet seen), each with its own mark. Explicit/inferred confidence
   stays visible. Derived from existing signals only: no new IPC, hook or store.
@@ -81,13 +100,20 @@ stage, and the browser beside the focused agent's terminal (`&stage=diff|browser
 Each decision carries the evidence from a second scout of seven more reference apps
 (13 in total, read 2026-10-22). The evidence informs; it decides nothing.
 
-- **OD-1 Tree or inbox.** The [navigation rail refresh](2026-10-06-navigation-rail-refresh.md)
-  chose the project-first tree over an attention-first rail on 2026-10-06. Accepting LAY-1/3
-  supersedes that decision; shipping the inbox as a second rail mode beside the tree is the
-  alternative.
-  _Reference evidence:_ 7 of 13 let the user switch between project and status grouping or
-  filter by status; 2 default to status sections; the rest default to a project or workspace
-  tree.
+- **OD-1 Tree or inbox.** _Decided by the owner, 2026-10-22:_ option C, the project-first
+  tree. The [navigation rail refresh](2026-10-06-navigation-rail-refresh.md)'s 2026-10-06
+  choice stands for the structure; what changes is the row (LAY-2), the roll-up on a folded
+  project, the pill and the Organize menu, whose By status grouping is the attention-first view
+  as an option rather than the structure.
+  _Reference evidence (first scout):_ 7 of 13 let the user switch between project and status
+  grouping or filter by status; 2 default to status sections; the rest default to a project or
+  workspace tree.
+  _Rail scout, 2026-10-22 (13 apps):_ the rows are a title plus one meta line, with detail in a
+  hover card; archive or done is the lifecycle action most apps weight (nine have it; two
+  auto-archive when a pull request merges); pin appears in about eleven; eight let the user
+  switch the grouping; about six put search in the rail; only one has an icon-rail collapse,
+  most hide the sidebar outright; footers are light and none shows a usage-limit line; none
+  except one has arrow-key navigation in the list.
 - **OD-2 ⌘⇧A.** Today it jumps straight to the pane that needs you (user guides document
   this). Options: the switcher replaces the jump, or a tap jumps and a hold opens the
   switcher. Either changes a documented shortcut.
@@ -143,6 +169,17 @@ Each decision carries the evidence from a second scout of seven more reference a
   the tab seam and is a fork.
   _Reference evidence:_ 6 of 13 point the digits at the agent or task list, 2 at tabs, 2 at
   panes or tool windows, and 3 bind none.
+- **OD-7 Rail features not carried.** Option C drops or defers what today's rail does, and
+  each needs the owner's yes or a place before it is built:
+  - the checkout level (a `worktree` or `folder` tag, a checkout menu with quick agents, Open
+    shell, New split here): C shows the branch on the row instead;
+  - the Create row's one-press Agent, Worktree and Folder buttons and dragging Agent onto a
+    pane: C has the "+" menu;
+  - closing a pane with ✕: C archives (reversible) and has no hard close;
+  - collapsing the rail to the 52px avatar column with a flyout, and ⌘B: not in C;
+  - dragging project headers to reorder: C has Move up and Move down;
+  - the footer's six buttons and the usage-limit line: C has Settings, History and a Tools
+    menu.
 
 ## Constraints found by research
 
@@ -210,8 +247,8 @@ shapes. Ribbon's chip bar and Filmstrip, kept in the gallery as considered alter
 
 | ID   | Required evidence                                                                                                                                                       |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| AC-1 | The owner has reviewed the hybrid mock by eye (screenshots or the running gallery) and answered OD-1 to OD-6.                                                           |
-| AC-2 | Section grouping and in-section order are a pure projection over existing tab views and attention state, with unit tests for grouping, order stability and the split. |
+| AC-1 | The owner has reviewed the hybrid mock by eye (screenshots or the running gallery) and answered OD-1 to OD-7.                                                           |
+| AC-2 | Grouping (project, status, time), the roll-up, pin and archive state and the in-group order are a pure projection over existing tab views and attention state, with unit tests for each grouping, order stability and the split. |
 | AC-3 | The dock follows the focused agent across spaces and projects, including a pane whose checkout differs from its tab's folder.                                            |
 | AC-4 | The switcher and ⌘⇧A behave as OD-2 decides, by keyboard and pointer; the user guides and keyboard-shortcut page match.                                                 |
 | AC-5 | Measured text contrast meets AA for every composition-chosen pair in both modes; stock pairs below it follow the parent specification's contrast decision.             |
