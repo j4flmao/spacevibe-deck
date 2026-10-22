@@ -39,7 +39,9 @@ Three mocks were built on one shared fixture so they differ in layout only:
 | Filmstrip | Project column; stage keeps its split; every other agent as a text-snapshot card in a right column    | Not pursued for now          |
 
 The hybrid is Inbox with Ribbon's dock: `?option=inbox` (dock open), `?option=inbox&dock=0`
-(without it).
+(without it). Surface boards then compared options per functional surface
+(`?surface=dock|changes|diff|browser`). The picked dock shape is `?surface=dock&option=c`;
+`?option=inbox` still mounts Ribbon's tabbed dock.
 
 ## Requirements of the hybrid
 
@@ -59,9 +61,11 @@ The hybrid is Inbox with Ribbon's dock: `?option=inbox` (dock open), `?option=in
   existing split tree. The bar above it is the breadcrumb `project / branch / space`, dropping
   the space crumb when it only repeats the project. Each agent pane keeps an identity header
   (logo, name, latest sentence).
-- **LAY-6 Agent-scoped dock.** A right column that follows the focused agent: its checkout's
-  Changes (status, path, +/−, total), an Ask block when it needs input, the other agents of its
-  space, and a Session tab (state, time, tokens, cost, PR). Toggled from the stage bar.
+- **LAY-6 Agent-scoped dock.** A right column that follows the focused agent, built as one
+  scroll of collapsible sections with nothing behind a tab: Ask when it needs input, its
+  checkout's Changes as a folder tree whose folders carry roll-up +/− counts, the other agents
+  of its space, Usage (tokens, cost, the space's cost, time running), Files and History.
+  Toggled from the stage bar.
 - **LAY-7 Attention switcher.** An overlay listing only agents in Needs you, Unread and
   Working, each with a text snapshot preview of its pane; ↑/↓ move, Enter focuses the agent,
   Esc closes. It takes over Mission Control's overview role, which is slated for removal.
@@ -101,11 +105,18 @@ Each decision carries the evidence from a second scout of seven more reference a
   _Reference evidence:_ defaults are split. Widths cluster at 295–340px. Every app has an
   explicit narrow-window rule: a sheet, a full/split/hidden cycle, an overflow menu, a minimum
   terminal width, or showing only the active session.
+  _Owner, 2026-10-22:_ open by default at a fixed 320px with no resize. Under 1360px the dock
+  becomes a 32px edge handle that opens it as a sheet over the stage with a scrim. The
+  browser's native view paints above every DOM layer, so while that sheet is open over a stage
+  holding the browser, the view must yield or hide, as it already yields to the dev-server
+  menu.
 - **OD-5 Where the rail footer's tools go.** Session history, Token usage, Explorer, Prompts,
   Browser and Settings (design language §28) are not placed in the mock beyond Settings.
   _Reference evidence:_ there is no consensus: sidebar header, sidebar footer, title bar, or a
   right-side tool strip, which is used by the two most tool-heavy apps. A command palette
   exists in nearly all.
+  _Owner, 2026-10-22:_ the global tools stay in the rail footer; the dock carries only the
+  focused agent's sections.
 - **OD-6 Space marks and ⌘1–9.** The mock's stage bar draws no space marks. Digits keep
   counting spaces unless the owner decides otherwise; routing them to rail rows goes through
   the tab seam and is a fork.
