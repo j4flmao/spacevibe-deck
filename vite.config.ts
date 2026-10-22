@@ -27,6 +27,10 @@ export default defineConfig(async () => ({
     minify: "terser",
   },
   test: {
+    // Bundles the Base UI controls once per run, with the React aliases applied, for the
+    // tests to import; Node would otherwise resolve Base UI's CommonJS `require("react")`
+    // to the real React (scripts/preset-controls-bundle.mjs).
+    globalSetup: ["./scripts/preset-controls-bundle.mjs"],
     server: {
       deps: {
         // `@preact/preset-vite` aliases react -> preact/compat through
