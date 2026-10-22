@@ -29,8 +29,8 @@ const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 /**
  * Whether a renderer-supplied value may reach `setTitleBarOverlay`: `#rrggbb`
- * and nothing else. That is all the renderer derives (presets, validated
- * colour overrides and `mixHex`), and it leaves out `#rrggbbaa`, which
+ * and nothing else. That is all the renderer sends (a theme declares only
+ * opaque `#rrggbb`), and it leaves out `#rrggbbaa`, which
  * Electron reads as AARRGGBB. A strict allowlist rather than a CSS parser —
  * the renderer is not the trust boundary, and a colour the OS cannot parse
  * falls back to system defaults instead of failing loudly.

@@ -2,7 +2,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { DEFAULT_SETTINGS } from "../settings/settings-schema";
+import { deriveChromeColors } from "../lib/derive-colors";
 import { BUILT_IN_THEMES } from "../settings/built-in-themes";
+import type { EditorKey, UiTokenKey } from "../settings/theme-schema";
 import { getTheme } from "../settings/themes";
 import { DECK_THEME_ID, EDITOR_LANGUAGES, languageForPath, monacoThemeFor } from "./editor-host";
 
@@ -165,18 +167,62 @@ describe("monacoThemeFor", () => {
     expect(light.base).toBe("vs");
   });
 
+  // Every Monaco token rule and editor colour, with the theme key it reads.
+  const RULES: readonly (readonly [string, EditorKey])[] = [
+    ["", "foreground"],
+    ["comment", "comment"],
+    ["string", "string"],
+    ["number", "number"],
+    ["keyword", "keyword"],
+    ["type", "type"],
+    ["type.identifier", "type"],
+    ["delimiter", "delimiter"],
+    ["tag", "tag"],
+    ["attribute.name", "attributeName"],
+    ["attribute.value", "attributeValue"],
+    ["regexp", "regexp"],
+    ["variable", "variable"],
+    ["variable.predefined", "variablePredefined"],
+    ["invalid", "invalid"],
+  ];
+  const EDITOR_COLORS: readonly (readonly [string, EditorKey])[] = [
+    ["editor.background", "background"],
+    ["editor.foreground", "foreground"],
+    ["editorCursor.foreground", "cursor"],
+    ["editor.selectionBackground", "selection"],
+    ["editor.lineHighlightBackground", "lineHighlight"],
+    ["editorLineNumber.foreground", "lineNumber"],
+    ["editorLineNumber.activeForeground", "lineNumberActive"],
+    ["editorIndentGuide.background1", "indentGuide"],
+    ["editorWhitespace.foreground", "indentGuide"],
+    ["editorGutter.background", "background"],
+  ];
+  const CHROME_COLORS: readonly (readonly [string, UiTokenKey])[] = [
+    ["editorWidget.background", "chrome-1"],
+    ["editorWidget.border", "chrome-2"],
+    ["input.background", "input-bg"],
+    ["scrollbarSlider.background", "chrome-2"],
+    ["diffEditor.unchangedRegionBackground", "chrome-1"],
+    ["diffEditor.unchangedRegionForeground", "text-muted"],
+    ["diffEditor.diagonalFill", "chrome-2"],
+    ["diffEditor.border", "chrome-2"],
+  ];
+
   it.each(BUILT_IN_THEMES)("paints the editor from $id's own editor group", (theme) => {
     const monaco = monacoThemeFor({ ...DEFAULT_SETTINGS, themeId: theme.id });
     expect(monaco.base).toBe(theme.type === "dark" ? "vs-dark" : "vs");
-    expect(monaco.colors["editor.background"]).toBe(theme.editor.background);
-    expect(monaco.colors["editor.selectionBackground"]).toBe(theme.editor.selection);
-    expect(monaco.colors["editorLineNumber.foreground"]).toBe(theme.editor.lineNumber);
-    expect(monaco.rules.find((rule) => rule.token === "keyword")?.foreground).toBe(
-      theme.editor.keyword.slice(1),
+    expect(monaco.rules.map((rule) => [rule.token, rule.foreground])).toEqual(
+      RULES.map(([token, key]) => [token, theme.editor[key].slice(1)]),
     );
-    expect(monaco.rules.find((rule) => rule.token === "comment")?.foreground).toBe(
-      theme.editor.comment.slice(1),
-    );
+    for (const [name, key] of EDITOR_COLORS) {
+      expect(monaco.colors[name], name).toBe(theme.editor[key]);
+    }
+    for (const [name, key] of CHROME_COLORS) {
+      expect(monaco.colors[name], name).toBe(theme.ui[key]);
+    }
+    const { tabActiveBg } = deriveChromeColors(theme);
+    expect(monaco.colors["scrollbarSlider.hoverBackground"]).toBe(tabActiveBg);
+    expect(monaco.colors["scrollbarSlider.activeBackground"]).toBe(tabActiveBg);
   });
 
   it("turns Monaco's scroll shadow off — DL-1.3 allows no shadows", () => {

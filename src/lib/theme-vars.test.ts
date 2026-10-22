@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { BUILT_IN_THEMES, DECK_DARK_THEME } from "../settings/built-in-themes";
 import { UI_TOKEN_KEYS, type Theme } from "../settings/theme-schema";
@@ -32,6 +33,15 @@ describe("applyThemeVars", () => {
     const written = recordProperties(DECK_DARK_THEME);
     expect(written.get("--yellow")).toBe(DECK_DARK_THEME.ui.yellow);
     expect(written.get("--status-unread")).toBe(DECK_DARK_THEME.ui.yellow);
+  });
+
+  it("publishes only properties the stylesheet declares a fallback for", () => {
+    // A theme key is a `:root` property name without its `--`; a key with no
+    // declaration there would publish a property nothing reads.
+    const tokens = readFileSync("src/styles/01-tokens.css", "utf8");
+    for (const key of UI_TOKEN_KEYS) {
+      expect(tokens, key).toMatch(new RegExp(`--${key}:`));
+    }
   });
 
   it.each(BUILT_IN_THEMES)("publishes every declared ui token of $id as itself", (theme) => {

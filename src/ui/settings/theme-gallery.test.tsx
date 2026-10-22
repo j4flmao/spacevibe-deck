@@ -124,6 +124,16 @@ describe("ThemeGallery", () => {
     expect(themeCards[themeCards.length - 1]?.textContent).toContain("Orange Mechanic");
   });
 
+  it("draws an imported theme's card on its own terminal ground", () => {
+    customThemes.value = [IMPORTED];
+
+    mount();
+
+    const stage = cards().at(-1)?.querySelector<HTMLElement>(".theme-mini__stage");
+    // #101014: the file's background, not the Deck Dark chrome it borrows.
+    expect(stage?.style.background).toBe("rgb(16, 16, 20)");
+  });
+
   it("selects a built-in theme by its id", () => {
     mount();
 

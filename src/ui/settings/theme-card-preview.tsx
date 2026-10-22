@@ -69,7 +69,9 @@ export function ThemeCardPreview({ theme }: { theme: Theme }) {
             />
           ))}
         </span>
-        <span class="theme-mini__stage" style={{ background: ui.bg }}>
+        {/* The terminal's own ground: the stage for a built-in, and the one
+            colour an imported terminal theme brings to a card. */}
+        <span class="theme-mini__stage" style={{ background: theme.terminal.background }}>
           <span class="theme-mini__line">
             <span class="theme-mini__dot" style={{ background: accent }} />
             <span class="theme-mini__bar theme-mini__bar--wide" style={{ background: accent }} />

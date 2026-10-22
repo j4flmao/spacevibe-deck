@@ -13,7 +13,9 @@ import { BUILT_IN_THEMES } from "./built-in-themes";
 import {
   ANSI_KEYS,
   EDITOR_KEYS,
+  EDITOR_SYNTAX_KEYS,
   isThemeColor,
+  type EditorKey,
   TERMINAL_KEYS,
   THEME_TYPES,
   UI_TOKEN_KEYS,
@@ -148,6 +150,46 @@ describe("contrast floors", () => {
         `${theme.id} ${key}`,
       ).toBeGreaterThanOrEqual(floor);
     }
+  });
+
+  it.each(BUILT_IN_THEMES)("keeps text legible on $id's selection", (theme) => {
+    const { editor, terminal } = theme;
+    expect(contrastRatio(terminal.foreground, terminal.selectionBackground)).toBeGreaterThanOrEqual(
+      TERMINAL_TEXT_FLOOR,
+    );
+    expect(contrastRatio(editor.foreground, editor.selection)).toBeGreaterThanOrEqual(
+      TERMINAL_TEXT_FLOOR,
+    );
+  });
+
+  // Every editor colour that draws text, on the editor's own ground.
+  it.each(BUILT_IN_THEMES)("holds $id's editor text to the text floor", (theme) => {
+    const { editor } = theme;
+    const inks = [
+      "foreground",
+      "lineNumber",
+      "lineNumberActive",
+      ...EDITOR_SYNTAX_KEYS,
+    ] as const satisfies readonly EditorKey[];
+    for (const key of inks) {
+      expect(
+        contrastRatio(editor[key], editor.background),
+        `${theme.id} editor.${key}`,
+      ).toBeGreaterThanOrEqual(TERMINAL_TEXT_FLOOR);
+    }
+  });
+
+  // The role inks mark state on chrome (a dot, a border, a count), so they are
+  // held to WCAG's 3:1 for non-text marks; `fg` is text and gets the text floor.
+  it.each(BUILT_IN_THEMES)("keeps $id's role inks visible on the stage", (theme) => {
+    const { ui } = theme;
+    const NON_TEXT_FLOOR = 3;
+    for (const key of ["accent", "red", "green", "yellow", "magenta", "cyan"] as const) {
+      expect(contrastRatio(ui[key], ui.bg), `${theme.id} ui.${key}`).toBeGreaterThanOrEqual(
+        NON_TEXT_FLOOR,
+      );
+    }
+    expect(contrastRatio(ui.fg, ui.bg)).toBeGreaterThanOrEqual(TERMINAL_TEXT_FLOOR);
   });
 });
 
