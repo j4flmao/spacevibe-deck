@@ -23,6 +23,7 @@ import { Input } from "../../../../ui/controls/input";
 import { Kbd, KbdGroup } from "../../../../ui/controls/kbd";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../../ui/controls/tooltip";
 import { AgentStateMark, TrafficLights } from "../../agent-parts";
+import { AGENTS } from "../../layout-fixture";
 import type { PanelOption } from "../surface-types";
 import { CreateMenu } from "./rail-option-c-create";
 import { FlatGroups, OrganizeMenu, flatGroups } from "./rail-option-c-organize";
@@ -60,7 +61,7 @@ function jumpToAttention(state: RailState) {
   });
 }
 
-function AttentionPill({ state }: { readonly state: RailState }) {
+function AttentionPill({ state, chord }: { readonly state: RailState; readonly chord: boolean }) {
   const count = attentionCount(state);
   if (count === 0) return null;
   return (
@@ -80,21 +81,31 @@ function AttentionPill({ state }: { readonly state: RailState }) {
       </TooltipTrigger>
       <TooltipContent>
         Next
-        <KbdGroup>
-          {["⌘", "⇧", "A"].map((key) => (
-            <Kbd key={key}>{key}</Kbd>
-          ))}
-        </KbdGroup>
+        {chord ? (
+          <KbdGroup>
+            {["⌘", "⇧", "A"].map((key) => (
+              <Kbd key={key}>{key}</Kbd>
+            ))}
+          </KbdGroup>
+        ) : null}
       </TooltipContent>
     </Tooltip>
   );
 }
 
-function Footer({ state }: { readonly state: RailState }) {
+function Footer({
+  onTool,
+  onSettings,
+}: {
+  readonly onTool: (label: string) => void;
+  readonly onSettings: () => void;
+}) {
   return (
     <div className="flex shrink-0 items-center justify-between border-t border-sidebar-border px-2 py-1.5">
       <Tooltip>
-        <TooltipTrigger render={<Button variant="ghost" size="icon" aria-label="Settings" />}>
+        <TooltipTrigger
+          render={<Button variant="ghost" size="icon" aria-label="Settings" onClick={onSettings} />}
+        >
           <HugeiconsIcon icon={Settings02Icon} strokeWidth={2} aria-hidden="true" />
         </TooltipTrigger>
         <TooltipContent>
@@ -113,7 +124,7 @@ function Footer({ state }: { readonly state: RailState }) {
                 variant="ghost"
                 size="icon"
                 aria-label="Session history"
-                onClick={() => state.say("History opens here")}
+                onClick={() => onTool("Session history")}
               />
             }
           >
@@ -135,7 +146,7 @@ function Footer({ state }: { readonly state: RailState }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" side="top" className="min-w-52">
             {TOOLS.map((tool) => (
-              <DropdownMenuItem key={tool.label} onClick={() => state.say(`${tool.label} opens`)}>
+              <DropdownMenuItem key={tool.label} onClick={() => onTool(tool.label)}>
                 <HugeiconsIcon icon={tool.icon} strokeWidth={2} aria-hidden="true" />
                 {tool.label}
                 <DropdownMenuShortcut>{tool.keys}</DropdownMenuShortcut>
@@ -152,8 +163,32 @@ function rowsIn(root: HTMLElement): HTMLElement[] {
   return Array.from(root.querySelectorAll<HTMLElement>("[data-thread],[data-project]"));
 }
 
-function RailC() {
-  const state = useRailState();
+export interface RailCProps {
+  /** The shell's focused agent: the rail selects it, unfolding its project. */
+  readonly focusId?: string;
+  /** Called when the user selects a session that exists in the fixture. */
+  readonly onFocus?: (id: string) => void;
+  /** Footer tools (history, usage, explorer, prompts, browser); the board shows a note. */
+  readonly onTool?: (label: string) => void;
+  /** Opens Settings; the board shows a note. */
+  readonly onSettings?: () => void;
+  /** Whether ⌘⇧A cycles attention here; a shell that owns the chord turns it off. */
+  readonly ownChord?: boolean;
+}
+
+export function RailC({ focusId, onFocus, onTool, onSettings, ownChord = true }: RailCProps) {
+  const state = useRailState((id) => {
+    if (AGENTS.some((agent) => agent.id === id)) onFocus?.(id);
+  });
+  const tool = onTool ?? ((label: string) => state.say(`${label} opens`));
+  useEffect(() => {
+    if (focusId === undefined || state.selectedId.value === focusId) return;
+    const thread = state.threads.value.find((item) => item.id === focusId);
+    if (thread) state.expand(thread.projectId);
+    state.selectedId.value = focusId;
+    // Only a change of the shell's focus syncs the rail.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId]);
   const root = useRef<HTMLElement>(null);
   const searchBox = useRef<HTMLDivElement>(null);
   const visible = state.projects.value.filter((item) => !item.hidden);
@@ -169,6 +204,7 @@ function RailC() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (!ownChord) return;
       if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.key.toLowerCase() !== "a") {
         return;
       }
@@ -219,7 +255,7 @@ function RailC() {
     >
       <div className={cn("flex h-10 shrink-0 items-center justify-between px-3", DRAG)}>
         <TrafficLights />
-        <AttentionPill state={state} />
+        <AttentionPill state={state} chord={ownChord} />
       </div>
       <div className="flex shrink-0 items-center gap-1 px-2 pb-1">
         <div ref={searchBox} className="relative min-w-0 flex-1">
@@ -292,7 +328,7 @@ function RailC() {
           </p>
         ) : null}
       </div>
-      <Footer state={state} />
+      <Footer onTool={tool} onSettings={onSettings ?? (() => state.say("Settings opens"))} />
     </aside>
   );
 }

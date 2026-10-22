@@ -45,7 +45,7 @@ function Section({
   const closed = folded.value[id];
   return (
     <section aria-label={title} className="border-b">
-      <h3 className="m-0 sticky top-0 z-10 bg-background">
+      <h3 className="m-0 sticky top-0 z-10 bg-sidebar">
         <button
           type="button"
           aria-expanded={!closed}
@@ -113,7 +113,7 @@ function Column({
     <aside
       aria-label={`${AGENT_NAME[agent.kind]} dock`}
       style={{ width: WIDTH }}
-      className={cn("flex shrink-0 flex-col border-l bg-background", className)}
+      className={cn("flex shrink-0 flex-col border-l bg-sidebar", className)}
     >
       <header className="flex h-10 shrink-0 items-center justify-between gap-2 border-b px-3">
         <AgentIdentity agent={agent} />

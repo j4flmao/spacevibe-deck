@@ -138,7 +138,7 @@ function freshThread(kind: AgentKind, project: RailProject, branch: string | nul
   } satisfies Thread;
 }
 
-export function useRailState() {
+export function useRailState(onSelect?: (id: string) => void) {
   const projects = useSignal<readonly RailProject[]>(
     PROJECTS.map((item) => ({ ...item, collapsed: false, hidden: false })),
   );
@@ -189,6 +189,7 @@ export function useRailState() {
     projectOf,
     select(id: string) {
       selectedId.value = id;
+      onSelect?.(id);
       const thread = threads.value.find((item) => item.id === id);
       if (thread?.state === "unchecked") patch(id, { state: "done" });
     },

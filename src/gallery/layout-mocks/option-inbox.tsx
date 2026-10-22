@@ -214,7 +214,7 @@ function Pane({
       onFocus={onFocus}
       className="relative flex min-h-0 min-w-0 flex-1 flex-col outline-none"
     >
-      <header className="flex h-8 shrink-0 items-center gap-2 px-3 text-xs">
+      <header className="flex h-8 shrink-0 items-center gap-2 border-b bg-card px-3 text-xs">
         <AgentLogo kind={agent.kind} className="size-3.5" />
         <span
           className={cn(
@@ -313,88 +313,99 @@ export function OptionInbox({
   const filterLabel = PROJECTS.find((item) => item.id === projectId.value)?.name ?? "All projects";
 
   return (
-    <div className="relative flex h-full overflow-hidden bg-background text-foreground">
-      <aside
-        aria-label="Agents"
-        className="flex w-[300px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
-      >
-        <div className={cn("flex h-10 shrink-0 items-center px-3", DRAG)}>
-          <TrafficLights />
+    <div className="relative flex h-full overflow-hidden bg-sidebar text-foreground">
+      {slots?.rail ? (
+        <div className="flex w-[300px] shrink-0 flex-col bg-sidebar">
+          {slots.rail(agentById(focusId.value), focusAgent)}
         </div>
-        <div className="flex shrink-0 items-center gap-1.5 px-2 pb-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="outline"
-                  className="min-w-0 flex-1 justify-between"
-                  aria-label={`Project filter: ${filterLabel}`}
-                />
-              }
-            >
-              <span className="truncate">{filterLabel}</span>
-              <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2} aria-hidden="true" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="min-w-56">
-              <DropdownMenuRadioGroup
-                value={projectId.value ?? "all"}
-                onValueChange={(value: string) => {
-                  projectId.value = value === "all" ? null : value;
-                }}
+      ) : (
+        <aside
+          aria-label="Agents"
+          className="flex w-[300px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
+        >
+          <div className={cn("flex h-10 shrink-0 items-center px-3", DRAG)}>
+            <TrafficLights />
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5 px-2 pb-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    className="min-w-0 flex-1 justify-between"
+                    aria-label={`Project filter: ${filterLabel}`}
+                  />
+                }
               >
-                <DropdownMenuRadioItem value="all">All projects</DropdownMenuRadioItem>
-                {PROJECTS.map((item) => (
-                  <DropdownMenuRadioItem key={item.id} value={item.id}>
-                    {item.name}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <IconButton label="New agent" keys={["⌘", "T"]}>
-            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} aria-hidden="true" />
-          </IconButton>
-        </div>
-        <nav aria-label="Agent inbox" className="min-h-0 flex-1 overflow-y-auto pb-2">
-          {SECTION_ORDER.map((section) => {
-            const items = agentsInSection(section, projectId.value);
-            if (items.length === 0) return null;
-            const quiet = section === "quiet";
-            const showRows = !quiet || quietOpen.value;
-            return (
-              <div key={section} className="pt-2">
-                <SectionHeader
-                  section={section}
-                  count={items.length}
-                  collapsible={quiet}
-                  open={quietOpen.value}
-                  onToggle={() => {
-                    quietOpen.value = !quietOpen.value;
-                  }}
+                <span className="truncate">{filterLabel}</span>
+                <HugeiconsIcon
+                  icon={ArrowDown01Icon}
+                  size={12}
+                  strokeWidth={2}
+                  aria-hidden="true"
                 />
-                {showRows
-                  ? items.map((agent) => (
-                      <InboxRow
-                        key={agent.id}
-                        agent={agent}
-                        selected={agent.id === focusId.value}
-                        onFocus={() => {
-                          focusId.value = agent.id;
-                        }}
-                      />
-                    ))
-                  : null}
-              </div>
-            );
-          })}
-        </nav>
-        <div className="flex h-10 shrink-0 items-center border-t border-sidebar-border px-2">
-          <IconButton label="Settings" keys={["⌘", ","]}>
-            <HugeiconsIcon icon={Settings02Icon} strokeWidth={2} aria-hidden="true" />
-          </IconButton>
-          {slots?.footer?.(focused, focusAgent)}
-        </div>
-      </aside>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="min-w-56">
+                <DropdownMenuRadioGroup
+                  value={projectId.value ?? "all"}
+                  onValueChange={(value: string) => {
+                    projectId.value = value === "all" ? null : value;
+                  }}
+                >
+                  <DropdownMenuRadioItem value="all">All projects</DropdownMenuRadioItem>
+                  {PROJECTS.map((item) => (
+                    <DropdownMenuRadioItem key={item.id} value={item.id}>
+                      {item.name}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <IconButton label="New agent" keys={["⌘", "T"]}>
+              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} aria-hidden="true" />
+            </IconButton>
+          </div>
+          <nav aria-label="Agent inbox" className="min-h-0 flex-1 overflow-y-auto pb-2">
+            {SECTION_ORDER.map((section) => {
+              const items = agentsInSection(section, projectId.value);
+              if (items.length === 0) return null;
+              const quiet = section === "quiet";
+              const showRows = !quiet || quietOpen.value;
+              return (
+                <div key={section} className="pt-2">
+                  <SectionHeader
+                    section={section}
+                    count={items.length}
+                    collapsible={quiet}
+                    open={quietOpen.value}
+                    onToggle={() => {
+                      quietOpen.value = !quietOpen.value;
+                    }}
+                  />
+                  {showRows
+                    ? items.map((agent) => (
+                        <InboxRow
+                          key={agent.id}
+                          agent={agent}
+                          selected={agent.id === focusId.value}
+                          onFocus={() => {
+                            focusId.value = agent.id;
+                          }}
+                        />
+                      ))
+                    : null}
+                </div>
+              );
+            })}
+          </nav>
+          <div className="flex h-10 shrink-0 items-center border-t border-sidebar-border px-2">
+            <IconButton label="Settings" keys={["⌘", ","]}>
+              <HugeiconsIcon icon={Settings02Icon} strokeWidth={2} aria-hidden="true" />
+            </IconButton>
+            {slots?.footer?.(focused, focusAgent)}
+          </div>
+        </aside>
+      )}
 
       <main className="flex min-w-0 flex-1 flex-col">
         <header className={cn("flex h-10 shrink-0 items-center gap-2 border-b px-3 text-xs", DRAG)}>
@@ -432,7 +443,9 @@ export function OptionInbox({
           </IconButton>
         </header>
         {stage != null ? (
-          <div className="flex min-h-0 flex-1">{stage}</div>
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden border-l bg-background">
+            {stage}
+          </div>
         ) : (
           <div
             className={cn(
@@ -444,8 +457,8 @@ export function OptionInbox({
               <div
                 key={agent.id}
                 className={cn(
-                  "flex min-h-0 min-w-0 flex-1",
-                  index > 0 && (space.split === "column" ? "border-t" : "border-l"),
+                  "flex min-h-0 min-w-0 flex-1 overflow-hidden bg-(--term-bg)",
+                  index > 0 && space.split === "column" ? "border-t" : "border-l",
                 )}
               >
                 <Pane

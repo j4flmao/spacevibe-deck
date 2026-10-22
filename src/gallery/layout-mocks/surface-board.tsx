@@ -88,6 +88,14 @@ export function SurfaceBoard({
     );
   }
 
+  if (shown?.frame === "overview") {
+    return (
+      <div className="h-full" data-surface={surface.id} data-surface-options={ids}>
+        {shown.render()}
+      </div>
+    );
+  }
+
   const columns = shown ? [shown] : surface.options;
   return (
     <div

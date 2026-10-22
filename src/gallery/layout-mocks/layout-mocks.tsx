@@ -1,37 +1,20 @@
 import { useSignal } from "@preact/signals";
-import type { ComponentType } from "preact";
 import { useLayoutEffect } from "preact/hooks";
 import { Button } from "../../ui/controls/button";
-import { ToggleGroup, ToggleGroupItem } from "../../ui/controls/toggle-group";
 import { TooltipProvider } from "../../ui/controls/tooltip";
 import { AGENTS, DEFAULT_FOCUS } from "./layout-fixture";
-import { OptionFilmstrip } from "./option-filmstrip";
 import { OptionHybrid } from "./option-hybrid";
-import { OptionInbox } from "./option-inbox";
-import type { OptionProps } from "./option-props";
-import { OptionRibbon } from "./option-ribbon";
 import { SurfaceBar, SurfaceBoard, surfaceById } from "./surface-board";
-
-const OPTIONS = [
-  { id: "hybrid", label: "Hybrid", view: OptionHybrid },
-  { id: "inbox", label: "Inbox", view: OptionInbox },
-  { id: "ribbon", label: "Ribbon", view: OptionRibbon },
-  { id: "filmstrip", label: "Filmstrip", view: OptionFilmstrip },
-] as const satisfies readonly { id: string; label: string; view: ComponentType<OptionProps> }[];
-type OptionId = (typeof OPTIONS)[number]["id"];
 
 /**
  * URL contract, so every capture is reproducible:
- * `?option=hybrid|inbox|ribbon|filmstrip&mode=dark|light&overlay=<name>&focus=<agent id>&bare=1`;
- * the hybrid also takes `&stage=diff|browser`.
- * `?surface=<id>&option=<a|b|c>` opens a surface board instead (no `option` compares panels).
- * `bare=1` hides the switcher for screenshots.
+ * `?mode=dark|light&overlay=<name>&focus=<agent id>&bare=1` opens the overview (the owner's
+ * picks composed into one shell); it also takes `&stage=diff|browser`.
+ * `?surface=<id>[&option=<id>]` opens a surface board instead.
+ * `bare=1` hides the floating controls for screenshots.
  */
 export function LayoutMocks() {
   const params = new URLSearchParams(window.location.search);
-  const option = useSignal<OptionId>(
-    OPTIONS.find((item) => item.id === params.get("option"))?.id ?? "hybrid",
-  );
   const dark = useSignal(params.get("mode") !== "light");
   const focusParam = params.get("focus");
   const initialFocus = AGENTS.some((agent) => agent.id === focusParam)
@@ -42,24 +25,27 @@ export function LayoutMocks() {
   const surface = useSignal<string | null>(surfaceById(params.get("surface"))?.id ?? null);
   const surfaceOption = useSignal<string | null>(surface.value ? params.get("option") : null);
 
+  // The overview and the Settings board own the theme (the theme engine reads `?mode=`); the
+  // other boards compare options under one plain light or dark class.
+  const themed = !surface.value || surface.value === "settings";
   useLayoutEffect(() => {
-    document.documentElement.classList.toggle("dark", dark.value);
-    document.documentElement.style.colorScheme = dark.value ? "dark" : "light";
+    if (!themed) {
+      document.documentElement.classList.toggle("dark", dark.value);
+      document.documentElement.style.colorScheme = dark.value ? "dark" : "light";
+    }
     const url = new URL(window.location.href);
-    url.searchParams.set("mode", dark.value ? "dark" : "light");
+    if (!themed) url.searchParams.set("mode", dark.value ? "dark" : "light");
     if (surface.value) {
       url.searchParams.set("surface", surface.value);
       if (surfaceOption.value) url.searchParams.set("option", surfaceOption.value);
       else url.searchParams.delete("option");
     } else {
       url.searchParams.delete("surface");
-      url.searchParams.set("option", option.value);
+      url.searchParams.delete("option");
     }
     window.history.replaceState(null, "", url);
-  }, [dark.value, option.value, surface.value, surfaceOption.value]);
+  }, [dark.value, surface.value, surfaceOption.value, themed]);
   const board = surfaceById(surface.value);
-
-  const View = OPTIONS.find((item) => item.id === option.value)?.view ?? OptionInbox;
 
   return (
     <TooltipProvider>
@@ -67,7 +53,7 @@ export function LayoutMocks() {
         {board ? (
           <SurfaceBoard key={board.id} surface={board} optionId={surfaceOption.value} />
         ) : (
-          <View key={option.value} initialFocus={initialFocus} overlay={overlay} />
+          <OptionHybrid initialFocus={initialFocus} overlay={overlay} />
         )}
       </div>
       {bare ? null : (
@@ -84,31 +70,18 @@ export function LayoutMocks() {
                 surfaceOption.value = id;
               }}
             />
-          ) : (
-            <ToggleGroup
-              aria-label="Layout option"
-              value={[option.value]}
-              onValueChange={(next: unknown[]) => {
-                const picked = OPTIONS.find((item) => item.id === next[0]);
-                if (picked) option.value = picked.id;
+          ) : null}
+          {themed ? null : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                dark.value = !dark.value;
               }}
             >
-              {OPTIONS.map((item) => (
-                <ToggleGroupItem key={item.id} value={item.id} size="sm">
-                  {item.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
+              {dark.value ? "Light" : "Dark"}
+            </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              dark.value = !dark.value;
-            }}
-          >
-            {dark.value ? "Light" : "Dark"}
-          </Button>
         </div>
       )}
     </TooltipProvider>

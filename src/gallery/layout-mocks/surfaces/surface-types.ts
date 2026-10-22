@@ -32,7 +32,13 @@ export interface ShellOption extends OptionBase {
   readonly dock?: "open" | "closed";
 }
 
-export type SurfaceOption = PanelOption | ShellOption;
+/** Rendered full board over the whole overview: the option brings its own panel on top of it. */
+export interface OverviewOption extends OptionBase {
+  readonly frame: "overview";
+  readonly render: () => ComponentChildren;
+}
+
+export type SurfaceOption = PanelOption | ShellOption | OverviewOption;
 
 export interface SurfaceSpec {
   readonly id: string;
