@@ -273,6 +273,6 @@ shapes. Ribbon's chip bar and Filmstrip, kept in the gallery as considered alter
 | AC-3 | The dock follows the focused agent across spaces and projects, including a pane whose checkout differs from its tab's folder.                                            |
 | AC-4 | The switcher and ⌘⇧A behave as OD-2 decides, by keyboard and pointer; the user guides and keyboard-shortcut page match.                                                 |
 | AC-5 | Measured text contrast meets AA for every composition-chosen pair in both modes; stock pairs below it follow the parent specification's contrast decision.             |
-| AC-6 | No PTY, IPC, persistence or tab-materialization change. The affected design-language patterns (§27 rail, §28 footer, §35 spaces) are rewritten in the same change.     |
+| AC-6 | No PTY, IPC, persistence or tab-materialization change. The affected design-language patterns (§11 settings, §18.7 and §18.12 regions and panes, §19 dock, §24 theme gallery, §27 rail, §28 footer, §35 spaces) are rewritten in the same change; no invariant (DL §1-4, §7, §20, §21) changes except through the approved theme rewrite.     |
 | AC-7 | Rail and dock render on the same surface token; panes are flush with 1px borders, no gap and no radius, in every built-in theme. |
 | AC-8 | Every primitive and block has a specimen; new shell UI contains no raw control or hand-built row, section header, setting row, theme card or panel surface where the library has one (a policy test fails otherwise). |
