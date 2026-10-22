@@ -31,10 +31,14 @@ cites it.
 
 ## 1. Hard constraints (resource frugality)
 
-- **DL-1.1** Chrome adds no runtime dependency beyond CSS and Preact. One exception: one icon
+- **DL-1.1** Chrome adds no runtime dependency beyond CSS and Preact. Two exceptions. One icon
   package, `@phosphor-icons/react`, supplies every functional icon (§14). It is reached
   through the `preact/compat` alias and tree-shakes to the icons imported by name
-  (`sideEffects: false`). A second icon package is not covered.
+  (`sideEffects: false`). A second icon package is not covered: the preset's Hugeicons are
+  not shipped, and the controls draw their glyphs through `DeckIcon`. The other is the Base UI
+  preset (DL-1.6): Tailwind, Base UI, `cn`, `class-variance-authority`, `tw-animate-css`, the
+  stylesheet of `shadcn` and the `@fontsource-variable/inter` font files. All are
+  `devDependencies` that Vite bundles into the renderer, and none loads from a network.
 - **DL-1.2** Chrome animates only `transform`, `opacity`, `color`, `border-color` and
   `background-color`, for at most 300ms, with no infinite loop and nothing moving while the
   user is idle. Three scoped exceptions loop, each only while its state exists, each with
@@ -50,15 +54,44 @@ cites it.
   No other surface inherits them. Panes draw no top-edge activity motion (DL-18.11).
   Why: an unread or live state exists precisely while nobody is watching, which is the
   only case that pays for a loop.
+  Inside the preset boundary (DL-1.6) the controls move as the preset draws them:
+  `transition-all` on state changes and the `tw-animate-css` enter and exit of popups (fade,
+  zoom, slide), each 100–150ms, never looping and never while idle. Reduced motion shortens
+  all of it to 0.01ms by scope.
 - **DL-1.3** No blurred or offset `box-shadow`, no `filter`, no `backdrop-filter`, no
   `requestAnimationFrame` loop and no timer that exists only to drive visuals. Depth comes
   from background steps and 1px lines; `box-shadow: inset 0 0 0 1px <color>` is a hairline
   and allowed. One exception: `.modal-scrim` uses `backdrop-filter` (DL-29.5), because its
-  layer exists only while a modal is open.
+  layer exists only while a modal is open. Inside the preset boundary (DL-1.6) popups carry
+  the preset's `shadow-md` and `ring-1`, and the dialog's overlay blurs what is behind it.
 - **DL-1.4** Native inputs (`<select>`, `<input type="color">`) laid invisibly over a styled
-  pill are preferred to custom pickers: no JS, no extra DOM, native accessibility.
+  pill are preferred to custom pickers: no JS, no extra DOM, native accessibility. Inside the
+  preset boundary (DL-1.6) the picker is the preset's Base UI `Select`.
 - **DL-1.5** `prefers-reduced-motion: reduce` disables chrome transitions; panels appear
   instantly.
+- **DL-1.6** The Base UI preset is a second system with a fence round it. A surface that carries
+  `.ui-preset`, and the shared controls of
+  [`preset-controls.ts`](../src/ui/controls/preset-controls.ts) with the popups they portal
+  (each control root has a `data-slot`), are drawn by the preset
+  ([`preset.css`](../src/ui/preset.css), generated from preset `b1a09kDGF`): its tokens,
+  Inter, its radius, shadows and motion. Every other surface keeps the rules in this document
+  unchanged. The sections below name what the fence relaxes: DL-1.1 to DL-1.4, DL-2.1,
+  DL-4.1, DL-14.3, DL-20.1 and DL-21.3.
+  - `.dark` on the root element is the preset's dark mode, so portals follow it.
+  - The preset's tokens never alias a chrome token, and chrome CSS never reads one (UI-2); the
+    preset's accent is declared `--ui-accent` because `--accent` is the chrome's.
+  - A control takes `className`, not `class`; a wrapper is made with `withRef`
+    ([`with-ref.ts`](../src/ui/controls/with-ref.ts)) because Preact strips `ref` from a
+    function component's props.
+  - Contrast on a migrated surface is WCAG 2.2 AA, 4.5:1 for text and 3:1 for the boundary of a
+    control, in both modes. A few stock pairs fall short and are named, each with where it
+    appears, in [`ui-preset-contrast.test.ts`](../scripts/ui-preset-contrast.test.ts); DL-3.5's
+    floors stay the chrome's.
+  - [`ui-preset-boundary.test.ts`](../scripts/ui-preset-boundary.test.ts) holds the fence: no
+    global rule, no custom property or utility class the chrome also uses, no real React in the
+    production bundle.
+  Why: the migration replaces the chrome's look one surface at a time; until a surface moves it
+  must not change by a pixel, and after it moves it must not be half Deck, half preset.
 
 ## 2. Tokens
 
@@ -87,7 +120,8 @@ only the pre-JS fallbacks.
 | `--duration` / `--ease`                                                                       | chrome state-change motion (DL-20.2)         | fixed   |
 
 - **DL-2.1** Components never hardcode a color. Every color is a token, or comes from the
-  live theme object (a swatch previewing a theme's own colors).
+  live theme object (a swatch previewing a theme's own colors). Inside the preset boundary
+  (DL-1.6) the tokens are the preset's, not the theme's.
 - **DL-2.2** The theme drives all chrome: switching theme restyles everything with no
   component change. A theme declares every surface, ink and text tone itself, and chrome
   reads only the theme, never a theme id or a setting, so the gallery, the editor host and a
@@ -160,7 +194,9 @@ only the pre-JS fallbacks.
   [`toFontStack`](../src/terminal/pane.ts); no chrome token reads it, and `--board-font`
   never does either. One exception in chrome: the launch page's command preview (DL-32.6)
   prints the exact command in `--board-font`, because a shell line's flags, quotes and spaces
-  must read exactly as they will run.
+  must read exactly as they will run. Inside the preset boundary (DL-1.6) the typeface is the
+  preset's Inter, bundled with the app, and the sizes are the controls' own (`text-xs`, 0.625rem
+  for badges and keys); `--ui-font` and the DL-4.4 ladder do not reach it.
 - **DL-4.2** Values use `font-variant-numeric: tabular-nums` so changing numbers do not
   jitter.
 - **DL-4.3** No `text-transform: uppercase`, no all-caps spelling used as styling and no
@@ -233,7 +269,8 @@ only the pre-JS fallbacks.
   of 28px or less at `--radius-control` without a matching width; a control whose height
   comes from padding is held by review.
   Why: on a 24px box a 10px corner is most of the half-height and the control reads as a
-  pill.
+  pill. Inside the preset boundary (DL-1.6) the radius is the preset's `--radius` and its
+  derived steps (`rounded-md`, `rounded-lg`, `rounded-full`), and the five roles do not apply.
 - **DL-20.2** One motion pair for chrome state change: `--duration` (150ms) and `--ease`
   (`cubic-bezier(0.4, 0, 0.2, 1)`). The slide-over's 0.28s stays inside DL-1.2's 300ms.
 - **DL-20.3** Type sizes are not a numeric scale here; DL-4.4 is their only authority.
@@ -257,7 +294,9 @@ only the pre-JS fallbacks.
   value. Why: a hover that paints "selected" tells the user they chose something they did
   not.
 - **DL-21.3** Focus-visible is a 2px `--accent` outline that composes with either wash.
-  Inside `.settings-screen` the outline is `--text-muted` (DL-3.7).
+  Inside `.settings-screen` the outline is `--text-muted` (DL-3.7). Inside the preset boundary
+  (DL-1.6) a control draws its own indicator: a 2px ring in the preset's `--ring`, solid and
+  inset, so a neighbour or a clipping parent never hides it.
 - **DL-21.4** Disabled is `--text-faint` on the unchanged surface.
 - **DL-21.5** State changes use DL-20.2's `--duration` / `--ease` and only DL-1.2's
   properties. Reduced motion is handled by scope (§9).
@@ -488,7 +527,8 @@ Functional icons come from one package, `@phosphor-icons/react`, drawn through o
   (`src/ui/controls/deck-icon.tsx`) the only place its presentation is set: `color="currentColor"`,
   the weight, `aria-hidden`, `focusable="false"` and the unconditional `deck-icon` class. Icons are
   imported by name; nothing else authors an `<svg>` and no glyph character stands in for an
-  action (`scripts/icon-system.test.ts`).
+  action (`scripts/icon-system.test.ts`). The preset's controls draw their chevrons, check
+  marks and close glyphs through `DeckIcon` too.
   - Weight is `bold` (24/256, about 1.2px) for every icon and `fill` for icons with a body whose
     silhouette survives filling: folders, files, `Robot`, `Gear`, `Trash`, `TerminalWindow`,
     `ChatText`, `ClipboardText`, `PaperPlaneTilt`, the pins, `Play`, `Stop`, `Gauge`,
@@ -513,7 +553,9 @@ Functional icons come from one package, `@phosphor-icons/react`, drawn through o
   never the icon.
 - **DL-14.3** CSS does not set `width`, `height`, `fill`, `stroke` or `stroke-width` on an icon:
   those declarations beat SVG attributes and silently disable DL-14.1, and a stray `fill` erases
-  the icon. Colour is `color`, reaching the icon through `currentColor`.
+  the icon. Colour is `color`, reaching the icon through `currentColor`. Inside the preset
+  boundary (DL-1.6) a control sizes the icons it holds (`[&_svg]:size-3.5`), which is the one
+  place CSS sets an icon's size; the `size` attribute stays as the fallback.
 - **DL-14.4** Icon-only controls are for familiar, repeated actions that carry a hover tooltip
   (close, add, split, next). Consequential or rare actions keep their word beside the icon:
   Restore Defaults reads `reset`, the Open Board's button reads `Open Folder…`.
