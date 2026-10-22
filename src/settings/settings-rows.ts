@@ -72,7 +72,6 @@ export const SETTING_CONTROLS: Readonly<Record<SettingKey, SettingControl>> = {
   fontFamily: { kind: "menu", source: "fonts" },
   fontSize: FONT_SIZE_STEPPER,
   themeId: { kind: "theme" },
-  colorOverrides: NONE,
   focusExpand: NONE,
   showPaneBar: SWITCH,
   showStatusBar: SWITCH,

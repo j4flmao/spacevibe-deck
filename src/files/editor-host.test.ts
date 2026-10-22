@@ -2,7 +2,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { DEFAULT_SETTINGS } from "../settings/settings-schema";
-import { resolveTheme } from "../settings/themes";
+import { BUILT_IN_THEMES } from "../settings/built-in-themes";
+import { getTheme } from "../settings/themes";
 import { DECK_THEME_ID, EDITOR_LANGUAGES, languageForPath, monacoThemeFor } from "./editor-host";
 
 describe("the enumerated language set", () => {
@@ -160,19 +161,22 @@ describe("monacoThemeFor", () => {
   });
 
   it("follows a light theme's base", () => {
-    const light = monacoThemeFor({
-      ...DEFAULT_SETTINGS,
-      colorOverrides: { background: "#ffffff", foreground: "#1a1a1a" },
-    });
+    const light = monacoThemeFor({ ...DEFAULT_SETTINGS, themeId: "deck-light" });
     expect(light.base).toBe("vs");
   });
 
-  it("follows a user's color overrides", () => {
-    const custom = monacoThemeFor({
-      ...DEFAULT_SETTINGS,
-      colorOverrides: { background: "#101010" },
-    });
-    expect(custom.colors["editor.background"]).toBe("#101010");
+  it.each(BUILT_IN_THEMES)("paints the editor from $id's own editor group", (theme) => {
+    const monaco = monacoThemeFor({ ...DEFAULT_SETTINGS, themeId: theme.id });
+    expect(monaco.base).toBe(theme.type === "dark" ? "vs-dark" : "vs");
+    expect(monaco.colors["editor.background"]).toBe(theme.editor.background);
+    expect(monaco.colors["editor.selectionBackground"]).toBe(theme.editor.selection);
+    expect(monaco.colors["editorLineNumber.foreground"]).toBe(theme.editor.lineNumber);
+    expect(monaco.rules.find((rule) => rule.token === "keyword")?.foreground).toBe(
+      theme.editor.keyword.slice(1),
+    );
+    expect(monaco.rules.find((rule) => rule.token === "comment")?.foreground).toBe(
+      theme.editor.comment.slice(1),
+    );
   });
 
   it("turns Monaco's scroll shadow off — DL-1.3 allows no shadows", () => {
@@ -182,20 +186,16 @@ describe("monacoThemeFor", () => {
   it("washes the diff from the live theme's own green and red, never fixed hex", () => {
     // 12% of 255 is 31 (0x1f), 25% is 64 (0x40).
     for (const themeId of ["deck-dark", "deck-light"]) {
-      const settings = { ...DEFAULT_SETTINGS, themeId, colorOverrides: {} };
-      const { green, red } = resolveTheme(settings);
+      const settings = { ...DEFAULT_SETTINGS, themeId };
+      const { green, red } = getTheme(themeId).ui;
       const colors = monacoThemeFor(settings).colors;
       expect(colors["diffEditor.insertedLineBackground"]).toBe(`${green}1f`.toLowerCase());
       expect(colors["diffEditor.removedLineBackground"]).toBe(`${red}1f`.toLowerCase());
       expect(colors["diffEditor.insertedTextBackground"]).toBe(`${green}40`.toLowerCase());
       expect(colors["diffEditor.removedTextBackground"]).toBe(`${red}40`.toLowerCase());
     }
-    const dark = monacoThemeFor({ ...DEFAULT_SETTINGS, themeId: "deck-dark", colorOverrides: {} });
-    const light = monacoThemeFor({
-      ...DEFAULT_SETTINGS,
-      themeId: "deck-light",
-      colorOverrides: {},
-    });
+    const dark = monacoThemeFor({ ...DEFAULT_SETTINGS, themeId: "deck-dark" });
+    const light = monacoThemeFor({ ...DEFAULT_SETTINGS, themeId: "deck-light" });
     expect(dark.colors["diffEditor.insertedLineBackground"]).not.toBe(
       light.colors["diffEditor.insertedLineBackground"],
     );

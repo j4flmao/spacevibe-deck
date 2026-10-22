@@ -64,12 +64,6 @@ export const SETTINGS_REGISTRY: Readonly<Record<keyof Settings, SettingEntry>> =
     label: "Color mode",
     keywords: ["theme", "dark", "light", "palette"],
   },
-  colorOverrides: {
-    page: null,
-    scope: "preference",
-    label: "Color overrides",
-    keywords: ["background", "cursor", "selection"],
-  },
   focusExpand: { page: null, scope: "layout", label: "Expand focused pane", keywords: [] },
   showPaneBar: {
     page: "appearance",

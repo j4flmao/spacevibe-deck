@@ -259,8 +259,9 @@ export function createPane(
     // No minimumContrastRatio on purpose: it rewrites *every* color, so an
     // agent TUI's deliberately dim grays get pulled up to near-white and the
     // information hierarchy flattens (SGR 2 `dim` stops reading as dim), on
-    // top of a per-cell contrast computation in the render path. A theme
-    // whose ANSI colors are too dark is fixed in `resolveTheme`, not here.
+    // top of a per-cell contrast computation in the render path. A theme's
+    // ANSI colours meet their floors in the theme itself
+    // (`built-in-themes.test.ts`), not here.
     //
     // A pane built for an adoption starts at the source's capture geometry, so
     // nothing has to resize while the route is still `Transferring`.

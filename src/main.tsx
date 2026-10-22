@@ -33,7 +33,7 @@ async function main(): Promise<void> {
     initLogo(),
     // The themes folder has to be scanned at boot, not when Settings first
     // opens: `themeId` persists a `file:` id across launches, and until the
-    // scan lands `getPreset` can only answer with the built-in fallback.
+    // scan lands `getTheme` can only answer with the built-in fallback.
     //
     // Awaited here with the rest of boot, BEFORE `render()`, on purpose:
     // letting it finish after first paint would flash the fallback theme on

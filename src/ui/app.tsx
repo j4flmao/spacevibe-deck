@@ -35,7 +35,7 @@ import { BUILT_IN_PRESET, type Preset } from "../lib/preset-schema";
 import { resolveInheritedCwds } from "../terminal/tab-materialize";
 import type { DockTab } from "../settings/settings-schema";
 import { agentOptions, agentProcessMatchers, probeNames } from "../lib/agent-catalog";
-import { resolveTheme } from "../settings/themes";
+import { activeTheme } from "../settings/themes";
 import { isShortcutAction } from "../terminal/keymap";
 import { createTabManager, type TabManager } from "../terminal/tab-manager";
 import { activeTabIndex, tabViews } from "../terminal/tabs-store";
@@ -1091,7 +1091,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
   useSignalEffect(() => {
     const current = settings.value;
     tabsRef.current?.applySettings(current);
-    applyThemeVars(document.documentElement.style, resolveTheme(current));
+    applyThemeVars(document.documentElement.style, activeTheme(current));
   });
 
   /**

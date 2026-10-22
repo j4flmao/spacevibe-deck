@@ -62,6 +62,15 @@ describe("mergeSettings", () => {
     ).toEqual({ fontSize: 15 });
   });
 
+  it("drops the colour overrides the explicit theme model retired", () => {
+    expect(
+      mergeSettings(
+        { themeId: "tokyo-night", colorOverrides: { background: "#101014" } },
+        { fontSize: 15 },
+      ),
+    ).toEqual({ themeId: "tokyo-night", fontSize: 15 });
+  });
+
   it("keeps unknown keys that are not retired", () => {
     // A key written by a newer Deck must survive a downgrade — only NAMED
     // retirees are dropped.

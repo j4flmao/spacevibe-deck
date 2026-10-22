@@ -27,13 +27,6 @@ import {
   type KeybindingOverrides,
 } from "../lib/keybindings";
 
-export interface TerminalColors {
-  background: string;
-  foreground: string;
-  cursor: string;
-  selectionBackground: string;
-}
-
 /** `left` = workspace sidebar (default), `top` = the classic horizontal bar. */
 export type TabBarPosition = "top" | "left";
 
@@ -51,7 +44,6 @@ export interface Settings {
   fontFamily: string;
   fontSize: number;
   themeId: string;
-  colorOverrides: Partial<TerminalColors>;
   focusExpand: boolean;
   showPaneBar: boolean;
   /**
@@ -221,18 +213,15 @@ export const SCROLLBACK_CHOICES = [1000, 5000, 10_000, 50_000, 100_000] as const
 
 export const FONT_FALLBACK = "Menlo, Monaco, monospace";
 
-export const COLOR_KEYS = ["background", "foreground", "cursor", "selectionBackground"] as const;
-
 export const DEFAULT_SETTINGS: Settings = {
   fontFamily: "SF Mono",
   fontSize: 13,
   // A NEW install only. Written as a literal rather than imported from
   // `themes.ts` on purpose — that module imports this one for the `Settings`
   // type, and closing the loop would make the schema depend on the palette
-  // data it is supposed to validate independently. Every stored id, including
-  // the four upstream palettes and any imported file, still validates.
+  // data it is supposed to validate independently. Every stored id still
+  // validates; one that no theme answers to falls back where it is resolved.
   themeId: "deck-dark",
-  colorOverrides: {},
   focusExpand: false,
   showPaneBar: false,
   showStatusBar: false,
@@ -300,16 +289,10 @@ export function clampDockWidth(width: number): number {
   return Math.min(DOCK_WIDTH_MAX, Math.max(DOCK_WIDTH_MIN, Math.round(width)));
 }
 
-const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
-
 const TAB_BAR_POSITIONS: readonly TabBarPosition[] = ["top", "left"];
 
 function isTabBarPosition(value: unknown): value is TabBarPosition {
   return TAB_BAR_POSITIONS.includes(value as TabBarPosition);
-}
-
-export function isHexColor(value: unknown): value is string {
-  return typeof value === "string" && HEX_COLOR.test(value);
 }
 
 export function clampFontSize(size: number): number {
@@ -318,21 +301,6 @@ export function clampFontSize(size: number): number {
 
 export function clampScrollback(n: number): number {
   return Math.min(SCROLLBACK_MAX, Math.max(SCROLLBACK_MIN, Math.round(n)));
-}
-
-function validateColorOverrides(raw: unknown): Partial<TerminalColors> {
-  if (typeof raw !== "object" || raw === null) {
-    return {};
-  }
-  const source = raw as Record<string, unknown>;
-  const result: Partial<TerminalColors> = {};
-  for (const key of COLOR_KEYS) {
-    const value = source[key];
-    if (isHexColor(value)) {
-      result[key] = value;
-    }
-  }
-  return result;
 }
 
 /**
@@ -559,7 +527,6 @@ export function validateSettings(raw: unknown): Settings {
         ? clampFontSize(source.fontSize)
         : DEFAULT_SETTINGS.fontSize,
     themeId: typeof source.themeId === "string" ? source.themeId : DEFAULT_SETTINGS.themeId,
-    colorOverrides: validateColorOverrides(source.colorOverrides),
     focusExpand:
       typeof source.focusExpand === "boolean" ? source.focusExpand : DEFAULT_SETTINGS.focusExpand,
     showStatusBar:

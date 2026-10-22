@@ -15,8 +15,8 @@ export interface OverlayColors {
 /**
  * The overlay's colours until the renderer publishes the theme's own. They
  * mirror the pre-render ground: `color` is `--bg`'s default (`backgroundColor`
- * in `main.ts`, `FALLBACK_BG` in `src/lib/theme-vars.ts`) and `symbolColor` is
- * `--fg`'s (`FALLBACK_FG`). Same drift rule as `backgroundColor`: change one
+ * in `main.ts`, `DECK_DARK_THEME` in `src/settings/built-in-themes.ts`) and
+ * `symbolColor` is `--fg`'s in `:root`. Same drift rule as `backgroundColor`: change one
  * without the others and the caption buttons flash a colour the app never
  * shows again between window open and the first theme sync.
  */

@@ -130,10 +130,10 @@ describe("themeId survives validation whatever it names", () => {
     expect(validateSettings({ themeId }).themeId).toBe(themeId);
   });
 
-  it("keeps colour overrides a legacy profile carries", () => {
-    expect(validateSettings({ colorOverrides: { background: "#101014" } }).colorOverrides).toEqual({
-      background: "#101014",
-    });
+  it("reads nothing from the retired colour overrides a legacy profile carries", () => {
+    const read = validateSettings({ colorOverrides: { background: "#101014" } });
+    expect(read).not.toHaveProperty("colorOverrides");
+    expect(read).toEqual(DEFAULT_SETTINGS);
   });
 
   it("falls back only for a value that is not a name at all", () => {

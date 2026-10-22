@@ -1,12 +1,6 @@
 import { signal } from "@preact/signals";
 import { Store } from "../host/store-host";
-import {
-  DEFAULT_SETTINGS,
-  validateSettings,
-  type DockTab,
-  type Settings,
-  type TerminalColors,
-} from "./settings-schema";
+import { DEFAULT_SETTINGS, validateSettings, type DockTab, type Settings } from "./settings-schema";
 import { defaultsFor } from "./settings-changes";
 import { quickAgentsWithout } from "./quick-agents";
 import { reportPersistError } from "../chrome/events";
@@ -246,13 +240,6 @@ export function revealDockTab(tab: DockTab): boolean {
  */
 export function openDockTab(tab: DockTab): void {
   updateSettings({ dockOpen: true, dockTab: tab });
-}
-
-/** Set or remove (value = undefined) a single color override. */
-export function updateColorOverride(key: keyof TerminalColors, value: string | undefined): void {
-  const { [key]: _removed, ...rest } = settings.value.colorOverrides;
-  const colorOverrides = value === undefined ? rest : { ...rest, [key]: value };
-  updateSettings({ colorOverrides });
 }
 
 /**

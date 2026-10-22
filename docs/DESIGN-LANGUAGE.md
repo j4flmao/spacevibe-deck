@@ -62,33 +62,39 @@ cites it.
 
 ## 2. Tokens
 
-One source: `:root` in [`styles.css`](../src/styles.css), fed by
-[`derive-colors.ts`](../src/lib/derive-colors.ts). The active terminal theme injects
-`--bg --fg --accent --red --green --yellow --magenta --cyan`; every other color derives
-through `color-mix`.
+One source: `:root` in [`styles.css`](../src/styles.css), published by
+[`applyThemeVars`](../src/lib/theme-vars.ts) from the active theme. A theme declares its
+chrome colours itself in its `ui` group ([`theme-schema.ts`](../src/settings/theme-schema.ts)),
+keyed by the role names below without their `--`; the washes and seams are formulas on top
+of them ([`derive-colors.ts`](../src/lib/derive-colors.ts)). The literals in `:root` are
+only the pre-JS fallbacks.
 
-| token                                                                                         | role                                     |
-| --------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `--sidebar-bg` / `--sidebar-seam`                                                             | the side columns and their boundary      |
-| `--chrome-1` / `--chrome-2`                                                                   | background steps for bars / panels       |
-| `--input-bg`                                                                                  | recessed input surfaces                  |
-| `--hair` / `--hair-strong`                                                                    | 1px lines inside a surface               |
-| `--seam-recessed` / `--seam-divider` / `--seam-split` / `--seam-raised`                       | the boundaries BETWEEN surfaces (DL-2.3) |
-| `--text-primary` / `--text-muted` / `--text-faint`                                            | text hierarchy                           |
-| `--ui-font`                                                                                   | the one chrome typeface (DL-4.1)         |
-| `--type-title` … `--type-micro`                                                               | the four standard text sizes (DL-4.4)    |
-| `--radius-flat` / `--radius-tab` / `--radius-tight` / `--radius-control` / `--radius-surface` | the five radius roles (DL-20.1)          |
-| `--duration` / `--ease`                                                                       | chrome state-change motion (DL-20.2)     |
+| token                                                                                         | role                                         | source  |
+| --------------------------------------------------------------------------------------------- | -------------------------------------------- | ------- |
+| `--bg` / `--fg`                                                                               | the stage and its ink                        | theme   |
+| `--accent` / `--red` / `--green` / `--yellow` / `--magenta` / `--cyan`                        | the role inks (§3)                           | theme   |
+| `--sidebar-bg`                                                                                | the side columns                             | theme   |
+| `--chrome-1` / `--chrome-2`                                                                   | background steps for bars / panels           | theme   |
+| `--input-bg`                                                                                  | recessed input surfaces                      | theme   |
+| `--text-primary` / `--text-muted` / `--text-faint`                                            | text hierarchy                               | theme   |
+| `--tone`                                                                                      | white on a dark theme, black on a light one  | derived |
+| `--tab-active-bg` / `--state-hover-bg` / `--tab-rest-bg`                                      | the selection, hover and rest washes (DL-21) | derived |
+| `--hair` / `--hair-strong`                                                                    | 1px lines inside a surface                   | derived |
+| `--sidebar-seam` / `--seam-recessed` / `--seam-divider` / `--seam-split` / `--seam-raised`    | the boundaries BETWEEN surfaces (DL-2.3)     | derived |
+| `--ui-font`                                                                                   | the one chrome typeface (DL-4.1)             | fixed   |
+| `--type-title` … `--type-micro`                                                               | the four standard text sizes (DL-4.4)        | fixed   |
+| `--radius-flat` / `--radius-tab` / `--radius-tight` / `--radius-control` / `--radius-surface` | the five radius roles (DL-20.1)              | fixed   |
+| `--duration` / `--ease`                                                                       | chrome state-change motion (DL-20.2)         | fixed   |
 
 - **DL-2.1** Components never hardcode a color. Every color is a token, or comes from the
   live theme object (a swatch previewing a theme's own colors).
 - **DL-2.2** The theme drives all chrome: switching theme restyles everything with no
-  component change. Every chrome tone is a function of `(background, foreground)` only, not
-  of a preset id or a setting, so the gallery, the editor host and a theme card show the
-  same chrome as the app. One exception: a background may pin a hand-picked sidebar,
-  keyed by that background ([`PINNED_SIDEBAR_BG`](../src/lib/derive-colors.ts)). Deck's dark
-  mode pins a `#141414` sidebar to its `#0a0a0a` pane; `#17181c` pins `#161b22` for legacy
-  overrides. Overriding the background drops its pin.
+  component change. A theme declares every surface, ink and text tone itself, and chrome
+  reads only the theme, never a theme id or a setting, so the gallery, the editor host and a
+  theme card show the same chrome as the app. What stays a formula is what must not drift
+  between themes: the washes (DL-21) and the seams and hairlines (DL-2.3), functions of the
+  theme's type, `--bg` and `--sidebar-bg` alone. An imported terminal theme replaces only
+  the terminal; its chrome and editor are Deck Dark's or Deck Light's, by its background.
 - **DL-2.3** A boundary between two surfaces is a seam; a line inside one surface is a
   hairline. All of them mix from `--tone`, never `--fg`, so the terminal's text hue never
   tints chrome. `--seam-recessed` (shell boundaries: the command-row frame, sidebar, status
@@ -124,16 +130,21 @@ through `color-mix`.
   label is `--text-faint` at `--type-meta` (DL-34.5).
 - **DL-3.5** The text tones have app-wide WCAG contrast floors: `--text-primary` ≥ 8:1,
   `--text-muted` ≥ 6:1, `--text-faint` ≥ 4.5:1, each measured on every surface it may sit
-  on (`sidebarBg`, `chrome1`, `chrome2`, `tabActiveBg`, plus `inputBg` for primary). The
-  three stay ordered (primary ≥ muted ≥ faint) and visibly distinct on every surface.
-  Locked by [`derive-colors.test.ts`](../src/lib/derive-colors.test.ts).
+  on (`--bg`, `--sidebar-bg`, `--chrome-1`, `--chrome-2`, `--tab-active-bg`, plus
+  `--input-bg` for primary). The three stay ordered (primary > muted > faint) and distinct
+  on every surface. The terminal has floors of its own on its background: foreground and
+  the six normal ANSI colours ≥ 4.5:1, with the text-side neutrals (`white` and
+  `brightWhite` on a dark theme, `black` on a light one); the cursor, `brightBlack` and the
+  bright colours ≥ 3:1. Every built-in theme declares values that meet them, locked by
+  [`built-in-themes.test.ts`](../src/settings/built-in-themes.test.ts); nothing raises a
+  colour at runtime.
   Why: faint styles 10.5–11px text, which WCAG AA rates as normal text.
-- **DL-3.6** A built-in theme's `foreground` is a neutral gray of the same WCAG relative
-  luminance as its palette's tinted ink, so the derived `--text-*` ladder stays neutral
-  (6% saturation ceiling, tested). The ANSI sixteen are untouched; `cursor` follows
-  `foreground` only where the palette had them equal. `deck-dark` ships `#e7e7e7` and
-  `deck-light` `#272727`. Imported themes keep their own foreground. Anchor:
-  [`THEME_PRESETS`](../src/settings/themes.ts).
+- **DL-3.6** A built-in theme's text ladder is neutral: `--text-primary`, `--text-muted` and
+  `--text-faint` stay under a 6% saturation ceiling (tested), so a tinted theme tints its
+  surfaces and its accent, never its words. The terminal and the editor carry the palette's
+  colour. Deck Dark's ladder is `#e7e7e7` / `#ababab` / `#949494` and Deck Light's
+  `#272727` / `#464647` / `#585959`. Anchor:
+  [`BUILT_IN_THEMES`](../src/settings/built-in-themes.ts).
 - **DL-3.7** _(pattern)_ Settings chrome is achromatic: inside `.settings-screen` an
   enabled toggle, a selected segment, a step icon, hover and the focus ring sit on the
   neutral `--text-*` / `--tone` / `--hair-*` ladders, overriding `--green` and `--accent`.
@@ -695,9 +706,9 @@ actions. §11 covers a full-window screen and §13 an anchored popover; neither 
   `--bg` with no line under it, parted from the work area by the pane cards' edges alone. Its right edge stops at the docked panel when one is open (DL-19.1, `--explorer-w`).
   The rail lists no documents; documents stay in the Explorer and the strip names stage surfaces.
 - **DL-18.7** The navigation column is the one surface with a colour of its own (owner,
-  2026-10-15). The navigation frame and rail paint the derived `--sidebar-bg`, which never
-  equals `--bg` (light and pure-black overrides included;
-  [`derive-colors.ts`](../src/lib/derive-colors.ts)); the terminal, the document surface,
+  2026-10-15). The navigation frame and rail paint the theme's `--sidebar-bg`, which never
+  equals `--bg` (tested for every built-in in
+  [`derive-colors.test.ts`](../src/lib/derive-colors.test.ts)); the terminal, the document surface,
   the stage gutter, every docked side panel and the full-window pages share the theme's
   `--bg`. On a dark theme the navigation column rises off the stage: `--sidebar-bg`, then
   `--chrome-1`, `--chrome-2` and `--tab-active-bg` stand above it, each measured from the
@@ -933,8 +944,8 @@ The component still builds and passes its tests, and the rules below describe it
 - **DL-24.1** The gallery is the only grid in a settings section and exists only for the theme.
 - **DL-24.2** A card is a miniature of Deck, not a strip of swatches: the command row, the
   navigation rail and the stage in the window's proportions, with an agent line for the accent.
-- **DL-24.3** Card colours are inline styles from that theme's own object, passed through
-  `deriveChromeColors` ([`theme-card-preview.tsx`](../src/ui/settings/theme-card-preview.tsx)),
+- **DL-24.3** Card colours are inline styles from that theme's own `ui` group and its
+  `deriveChromeColors` washes ([`theme-card-preview.tsx`](../src/ui/settings/theme-card-preview.tsx)),
   as DL-2.1's swatch exception. Why: a card shows a theme that is not running, while every
   `--token` resolves to the one that is.
 - **DL-24.4** The selected card is marked by an `--accent` border and a check in its footer, an

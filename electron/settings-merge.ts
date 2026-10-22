@@ -37,6 +37,10 @@ const RETIRED_KEYS: readonly string[] = [
   // already out of range.
   "explorerOpen",
   "explorerWidth",
+  // Per-colour overrides on top of a terminal palette went with the explicit
+  // theme model: a theme declares every colour itself, so there is nothing
+  // left to override from Settings.
+  "colorOverrides",
 ];
 
 /**
