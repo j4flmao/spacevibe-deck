@@ -238,6 +238,22 @@ function bucketGroups(
     .filter((group) => group.items.length > 0);
 }
 
+/**
+ * One project per `orderKey`, in stream order. Two stream groups can share a
+ * key — a live cluster and a remembered one for the same repository (see
+ * `applyRailOrder`) — and the project-first rail lists that repository once,
+ * so the first writer names it and the rows of both fall under it.
+ */
+function railProjects(view: AgentRailView): readonly RailProject[] {
+  const byKey = new Map<string, RailProject>();
+  for (const group of view.stream) {
+    if (!byKey.has(group.orderKey)) {
+      byKey.set(group.orderKey, { key: group.orderKey, name: group.project });
+    }
+  }
+  return [...byKey.values()];
+}
+
 /** Group, sort, search and partition the stream under the session's marks. */
 export function buildRailView(
   view: AgentRailView,
@@ -245,7 +261,7 @@ export function buildRailView(
   now: number,
 ): RailViewModel {
   const items = railItems(view);
-  const projects = view.stream.map((group) => ({ key: group.orderKey, name: group.project }));
+  const projects = railProjects(view);
   const unarchived = items.filter((item) => !state.archived.has(item.id));
   const visible = sortItems(
     unarchived.filter(

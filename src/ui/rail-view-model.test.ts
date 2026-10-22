@@ -12,6 +12,7 @@ import {
   pane,
   rail,
   tab,
+  twinRail,
   viewOf,
   WORKDAY,
 } from "./rail-view-fixtures";
@@ -213,6 +214,88 @@ describe("search", () => {
     expect(layout(viewOf({ query: "api", grouping: "status" }))).toEqual([
       ["needs-you", ["pane:31"]],
       ["quiet", ["shell:4"]],
+    ]);
+  });
+});
+
+describe("review follow-ups", () => {
+  it("lists a repository with two stream groups under one key once, each row once", () => {
+    const view = twinRail();
+    // The precondition the fixture exists for: the stream really carries a twin.
+    expect(view.stream.map((group) => group.orderKey)).toEqual([DECK_KEY, DECK_KEY]);
+    const model = viewOf({}, view);
+    expect(layout(model)).toEqual([[DECK_KEY, ["pane:11"]]]);
+    expect(model.groups[0]).toMatchObject({ count: 1, rollup: { id: "pane:11" } });
+    expect(viewOf({ hidden: new Set([DECK_KEY]) }, view).hidden.map((p) => p.key)).toEqual([
+      DECK_KEY,
+    ]);
+  });
+
+  it.each(["status", "time"] as const)(
+    "puts every unarchived row in exactly one %s bucket",
+    (grouping) => {
+      const view = rail([
+        tab(1, "/w/deck", [
+          pane(1, { attention: "error", changedAt: NOW - MINUTE }),
+          pane(2, { attention: "requested", changedAt: NOW - 5 * MINUTE }),
+          pane(3, { attention: "completed", changedAt: NOW - 15 * MINUTE }),
+          pane(4, { phase: "exited", changedAt: NOW - 20 * MINUTE }),
+          pane(5, { phase: "working", changedAt: NOW + 1 }),
+          pane(6),
+          pane(7, { hasRun: false }),
+        ]),
+        tab(2, "/w/api", [pane(8, { agent: null })]),
+      ]);
+      const archived = new Set(["pane:6"]);
+      const placed = viewOf({ grouping, archived }, view).groups.flatMap((group) =>
+        ids(group.items),
+      );
+      const expected = ids(railItems(view)).filter((id) => !archived.has(id));
+      expect([...placed].sort()).toEqual([...expected].sort());
+    },
+  );
+
+  it("starts a time bucket at its bound: 5 minutes is no longer the last 5", () => {
+    const view = rail([
+      tab(1, "/w/deck", [
+        pane(1, { changedAt: NOW - 5 * MINUTE }),
+        pane(2, { changedAt: NOW - 15 * MINUTE }),
+        // A clock that ran behind the pane's change counts as no time at all.
+        pane(3, { changedAt: NOW + 1 }),
+      ]),
+    ]);
+    expect(layout(viewOf({ grouping: "time" }, view))).toEqual([
+      ["last-5m", ["pane:3"]],
+      ["last-15m", ["pane:1"]],
+      ["earlier", ["pane:2"]],
+    ]);
+  });
+
+  it("matches a row through its project name alone", () => {
+    // No title or branch in deck holds d-e-c-k in order; the project does.
+    expect(layout(viewOf({ query: "deck" }))).toEqual([
+      [DECK_KEY, ["pane:12", "pane:21", "pane:11"]],
+    ]);
+  });
+
+  it("keeps a project's count and roll-up whole under a search, and Archived unfiltered", () => {
+    const model = viewOf({ query: "release", archived: new Set(["pane:31"]) });
+    expect(layout(model)).toEqual([[DECK_KEY, ["pane:21"]]]);
+    // The roll-up is the loudest of the project, not of what the search left.
+    expect(model.groups[0]).toMatchObject({ count: 3, rollup: { id: "pane:11" } });
+    expect(ids(model.archived)).toEqual(["pane:31"]);
+  });
+
+  it("titles a silent row by the session's first prompt, else by an ordinal agent name", () => {
+    const view = rail(
+      [tab(1, "/w/deck", [pane(1), pane(2)]), tab(2, "/w/api", [pane(3)])],
+      new Map(),
+      new Map([[3, "Fix the login flow"]]),
+    );
+    expect(railItems(view).map((item) => [item.id, item.title])).toEqual([
+      ["pane:1", "Claude"],
+      ["pane:2", "Claude 2"],
+      ["pane:3", "Fix the login flow"],
     ]);
   });
 });

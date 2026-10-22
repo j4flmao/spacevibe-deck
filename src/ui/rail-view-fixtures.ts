@@ -76,6 +76,7 @@ const SCANS = new Map<string, RepositoryScan>([
 export function rail(
   tabs: readonly TabView[],
   tails: ReadonlyMap<number, string> = new Map(),
+  titles: ReadonlyMap<number, string> = new Map(),
 ): AgentRailView {
   return buildAgentRail({
     tabs,
@@ -84,6 +85,37 @@ export function rail(
     // `/w/notes` has nothing open: a remembered project with no rows.
     workspaceHistoryPaths: ["/w/deck", "/w/deck-side", "/w/api", "/w/notes"],
     tails,
+    titles,
+    now: NOW,
+  });
+}
+
+/**
+ * Two stream groups under one `orderKey`: the open tab's scan lists only
+ * `/w/deck`, while the history entry `/w/deck-new` scans to the same
+ * repository and is no live path's prefix, so it builds a remembered cluster
+ * with the live one's key (`coveredHistoryPaths` in `agent-rail-model.ts`).
+ */
+export function twinRail(): AgentRailView {
+  const narrow: RepositoryScan = {
+    kind: "repository",
+    key: DECK_KEY,
+    root: "/w/deck",
+    worktrees: [checkout("/w/deck", "main")],
+  };
+  const wide: RepositoryScan = {
+    ...narrow,
+    worktrees: [checkout("/w/deck", "main"), checkout("/w/deck-new", "next")],
+  };
+  return buildAgentRail({
+    tabs: [tab(1, "/w/deck", [pane(11, { attention: "requested", changedAt: NOW - MINUTE })])],
+    activeIndex: 0,
+    scans: new Map([
+      ["/w/deck", narrow],
+      ["/w/deck-new", wide],
+    ]),
+    workspaceHistoryPaths: ["/w/deck", "/w/deck-new"],
+    tails: new Map(),
     now: NOW,
   });
 }
