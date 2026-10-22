@@ -126,6 +126,21 @@ describe("searchHits", () => {
       );
     expect(agentIds("claude")).toEqual(["claude"]);
     expect(agentIds("sonnet")).toEqual(["custom:aider"]);
+    // A built-in is found by the flags its row shows, not only by its bare id.
+    const gemini = BUILTIN_AGENTS.find((agent) => agent.id === "gemini");
+    expect(gemini?.defaultCommand).toContain("--yolo");
+    expect(agentIds("yolo")).toEqual(["gemini"]);
+  });
+
+  it("lists an area once when both its key and its label match", () => {
+    for (const query of ["shortcut", "shortcuts"]) {
+      const hits = searchHits(query, null, sources());
+      expect(
+        hits.filter((hit) => hit.id === "area:shortcuts"),
+        query,
+      ).toHaveLength(1);
+      expect(new Set(hits.map((hit) => hit.id)).size, query).toBe(hits.length);
+    }
   });
 
   it("lists every agent when a per-agent key matches, not a row of its own", () => {
@@ -146,6 +161,24 @@ describe("searchHits", () => {
       "shortcut:close-pane",
       "shortcut:split-row",
     ]);
+  });
+
+  it("offers a rebound row that conflicts with nothing", () => {
+    const unbound: Settings = {
+      ...DEFAULT_SETTINGS,
+      keybindings: withOverride(NO_KEYBINDING_OVERRIDES, "macos", "close-pane", []),
+    };
+    expect(
+      searchHits("hotkey", null, sources(unbound))
+        .map((hit) => hit.id)
+        .sort(),
+    ).toEqual(["area:shortcuts", "shortcut:close-pane"]);
+  });
+
+  it("reads rebinds of the running platform only", () => {
+    const windows = { ...sources(CLASH), platform: "windows" };
+    expect(searchHits("hotkey", null, windows).map((hit) => hit.id)).toEqual(["area:shortcuts"]);
+    expect(changedHits(windows)).toEqual([]);
   });
 });
 
@@ -199,6 +232,19 @@ describe("home lists (empty field, no scope)", () => {
       "changed:setting:fontSize",
       "changed:agent:codex",
       "changed:shortcut:close-pane",
+    ]);
+  });
+
+  it("orders what changed by area, not by the order it was collected in", () => {
+    // Settings are collected before agents, but Agents comes before Links & editor.
+    const current: Settings = {
+      ...DEFAULT_SETTINGS,
+      externalAppId: "zed",
+      disabledAgents: ["codex"],
+    };
+    expect(changedHits(sources(current)).map((hit) => hit.id)).toEqual([
+      "agent:codex",
+      "setting:externalAppId",
     ]);
   });
 

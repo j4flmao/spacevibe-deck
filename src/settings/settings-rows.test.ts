@@ -63,4 +63,18 @@ describe("agentEntryChanged", () => {
     expect(agentEntryChanged("codex", current)).toBe(true);
     expect(agentEntryChanged("claude", current)).toBe(false);
   });
+
+  it("marks an agent whose signal adapter or default launch profile changed", () => {
+    const adapters = DEFAULT_SETTINGS.agentSignalAdapters;
+    const flipped: Settings = {
+      ...DEFAULT_SETTINGS,
+      agentSignalAdapters: { ...adapters, claude: !adapters.claude },
+    };
+    expect(agentEntryChanged("claude", flipped)).toBe(true);
+    expect(agentEntryChanged("codex", flipped)).toBe(false);
+
+    const profiled: Settings = { ...DEFAULT_SETTINGS, defaultLaunchProfiles: { claude: "fast" } };
+    expect(agentEntryChanged("claude", profiled)).toBe(true);
+    expect(agentEntryChanged("codex", profiled)).toBe(false);
+  });
 });

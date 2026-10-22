@@ -70,9 +70,14 @@ function isStandalone(key: SettingKey): boolean {
   return kind !== "agents" && kind !== "shortcuts" && kind !== "none";
 }
 
+/** Each agent with the command line its row shows (`catalogLaunchCommand`), so a flag finds it. */
 function agentsOf(current: Settings): readonly { id: string; label: string; command: string }[] {
   return [
-    ...BUILTIN_AGENTS.map((agent) => ({ id: agent.id, label: agent.label, command: agent.id })),
+    ...BUILTIN_AGENTS.map((agent) => ({
+      id: agent.id,
+      label: agent.label,
+      command: agent.defaultCommand ?? agent.id,
+    })),
     ...current.customAgents,
   ];
 }
