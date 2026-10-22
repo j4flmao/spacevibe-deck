@@ -99,6 +99,20 @@ Each decision carries the evidence from a second scout of seven more reference a
 - **OD-3 Dock root.** The Explorer and Changes root today is the selected tab's
   `workspacePath`, fixed when the tab was created; LAY-6 needs the focused pane's checkout.
   Whether that re-rooting touches tab materialization must be confirmed before it is built.
+  _Research, 2026-10-22 (origin/main 54eb4e5c):_ chrome-only. The root is the signal
+  `activeWorkspace` (`src/files/file-surface-store.ts:293`), written from the selected tab's
+  `workspacePath` (`src/ui/app.tsx:903-908`), which is "fixed for the tab's life and never
+  re-derived from a pane's cwd" (`docs/internals/terminal.md:131-132`). The focused pane's cwd is
+  already a reactive signal, `statusInfo.value.cwd` (`src/terminal/tab-manager.ts:636-640`), and
+  the renderer already maps a path to its checkout by longest prefix (`worktreeForPath`, used in
+  `src/ui/agent-rail-model.ts`). The dock therefore gets its own derived root signal (focused
+  pane cwd → checkout, falling back to `activeWorkspace`) and feeds the existing
+  `workspacePath` prop. It must not rewrite `activeWorkspace`: the file watcher and open file
+  tabs key on it (`src/files/file-surface-controller.ts:212-219`). It becomes an R4 fork only if
+  a cwd field is added to `PaneView` or `TabView` (`tab-manager.ts` `syncViews`). Open edges: the
+  cwd is polled every 2 seconds, is null before the first poll or while a file surface has focus,
+  and on Windows comes only from OSC 9;9; a cwd outside every known checkout needs a rule
+  (Explorer must not fall back to `$HOME`).
   _Reference evidence:_ 11 of 13 scope the review panel to the selected agent or task. The two
   exceptions are a terminal-native app, whose diff is a pane scoped to the terminal's
   repository, and an editor, whose panels are project-wide.
@@ -124,6 +138,54 @@ Each decision carries the evidence from a second scout of seven more reference a
   the tab seam and is a fork.
   _Reference evidence:_ 6 of 13 point the digits at the agent or task list, 2 at tabs, 2 at
   panes or tool windows, and 3 bind none.
+
+## Constraints found by research
+
+Read from `origin/main` 54eb4e5c; each line was re-read by the coordinator.
+
+- **Chords (OD-2, AC-4).** `handleShortcut` is one capture-phase listener that swallows a matched
+  chord before xterm (`src/terminal/tab-manager.ts:3153-3194`); bare keys are not bindable
+  (`src/lib/keybindings.ts:282-320`), so a bare Esc, ←/→ or R must never be global because the
+  agent CLIs use them. Collisions in the mock: ⌘⇧D is `split-column`
+  (`src/terminal/default-keymaps.ts:88`), ⌘⇧G is `find-previous` (`:160`). Proposed:
+  - dock toggle → the shipped `toggle-dock`, ⌘⇧J / Ctrl+Shift+J (`default-keymaps.ts:252`, `:439`);
+  - diff open/close → a new registry action on ⌘⇧H / Ctrl+Shift+H, unbound in both keymaps
+    (Hypothesis: no agent CLI binds it; check their keybinding docs); fallback ⌘⇧X;
+  - ⌘⇧A, ⌘⇧I and ⌘⇧↵ are Deck's own and stay (`default-keymaps.ts:197`, `:213`, `:154`); ⌘⇧A
+    changes behaviour only if OD-2 says so;
+  - queue ←/→/R are local handlers active only while the diff surface owns focus, never when
+    xterm does; each Esc path (switcher, composer, inspect pick, dock) needs an owner so it
+    never reaches the PTY of an agent that needs it to interrupt.
+- **Browser beside a pane (LAY-5, OD-4): chrome-only.** The renderer measures a placeholder and
+  sends `browser_set_bounds` (`src/browser/browser-panel.tsx:55-100`,
+  `electron/ipc/register-browser.ts:72-77`), so any element's rectangle can drive the view
+  without touching the layout engine. Yield is one predicate, `browserPanelObscured`
+  (`src/ui/app-policy.ts:24-34`); the dock sheet needs one more flag there. Limits: the host keeps
+  one `WebContentsView` per window (`electron/browser/view.ts:102`), so two simultaneous
+  browsers are an R6 fork; the browser is a stage surface, not a split leaf, so "beside the
+  terminal" needs a side slot in the stage markup, not a leaf in the tab layout. Hypotheses:
+  `ResizeObserver` misses a move without a resize (split drag), so the hole may need a position
+  poll; a native run decides.
+- **Attention states (LAY-4): derivable, no new store.** `completed` is a latched attention kind
+  cleared only by `acknowledge`, which runs on pane focus while the window is foreground
+  (`src/terminal/agent-attention.ts:1109-1121`, `src/terminal/tab-manager.ts:747-752`), so
+  Unread = `attention === "completed"`. Nothing about seen or attention is persisted: after a
+  restart nothing is unread. Explicit `requested` and `completed` arrive only for claude, codex
+  and opencode (hooks or plugin, `src/lib/agent-signal-map.ts:131-139`); the other 11 agents in
+  `src/lib/agents/agent-registry.ts:31-46` get `requested` from OSC 9/777 or bell and
+  `completed` only inferred, so their Unread mark is low-confidence. `warning` is explicit for
+  every agent but comes only from OSC 9;4 severity warning, never a hook.
+- **Dock Usage and History (LAY-6).** Buildable renderer-side: time running
+  (`PaneView.startedAt`, `src/terminal/tabs-store.ts:88-95`), the pane's session id when known
+  (`PaneView.sessionId`/`lastSessionId`, `:63`, `:104`; reported only for claude, codex hooks),
+  History for one pane (`sessions_list` filtered by exact cwd and agent,
+  `src/sessions/session-filters.ts:10-25`; Claude and Codex only), and repo-level usage and
+  cost from the snapshot filtered by repo. Not buildable without a fork: per-session or
+  per-pane tokens (`UsageBucket` has no session dimension, `electron/usage/model.ts:125-136`)
+  and any usage for the 12 agents other than claude and codex (`UsageAgent`, `:107`). LAY-6's
+  "its tokens" is therefore the repo's tokens for that agent until the owner approves a scanner
+  change. A Usage dock tab and a Sessions dock tab already exist
+  (`src/ui/usage/usage-dock-tab.tsx`, `src/ui/sessions/sessions-dock-tab.tsx`) and are global.
 
 ## Out of scope
 
