@@ -186,6 +186,14 @@ Read from `origin/main` 54eb4e5c; each line was re-read by the coordinator.
   "its tokens" is therefore the repo's tokens for that agent until the owner approves a scanner
   change. A Usage dock tab and a Sessions dock tab already exist
   (`src/ui/usage/usage-dock-tab.tsx`, `src/ui/sessions/sessions-dock-tab.tsx`) and are global.
+- **Hunk review state (owner, 2026-10-22).** "Mark reviewed" is session-only in v1: no
+  persistence, no new store. It does not conflict with the line-comment composer
+  (`2026-10-21-diff-line-comments.md`) if three things hold: the composer's location snapshot
+  (DLC2) is untouched when a hunk is marked or the queue advances; the queue's ←/→/R handlers
+  ignore keys while the composer or any text field has focus, and Esc discards the composer
+  before it closes the queue (DLC13); and the composer's target candidates (DLC6) come from the
+  checkout the queue shows, which is the focused agent's checkout, so the preselected target is
+  that agent. DLC1's new chord must differ from the diff open/close chord chosen above.
 
 ## Out of scope
 
