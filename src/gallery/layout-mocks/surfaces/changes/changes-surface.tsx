@@ -8,6 +8,7 @@ export const CHANGES_SURFACE: SurfaceSpec = {
   label: "Changes",
   today:
     "The explorer's second view: each changed file with status and +/− against HEAD, for the tab's folder, with a Refresh. Pressing a row opens a Monaco diff column beside the explorer.",
+  picked: "b",
   options: [
     {
       id: "a",

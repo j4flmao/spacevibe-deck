@@ -39,5 +39,7 @@ export interface SurfaceSpec {
   readonly label: string;
   /** How Deck does it today, in one line, so the owner sees the delta. */
   readonly today: string;
+  /** The option the owner picked by eye, once there is one. */
+  readonly picked?: string;
   readonly options: readonly SurfaceOption[];
 }

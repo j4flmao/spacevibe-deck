@@ -1,3 +1,5 @@
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { Badge } from "../../ui/controls/badge";
 import { ToggleGroup, ToggleGroupItem } from "../../ui/controls/toggle-group";
 import { DEFAULT_FOCUS, agentById } from "./layout-fixture";
@@ -20,13 +22,14 @@ function comparable(surface: SurfaceSpec): boolean {
   return surface.options.every((option) => option.frame === "panel");
 }
 
-function Caption({ option }: { readonly option: SurfaceOption }) {
+function Caption({ option, picked }: { readonly option: SurfaceOption; readonly picked: boolean }) {
   return (
     <div className="flex flex-col gap-1 px-1 pb-2">
       <div className="flex items-center gap-1.5">
         <span className="text-xs font-semibold text-foreground">
           {option.id.toUpperCase()} · {option.label}
         </span>
+        {picked ? <Badge>Picked</Badge> : null}
         {option.area.map((area) => (
           <Badge key={area} variant="outline">
             {AREA_LABEL[area]}
@@ -38,11 +41,17 @@ function Caption({ option }: { readonly option: SurfaceOption }) {
   );
 }
 
-function PanelColumn({ option }: { readonly option: SurfaceOption & { frame: "panel" } }) {
+function PanelColumn({
+  option,
+  picked,
+}: {
+  readonly option: SurfaceOption & { frame: "panel" };
+  readonly picked: boolean;
+}) {
   const agent = agentById(option.focus ?? DEFAULT_FOCUS);
   return (
     <section className="flex min-h-0 shrink-0 flex-col" style={{ width: option.width }}>
-      <Caption option={option} />
+      <Caption option={option} picked={picked} />
       <div className="min-h-0 flex-1 overflow-hidden rounded-md border bg-background">
         {option.render(agent, () => undefined)}
       </div>
@@ -87,7 +96,9 @@ export function SurfaceBoard({
       data-surface-options={ids}
     >
       {columns.map((option) =>
-        option.frame === "panel" ? <PanelColumn key={option.id} option={option} /> : null,
+        option.frame === "panel" ? (
+          <PanelColumn key={option.id} option={option} picked={option.id === surface.picked} />
+        ) : null,
       )}
     </div>
   );
@@ -140,14 +151,26 @@ export function SurfaceBar({
             </ToggleGroupItem>
           ) : null}
           {surface.options.map((item) => (
-            <ToggleGroupItem key={item.id} value={item.id} size="sm">
+            <ToggleGroupItem
+              key={item.id}
+              value={item.id}
+              size="sm"
+              aria-label={
+                item.id === surface.picked ? `${item.id.toUpperCase()}, picked` : undefined
+              }
+            >
               {item.id.toUpperCase()}
+              {item.id === surface.picked ? (
+                <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} aria-hidden="true" />
+              ) : null}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
       </div>
       <p className="m-0 px-1 text-xs text-muted-foreground">
-        {option ? `${option.label}: ${option.concept}` : `Today: ${surface.today}`}
+        {option
+          ? `${option.label}${option.id === surface.picked ? " (picked)" : ""}: ${option.concept}`
+          : `Today: ${surface.today}`}
       </p>
     </div>
   );

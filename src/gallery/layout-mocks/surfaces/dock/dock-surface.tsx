@@ -8,6 +8,7 @@ export const DOCK_SURFACE: SurfaceSpec = {
   label: "Dock",
   today:
     "A right side panel (⌘⇧J) with three tabs (File explorer ⌘⇧B, Token usage ⌘⇧U, Session history ⌘⇧Y). It is a column that shrinks the stage, drag-resizable with a 360px floor. Changes is the explorer's second view, scoped to the tab's folder.",
+  picked: "c",
   options: [
     {
       id: "a",
