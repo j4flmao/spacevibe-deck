@@ -133,6 +133,11 @@ Each decision carries the evidence from a second scout of seven more reference a
   exists in nearly all.
   _Owner, 2026-10-22:_ the global tools stay in the rail footer; the dock carries only the
   focused agent's sections.
+  _Owner, 2026-10-22 (follow-up):_ Token usage and Session history are global, so the rail
+  footer opens each as its own stage view (⌘⇧U, ⌘⇧Y; Esc or Close returns), not as a section of
+  the agent-scoped dock. They lose their place in today's tabbed side panel, which the dock
+  replaces. Usage shows `—` for the agents the scanner does not read.
+
 - **OD-6 Space marks and ⌘1–9.** The mock's stage bar draws no space marks. Digits keep
   counting spaces unless the owner decides otherwise; routing them to rail rows goes through
   the tab seam and is a fork.
@@ -163,8 +168,9 @@ Read from `origin/main` 54eb4e5c; each line was re-read by the coordinator.
   (`src/ui/app-policy.ts:24-34`); the dock sheet needs one more flag there. Limits: the host keeps
   one `WebContentsView` per window (`electron/browser/view.ts:102`), so two simultaneous
   browsers are an R6 fork; the browser is a stage surface, not a split leaf, so "beside the
-  terminal" needs a side slot in the stage markup, not a leaf in the tab layout. Hypotheses:
-  `ResizeObserver` misses a move without a resize (split drag), so the hole may need a position
+  terminal" needs a side slot in the stage markup, not a leaf in the tab layout. Below a
+  900px stage the preview takes the whole stage and the agent chip in its toolbar returns to
+  the terminal (owner, 2026-10-22). Hypotheses: `ResizeObserver` misses a move without a resize (split drag), so the hole may need a position
   poll; a native run decides.
 - **Attention states (LAY-4): derivable, no new store.** `completed` is a latched attention kind
   cleared only by `acknowledge`, which runs on pane focus while the window is foreground
