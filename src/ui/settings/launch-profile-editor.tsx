@@ -6,8 +6,7 @@ import { ConfigGroup, ConfigRow, NOT_AVAILABLE_ON_WINDOWS } from "../controls/co
 import { CommitInput } from "../controls/commit-input";
 import { AgentChoiceValue, CLI_DEFAULT_CHOICE } from "./agent-choice-value";
 import { settings, updateSettings } from "../../settings/settings-store";
-import { marksChange } from "../../settings/settings-changes";
-import { DEFAULT_SETTINGS, type Settings } from "../../settings/settings-schema";
+import { AGENT_ROW_KEYS, agentEntryChanged } from "../../settings/settings-rows";
 import { signalAdaptersPatch } from "../../settings/signal-adapter-choice";
 import {
   agentHooksSupported,
@@ -305,26 +304,6 @@ function AgentRow({
         </div>
       </div>
     </div>
-  );
-}
-
-/** The per-agent map keys an agent row edits: on/off, signals, default command. */
-const AGENT_ROW_KEYS = ["disabledAgents", "agentSignalAdapters", "defaultLaunchProfiles"] as const;
-
-function agentEntryChanged(agentId: string, current: Settings): boolean {
-  const defaults = DEFAULT_SETTINGS;
-  const adapter = (source: Settings): boolean | undefined =>
-    source.agentSignalAdapters[agentId as keyof Settings["agentSignalAdapters"]];
-  return (
-    marksChange(
-      "disabledAgents",
-      current.disabledAgents.includes(agentId) !== defaults.disabledAgents.includes(agentId),
-    ) ||
-    marksChange("agentSignalAdapters", adapter(current) !== adapter(defaults)) ||
-    marksChange(
-      "defaultLaunchProfiles",
-      current.defaultLaunchProfiles[agentId] !== defaults.defaultLaunchProfiles[agentId],
-    )
   );
 }
 

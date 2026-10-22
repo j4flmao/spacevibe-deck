@@ -3,13 +3,7 @@ import { clampScrollback, SCROLLBACK_CHOICES } from "../../../settings/settings-
 import { settings, updateSettings } from "../../../settings/settings-store";
 import { DeckIcon, ROW_ICON } from "../../controls/deck-icon";
 import { ConfigRow } from "../../controls/config-row";
-
-function scrollbackLabel(n: number): string {
-  if (n >= 1000) {
-    return `${n / 1000}k lines`;
-  }
-  return `${n} lines`;
-}
+import { scrollbackLabel } from "../../../settings/settings-rows";
 
 export function TerminalSection() {
   const current = settings.value;
