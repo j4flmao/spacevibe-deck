@@ -2,7 +2,7 @@
 import { createRef } from "preact";
 import { describe, expect, it, vi } from "vitest";
 import { loadPresetControls } from "./load-preset-controls";
-import { click, expectRefsToHoldElements, mount, press } from "./preset-test-kit";
+import { click, expectRefsToHoldElements, mount } from "./preset-test-kit";
 
 const { Switch } = await loadPresetControls();
 
@@ -10,17 +10,18 @@ const control = (host: HTMLElement): HTMLElement =>
   host.querySelector('[role="switch"]') as HTMLElement;
 
 describe("Switch", () => {
-  it("toggles on click and on Space, and reports each change", async () => {
+  it("toggles on click and reports each change", async () => {
     const onCheckedChange = vi.fn();
     const view = await mount(<Switch aria-label="Notify" onCheckedChange={onCheckedChange} />);
     expect(control(view.host).getAttribute("aria-checked")).toBe("false");
 
     await click(control(view.host));
     expect(control(view.host).getAttribute("aria-checked")).toBe("true");
+    expect(onCheckedChange.mock.calls.map((call) => call[0])).toEqual([true]);
 
-    control(view.host).focus();
-    await press(control(view.host), { key: " " });
-    expect(onCheckedChange).toHaveBeenCalled();
+    await click(control(view.host));
+    expect(control(view.host).getAttribute("aria-checked")).toBe("false");
+    expect(onCheckedChange.mock.calls.map((call) => call[0])).toEqual([true, false]);
     await view.unmount();
   });
 

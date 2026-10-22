@@ -12,7 +12,7 @@
 // test file resolve `preact` to the same ESM instance, one hook state, and the bundle's
 // metafile proves no module of real React went in.
 import { build } from "esbuild";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, renameSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -30,18 +30,20 @@ export const PRESET_CONTROLS_FILE = join(OUT_DIR, "preset-controls.mjs");
 const requireReactAsCompat = {
   name: "require-react-as-preact-compat",
   setup(build) {
-    build.onResolve({ filter: /^(react|react-dom)$/ }, (args) =>
-      args.kind === "require-call" ? { path: "preact-compat", namespace: "compat-esm" } : undefined,
-    );
-    build.onLoad({ filter: /.*/, namespace: "compat-esm" }, () => ({
-      contents: 'export * from "preact/compat";',
+    build.onResolve({ filter: /^(react|react-dom)(\/.*)?$/ }, (args) => {
+      if (args.kind !== "require-call") return undefined;
+      const sub = args.path.replace(/^(react|react-dom)/, "");
+      return { path: `preact/compat${sub}`, namespace: "compat-esm" };
+    });
+    build.onLoad({ filter: /.*/, namespace: "compat-esm" }, (args) => ({
+      contents: `export * from "${args.path}";`,
       resolveDir: ROOT,
     }));
   },
 };
 
 /** A bundled module of the real React runtime. Preact's compat layer replaces both. */
-export const REACT_RUNTIME = /node_modules\/(react|react-dom|scheduler)\//;
+export const REACT_RUNTIME = /node_modules[\\/](react|react-dom|scheduler)[\\/]/;
 
 /**
  * @param {string} entry absolute path of the module to bundle
@@ -74,10 +76,11 @@ export async function bundleForPreact(entry, outfile, options = {}) {
 
 export default async function setup(project) {
   mkdirSync(OUT_DIR, { recursive: true });
-  const leaked = await bundleForPreact(
-    join(ROOT, "src/ui/controls/preset-controls.ts"),
-    PRESET_CONTROLS_FILE,
-  );
+  // Built under a private name and renamed, so a second vitest run in this checkout never
+  // reads a half-written bundle.
+  const staging = `${PRESET_CONTROLS_FILE}.${process.pid}.tmp.mjs`;
+  const leaked = await bundleForPreact(join(ROOT, "src/ui/controls/preset-controls.ts"), staging);
+  renameSync(staging, PRESET_CONTROLS_FILE);
   if (leaked.length > 0) {
     throw new Error(`the controls bundle contains real React modules:\n${leaked.join("\n")}`);
   }

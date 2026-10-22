@@ -3,7 +3,14 @@ import { createRef } from "preact";
 import { useState } from "preact/hooks";
 import { describe, expect, it, vi } from "vitest";
 import { loadPresetControls } from "./load-preset-controls";
-import { byRole, click, expectRefsToHoldElements, mount, press, settle } from "./preset-test-kit";
+import {
+  byRole,
+  click,
+  expectRefsToHoldElements,
+  mount,
+  press,
+  waitUntil,
+} from "./preset-test-kit";
 
 const ui = await loadPresetControls();
 const { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } = ui;
@@ -36,7 +43,7 @@ describe("DropdownMenu", () => {
 
     await click(items[0]);
     expect(onRename).toHaveBeenCalledTimes(1);
-    expect(byRole("menu")).toBeNull();
+    await waitUntil(() => byRole("menu") === null);
     await view.unmount();
   });
 
@@ -47,8 +54,8 @@ describe("DropdownMenu", () => {
     expect(byRole("menu")).not.toBeNull();
 
     await press(byRole("menu") as HTMLElement, { key: "Escape" });
-    expect(byRole("menu")).toBeNull();
-    expect(document.activeElement).toBe(trigger(view.host));
+    await waitUntil(() => byRole("menu") === null);
+    await waitUntil(() => document.activeElement === trigger(view.host));
     await view.unmount();
   });
 
@@ -93,8 +100,7 @@ describe("DropdownMenu", () => {
       await click(trigger(view.host));
       expect(byRole("menu")).not.toBeNull();
       await view.unmount();
-      await settle();
-      expect(byRole("menu")).toBeNull();
+      await waitUntil(() => byRole("menu") === null);
     }
   });
 

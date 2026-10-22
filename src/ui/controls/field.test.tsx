@@ -19,6 +19,7 @@ describe("Field and Label", () => {
     );
     const input = view.host.querySelector("input") as HTMLInputElement;
     expect(input.labels?.[0]?.textContent).toBe("Shell");
+    expect(input.labels?.[0]?.getAttribute("data-slot")).toBe("field-label");
     await view.unmount();
   });
 

@@ -1,7 +1,7 @@
 /* oxlint-disable jest/valid-expect, vitest/valid-expect -- vitest expect() takes a failure message as its second argument */
 import { render, type ComponentChild } from "preact";
 import { act } from "preact/test-utils";
-import { expect } from "vitest";
+import { afterEach, expect } from "vitest";
 
 /** A control mounted in the jsdom document, with the `act` plumbing every control test repeats. */
 export interface Mounted {
@@ -19,9 +19,24 @@ export async function settle(ms = 30): Promise<void> {
   });
 }
 
+/** Hosts still mounted: a test that fails before its `unmount()` must not leak into the next one. */
+const mounted = new Set<HTMLElement>();
+
+afterEach(async () => {
+  for (const host of mounted) {
+    await act(async () => {
+      render(null, host);
+    });
+    host.remove();
+  }
+  mounted.clear();
+  document.body.replaceChildren();
+});
+
 export async function mount(ui: ComponentChild): Promise<Mounted> {
   const host = document.createElement("div");
   document.body.appendChild(host);
+  mounted.add(host);
   await act(async () => {
     render(ui, host);
   });
@@ -39,6 +54,7 @@ export async function mount(ui: ComponentChild): Promise<Mounted> {
         render(null, host);
       });
       host.remove();
+      mounted.delete(host);
       await settle();
     },
   };

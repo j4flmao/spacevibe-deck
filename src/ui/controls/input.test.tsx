@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { createRef } from "preact";
+import { act } from "preact/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { loadPresetControls } from "./load-preset-controls";
 import { click, expectRefsToHoldElements, mount } from "./preset-test-kit";
@@ -12,10 +13,18 @@ const field = (host: HTMLElement): HTMLInputElement =>
 describe("Input", () => {
   it("follows a controlled value and reports typing", async () => {
     const onValueChange = vi.fn();
-    const view = await mount(<Input aria-label="Name" value="Menlo" onChange={onValueChange} />);
+    const view = await mount(
+      <Input aria-label="Name" value="Menlo" onValueChange={onValueChange} />,
+    );
     expect(field(view.host).value).toBe("Menlo");
 
-    await view.update(<Input aria-label="Name" value="Iosevka" onChange={onValueChange} />);
+    await act(async () => {
+      field(view.host).value = "Menlo Nerd";
+      field(view.host).dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(onValueChange.mock.calls.map((call) => call[0])).toEqual(["Menlo Nerd"]);
+
+    await view.update(<Input aria-label="Name" value="Iosevka" onValueChange={onValueChange} />);
     expect(field(view.host).value).toBe("Iosevka");
     await view.unmount();
   });

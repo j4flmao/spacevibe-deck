@@ -153,6 +153,19 @@ const PAIRS: readonly Pair[] = [
     ],
   },
   {
+    id: "destructive on its 20% hover tint",
+    kind: "text",
+    pair: (t) => [
+      solid(t, "--destructive"),
+      over(t.get("--destructive") as Color, solid(t, "--background"), 0.2),
+    ],
+  },
+  {
+    id: "tooltip text (background on foreground)",
+    kind: "text",
+    pair: ink("--background", "--foreground"),
+  },
+  {
     id: "foreground on the input fill",
     kind: "text",
     pair: (t) => [solid(t, "--foreground"), onPage(t, "--input")],
@@ -187,6 +200,7 @@ const EXCEPTIONS: ReadonlyMap<string, string> = new Map([
   ["dark|primary as link text on background", "Button and Badge `link` variant"],
   ["dark|switch track on (primary) on background", "the thumb, not the track, carries the state"],
   ["light|destructive on its 10% tint", "Button and Badge `destructive` variants"],
+  ["light|destructive on its 20% hover tint", "Button and Badge `destructive` hover (3.31:1)"],
   ["light|muted-foreground on muted", "Kbd, and muted text on a muted fill"],
   ["light|muted-foreground on secondary", "text on a secondary fill"],
   ["light|input border on background", "Input, Select and outline Button borders"],

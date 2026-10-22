@@ -3,7 +3,7 @@ import { createRef } from "preact";
 import { useState } from "preact/hooks";
 import { describe, expect, it } from "vitest";
 import { loadPresetControls } from "./load-preset-controls";
-import { byRole, click, mount, press, settle } from "./preset-test-kit";
+import { byRole, click, mount, press, settle, waitUntil } from "./preset-test-kit";
 
 const ui = await loadPresetControls();
 const { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle } = ui;
@@ -48,7 +48,7 @@ describe("Dialog", () => {
     );
 
     await press(dialog, { key: "Escape" });
-    expect(byRole("dialog")).toBeNull();
+    await waitUntil(() => byRole("dialog") === null);
     expect(changes).toEqual([true, false]);
     await view.unmount();
   });
@@ -62,7 +62,7 @@ describe("Dialog", () => {
     expect(byRole("dialog")?.contains(document.activeElement)).toBe(true);
 
     await press(byRole("dialog") as HTMLElement, { key: "Escape" });
-    expect(document.activeElement).toBe(trigger);
+    await waitUntil(() => document.activeElement === trigger);
     await view.unmount();
   });
 

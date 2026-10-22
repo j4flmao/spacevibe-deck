@@ -2,7 +2,7 @@
 import { createRef } from "preact";
 import { describe, expect, it } from "vitest";
 import { loadPresetControls } from "./load-preset-controls";
-import { expectRefsToHoldElements, mount, waitUntil } from "./preset-test-kit";
+import { expectRefsToHoldElements, mount, press, waitUntil } from "./preset-test-kit";
 
 const { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } = await loadPresetControls();
 
@@ -35,6 +35,26 @@ describe("Tooltip", () => {
       </TooltipProvider>,
     );
     expect(content()?.textContent).toBe("Copy the path");
+    await view.unmount();
+  });
+
+  it("opens on keyboard focus and closes on Escape", async () => {
+    const view = await mount(
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger>Info</TooltipTrigger>
+          <TooltipContent>Copy the path</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>,
+    );
+    const trigger = view.host.querySelector("button") as HTMLElement;
+    expect(content()).toBeNull();
+    // Keyboard modality first, so focus counts as focus-visible as it does after a Tab.
+    await press(document.body, { key: "Tab" });
+    trigger.focus();
+    await waitUntil(() => content() !== null);
+    await press(trigger, { key: "Escape" });
+    await waitUntil(() => content() === null);
     await view.unmount();
   });
 

@@ -86,7 +86,7 @@ beforeAll(async () => {
 describe("G2: the production bundle holds one renderer", () => {
   it("contains no module of real React or react-dom", () => {
     const real = built.moduleIds.filter((id) =>
-      /node_modules\/(react|react-dom|scheduler)\//.test(id),
+      /node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id),
     );
     expect(real, "Base UI must resolve react to preact/compat in the production build").toEqual([]);
     expect(built.moduleIds.some((id) => id.includes("node_modules/preact/compat/"))).toBe(true);
@@ -108,11 +108,27 @@ describe("G2: the production bundle holds one renderer", () => {
   });
 });
 
+/** Every stylesheet the app can load: `src/styles/` and the ones that sit beside their component. */
+function chromeCssFiles(): string[] {
+  return files(SRC, (name) => name.endsWith(".css")).filter((file) => {
+    const path = posix(relative(SRC, file));
+    return path !== "ui/preset.css" && !path.startsWith("gallery/");
+  });
+}
+
+/** The controls the barrel exports, as paths under `src/`; the rest of `ui/controls/` is chrome. */
+function presetControlFiles(): Set<string> {
+  const barrel = readFileSync(join(SRC, "ui/controls/preset-controls.ts"), "utf8");
+  return new Set(
+    [...barrel.matchAll(/from "\.\/([\w-]+)"/g)].map((m) => `ui/controls/${m[1]}.tsx`),
+  );
+}
+
 /** Custom properties the chrome declares: its stylesheets, and the theme the renderer sets inline. */
 function deckCustomProperties(): Set<string> {
   const names = new Set<string>();
   const declared = /(?:^|[;{\s])(--[a-z0-9-]+)\s*:/g;
-  for (const file of files(join(SRC, "styles"), (name) => name.endsWith(".css"))) {
+  for (const file of chromeCssFiles()) {
     for (const match of readFileSync(file, "utf8").matchAll(declared)) names.add(match[1]);
   }
   for (const file of ["lib/theme-vars.ts", "lib/derive-colors.ts"]) {
@@ -190,7 +206,7 @@ describe("the preset leaks nothing into a surface that does not carry it", () =>
 
   it("emits no utility class that a chrome stylesheet or chrome markup also uses", () => {
     const utilities = plainClasses(rules.flatMap((rule) => rule.selectors));
-    const chromeCss = files(join(SRC, "styles"), (name) => name.endsWith(".css")).flatMap((file) =>
+    const chromeCss = chromeCssFiles().flatMap((file) =>
       parseRules(file, readFileSync(file, "utf8")).flatMap((rule) => rule.selectors),
     );
     const definedByChrome = plainClasses(chromeCss);
@@ -201,7 +217,7 @@ describe("the preset leaks nothing into a surface that does not carry it", () =>
     const sources = files(SRC, (name) => /\.tsx$/.test(name) && !name.endsWith(".test.tsx"));
     for (const file of sources) {
       const path = posix(relative(SRC, file));
-      if (path.startsWith("ui/controls/") || path.startsWith("gallery/")) continue;
+      if (path.startsWith("gallery/") || presetControlFiles().has(path)) continue;
       const text = readFileSync(file, "utf8");
       // A template literal is read up to its first `${`: what follows is code, not class names.
       for (const match of text.matchAll(/\bclass(?:Name)?=(?:\{\s*)?(["'`])([^"'`]*)\1/g)) {
@@ -241,7 +257,7 @@ describe("the preset leaks nothing into a surface that does not carry it", () =>
     );
     expect(presetTokens.size).toBeGreaterThan(0);
     const usage: string[] = [];
-    for (const file of files(join(SRC, "styles"), (name) => name.endsWith(".css"))) {
+    for (const file of chromeCssFiles()) {
       const text = readFileSync(file, "utf8");
       for (const token of presetTokens) {
         if (new RegExp(`var\\(\\s*${token}\\s*[,)]`).test(text))

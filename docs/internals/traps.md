@@ -77,7 +77,8 @@ constants that currently switch behaviour off and are meant to be flipped back.
   the React 19 that Phosphor pulls in as a peer. Control tests import
   `loadPresetControls()`, a bundle built with the `preact/compat` aliases by
   [`preset-controls-bundle.mjs`](../../scripts/preset-controls-bundle.mjs); inlining the package or the
-  dependency optimizer does not fix it (the optimizer keeps `import "react"` in its chunks).
+  dependency optimizer does not fix it (the optimizer keeps `import "react"` in its chunks). The
+  bundle is built once when Vitest starts, so in watch mode a change to a control needs a restart.
 
 ## Hosts and evidence
 

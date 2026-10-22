@@ -52,7 +52,7 @@ describe("Select", () => {
     await view.unmount();
   });
 
-  it("opens a listbox, picks an item with the keyboard and reports it", async () => {
+  it("opens a listbox, picks an item with the pointer and reports it", async () => {
     const onValueChange = vi.fn();
     const view = await mount(<Menu value="system" onValueChange={onValueChange} />);
     await click(trigger(view.host));
@@ -62,7 +62,7 @@ describe("Select", () => {
     expect(options.map((option) => option.textContent)).toEqual(["System", "Dark", "Light"]);
     await click(options[1]);
     expect(onValueChange).toHaveBeenCalledWith("dark");
-    expect(visibleByRole("listbox")).toBeNull();
+    await waitUntil(() => visibleByRole("listbox") === null);
     await view.unmount();
   });
 
@@ -73,8 +73,8 @@ describe("Select", () => {
     expect(byRole("listbox")).not.toBeNull();
 
     await press(byRole("listbox") as HTMLElement, { key: "Escape" });
-    expect(visibleByRole("listbox")).toBeNull();
-    expect(document.activeElement).toBe(trigger(view.host));
+    await waitUntil(() => visibleByRole("listbox") === null);
+    await waitUntil(() => document.activeElement === trigger(view.host));
     await view.unmount();
   });
 

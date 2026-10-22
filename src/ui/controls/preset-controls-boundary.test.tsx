@@ -13,7 +13,7 @@ import { mount } from "./preset-test-kit";
  */
 
 /** A module of real React or its renderer, by path. */
-const REACT_RUNTIME = /node_modules\/(react|react-dom|scheduler)\//;
+const REACT_RUNTIME = /node_modules[\\/](react|react-dom|scheduler)[\\/]/;
 const requireFromHere = createRequire(import.meta.url);
 
 /** Modules of real React or its renderer that this process has loaded through Node. */
@@ -21,7 +21,7 @@ const loadedReactModules = (): string[] =>
   Object.keys(requireFromHere.cache ?? {}).filter((path) => REACT_RUNTIME.test(path));
 
 describe("the Preact test boundary for the Base UI controls", () => {
-  it("renders every control family through the aliased bundle", async () => {
+  it("renders a switch and a button through the aliased bundle", async () => {
     const { Switch, Button } = await loadPresetControls();
     const view = await mount(
       <>
