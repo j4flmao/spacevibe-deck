@@ -247,14 +247,16 @@ function Pane({
   );
 }
 
-export function OptionInbox({ initialFocus, overlay }: OptionProps) {
+export function OptionInbox({ initialFocus, overlay, slots, dockOpen: dockDefault }: OptionProps) {
   const focusId = useSignal(initialFocus);
   const projectId = useSignal<string | null>(null);
   const quietOpen = useSignal(sectionOf(agentById(initialFocus)) === "quiet");
   const switcherOpen = useSignal(overlay === "switcher");
   const highlight = useSignal(switcherEntries()[0]?.id ?? initialFocus);
   // The hybrid: the inbox rail plus the agent-scoped dock. `?dock=0` opens without it.
-  const dockOpen = useSignal(new URLSearchParams(window.location.search).get("dock") !== "0");
+  const dockOpen = useSignal(
+    dockDefault ?? new URLSearchParams(window.location.search).get("dock") !== "0",
+  );
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -289,13 +291,16 @@ export function OptionInbox({ initialFocus, overlay }: OptionProps) {
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const focusAgent = (id: string) => {
+    focusId.value = id;
+  };
   const focused = agentById(focusId.value);
   const { space, checkout, project } = placeOf(focused);
   const panes = space.paneIds.map(agentById);
   const filterLabel = PROJECTS.find((item) => item.id === projectId.value)?.name ?? "All projects";
 
   return (
-    <div className="flex h-full overflow-hidden bg-background text-foreground">
+    <div className="relative flex h-full overflow-hidden bg-background text-foreground">
       <aside
         aria-label="Agents"
         className="flex w-[300px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground"
@@ -412,37 +417,45 @@ export function OptionInbox({ initialFocus, overlay }: OptionProps) {
             <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} aria-hidden="true" />
           </IconButton>
         </header>
-        <div
-          className={cn("flex min-h-0 flex-1", space.split === "column" ? "flex-col" : "flex-row")}
-        >
-          {panes.map((agent, index) => (
-            <div
-              key={agent.id}
-              className={cn(
-                "flex min-h-0 min-w-0 flex-1",
-                index > 0 && (space.split === "column" ? "border-t" : "border-l"),
-              )}
-            >
-              <Pane
-                agent={agent}
-                focused={agent.id === focusId.value}
-                onFocus={() => {
-                  focusId.value = agent.id;
-                }}
-              />
-            </div>
-          ))}
-        </div>
+        {slots?.stage ? (
+          <div className="flex min-h-0 flex-1">{slots.stage(focused, focusAgent)}</div>
+        ) : (
+          <div
+            className={cn(
+              "flex min-h-0 flex-1",
+              space.split === "column" ? "flex-col" : "flex-row",
+            )}
+          >
+            {panes.map((agent, index) => (
+              <div
+                key={agent.id}
+                className={cn(
+                  "flex min-h-0 min-w-0 flex-1",
+                  index > 0 && (space.split === "column" ? "border-t" : "border-l"),
+                )}
+              >
+                <Pane
+                  agent={agent}
+                  focused={agent.id === focusId.value}
+                  onFocus={() => {
+                    focusId.value = agent.id;
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </main>
 
       {dockOpen.value ? (
-        <AgentDock
-          agent={focused}
-          onFocus={(id) => {
-            focusId.value = id;
-          }}
-        />
+        slots?.dock ? (
+          slots.dock(focused, focusAgent)
+        ) : (
+          <AgentDock agent={focused} onFocus={focusAgent} />
+        )
       ) : null}
+
+      {slots?.overlay?.(focused, focusAgent)}
 
       {switcherOpen.value ? (
         <InboxSwitcher

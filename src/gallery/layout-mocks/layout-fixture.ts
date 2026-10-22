@@ -19,12 +19,156 @@ export interface MockProject {
   readonly kind: "repository" | "folder";
 }
 
+export interface MockDiffLine {
+  readonly kind: "ctx" | "add" | "del";
+  readonly old: number | null;
+  readonly new: number | null;
+  readonly text: string;
+}
+
+export interface MockHunk {
+  readonly header: string;
+  readonly lines: readonly MockDiffLine[];
+}
+
 export interface MockFileChange {
   readonly path: string;
   readonly status: "M" | "A" | "D";
   readonly added: number;
   readonly removed: number;
+  /** The agent whose turn made the change, and that turn's number (1-based). */
+  readonly by: string;
+  readonly turn: number;
+  /** Present for the files the diff mocks open; their +/− counts are derived from these. */
+  readonly hunks?: readonly MockHunk[];
 }
+
+/** Rows prefixed " ", "-" or "+"; line numbers and the @@ header are derived from the starts. */
+function hunk(
+  context: string,
+  oldStart: number,
+  newStart: number,
+  rows: readonly string[],
+): MockHunk {
+  const lines: MockDiffLine[] = [];
+  let oldNo = oldStart;
+  let newNo = newStart;
+  for (const row of rows) {
+    const text = row.slice(1);
+    if (row.startsWith("+")) lines.push({ kind: "add", old: null, new: newNo++, text });
+    else if (row.startsWith("-")) lines.push({ kind: "del", old: oldNo++, new: null, text });
+    else lines.push({ kind: "ctx", old: oldNo++, new: newNo++, text });
+  }
+  const oldCount = lines.filter((line) => line.kind !== "add").length;
+  const newCount = lines.filter((line) => line.kind !== "del").length;
+  const range = `@@ -${oldStart},${oldCount} +${newStart},${newCount} @@`;
+  return { header: context ? `${range} ${context}` : range, lines };
+}
+
+/** A change whose +/− counts are read off its hunks. */
+function diffed(
+  path: string,
+  status: MockFileChange["status"],
+  by: string,
+  turn: number,
+  hunks: readonly MockHunk[],
+): MockFileChange {
+  const all = hunks.flatMap((item) => item.lines);
+  return {
+    path,
+    status,
+    by,
+    turn,
+    hunks,
+    added: all.filter((line) => line.kind === "add").length,
+    removed: all.filter((line) => line.kind === "del").length,
+  };
+}
+
+const SESSION_STORE_HUNKS = [
+  hunk("", 12, 12, [
+    ' import { store } from "./store";',
+    ' import { signOut } from "./sign-out";',
+    '+import { RefreshError } from "./errors";',
+    " ",
+    ' const REFRESH_URL = "/api/session/refresh";',
+    " const RETRY_DELAY_MS = 250;",
+  ]),
+  hunk("export async function refreshToken", 84, 85, [
+    " export async function refreshToken({ retried = false } = {}) {",
+    '   const response = await fetch(REFRESH_URL, { method: "POST", credentials: "include" });',
+    "-  if (!response.ok) {",
+    "-    return signOut();",
+    "-  }",
+    "+  if (response.status === 401) {",
+    "+    if (!retried) return refreshToken({ retried: true });",
+    "+    return signOut();",
+    "+  }",
+    "+  if (!response.ok) throw new RefreshError(response.status);",
+    "   const session = await response.json();",
+    "   store.set(session);",
+    "   return session;",
+    " }",
+  ]),
+];
+
+const ERRORS_HUNKS = [
+  hunk("", 0, 1, [
+    "+export class RefreshError extends Error {",
+    "+  constructor(readonly status: number) {",
+    "+    super(`Session refresh failed with ${status}`);",
+    '+    this.name = "RefreshError";',
+    "+  }",
+    "+}",
+  ]),
+];
+
+const REFRESH_TEST_HUNKS = [
+  hunk("", 0, 1, [
+    '+import { describe, expect, it, vi } from "vitest";',
+    '+import { refreshToken } from "./session-store";',
+    '+import { signOut } from "./sign-out";',
+    "+",
+    '+vi.mock("./sign-out");',
+    "+",
+    '+describe("refreshToken", () => {',
+    '+  it("retries once on a 401 before signing out", async () => {',
+    "+    const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));",
+    '+    vi.stubGlobal("fetch", fetch);',
+    "+    await refreshToken();",
+    "+    expect(fetch).toHaveBeenCalledTimes(2);",
+    "+    expect(signOut).toHaveBeenCalledOnce();",
+    "+  });",
+    "+",
+    '+  it("does not sign out when the retry succeeds", async () => {',
+    "+    const fetch = vi.fn().mockResolvedValueOnce(new Response(null, { status: 401 }));",
+    '+    fetch.mockResolvedValueOnce(Response.json({ user: "kyan" }));',
+    '+    vi.stubGlobal("fetch", fetch);',
+    '+    await expect(refreshToken()).resolves.toEqual({ user: "kyan" });',
+    "+  });",
+    "+});",
+  ]),
+];
+
+const LEADERBOARD_HUNKS = [
+  hunk("export function rankModels", 38, 38, [
+    " export function rankModels(rows: readonly ModelRow[]): RankedRow[] {",
+    "-  return [...rows]",
+    "-    .sort((a, b) => b.score - a.score)",
+    "-    .map((row, index) => ({ ...row, rank: index + 1 }));",
+    "+  // Curated rows stay pinned; the rest rank by score, then by name.",
+    "+  const curated = rows.filter((row) => row.curated);",
+    "+  const rest = rows.filter((row) => !row.curated);",
+    "+  const byScore = (a: ModelRow, b: ModelRow) =>",
+    "+    b.score - a.score || a.name.localeCompare(b.name);",
+    "+",
+    "+  return [...curated, ...rest.sort(byScore)].map((row, index) => ({",
+    "+    ...row,",
+    "+    rank: index + 1,",
+    "+  }));",
+    " }",
+  ]),
+];
 
 export interface MockCheckout {
   readonly id: string;
@@ -128,6 +272,9 @@ export const PROJECTS: readonly MockProject[] = [
   { id: "tiny", name: "tiny-cli", kind: "folder" },
 ];
 
+const R = "a-rail-opencode";
+const G = "a-filters-gemini";
+
 export const CHECKOUTS: readonly MockCheckout[] = [
   {
     id: "deck-auth",
@@ -136,8 +283,9 @@ export const CHECKOUTS: readonly MockCheckout[] = [
     worktree: true,
     path: "~/dev/spacevibe-deck/.claude/worktrees/token-refresh",
     changes: [
-      { path: "src/auth/session-store.ts", status: "M", added: 24, removed: 6 },
-      { path: "src/auth/refresh.test.ts", status: "A", added: 58, removed: 0 },
+      diffed("src/auth/session-store.ts", "M", "a-auth-claude", 2, SESSION_STORE_HUNKS),
+      diffed("src/auth/errors.ts", "A", "a-auth-claude", 1, ERRORS_HUNKS),
+      diffed("src/auth/refresh.test.ts", "A", "a-auth-codex", 1, REFRESH_TEST_HUNKS),
     ],
     pr: null,
   },
@@ -157,12 +305,19 @@ export const CHECKOUTS: readonly MockCheckout[] = [
     worktree: true,
     path: "~/dev/spacevibe-deck/.claude/worktrees/rail-sections",
     changes: [
-      { path: "src/ui/agent-rail.tsx", status: "M", added: 142, removed: 87 },
-      { path: "src/ui/agent-rail-model.ts", status: "M", added: 64, removed: 12 },
-      { path: "src/styles/rail-sections.css", status: "A", added: 48, removed: 0 },
-      { path: "src/ui/agent-rail.test.tsx", status: "M", added: 36, removed: 4 },
-      { path: "src/ui/agent-rail-card-model.ts", status: "M", added: 8, removed: 3 },
-      { path: "docs/DESIGN-LANGUAGE.md", status: "M", added: 12, removed: 9 },
+      { path: "src/ui/agent-rail-model.ts", status: "M", added: 64, removed: 12, by: R, turn: 1 },
+      { path: "src/ui/agent-rail.tsx", status: "M", added: 142, removed: 87, by: R, turn: 1 },
+      { path: "src/styles/rail-sections.css", status: "A", added: 48, removed: 0, by: R, turn: 1 },
+      { path: "src/ui/agent-rail.test.tsx", status: "M", added: 36, removed: 4, by: R, turn: 2 },
+      {
+        path: "src/ui/agent-rail-card-model.ts",
+        status: "M",
+        added: 8,
+        removed: 3,
+        by: R,
+        turn: 2,
+      },
+      { path: "docs/DESIGN-LANGUAGE.md", status: "M", added: 12, removed: 9, by: R, turn: 2 },
     ],
     pr: { number: 241, state: "draft" },
   },
@@ -172,7 +327,7 @@ export const CHECKOUTS: readonly MockCheckout[] = [
     branch: "main",
     worktree: false,
     path: "~/dev/spacevibe-bench",
-    changes: [{ path: "lib/leaderboard.ts", status: "M", added: 11, removed: 3 }],
+    changes: [diffed("lib/leaderboard.ts", "M", "a-bench-codex", 1, LEADERBOARD_HUNKS)],
     pr: null,
   },
   {
@@ -182,8 +337,8 @@ export const CHECKOUTS: readonly MockCheckout[] = [
     worktree: true,
     path: "~/dev/spacevibe-bench/.claude/worktrees/provider-filter",
     changes: [
-      { path: "components/model-table.tsx", status: "M", added: 40, removed: 8 },
-      { path: "lib/filters.ts", status: "A", added: 22, removed: 0 },
+      { path: "components/model-table.tsx", status: "M", added: 40, removed: 8, by: G, turn: 1 },
+      { path: "lib/filters.ts", status: "A", added: 22, removed: 0, by: G, turn: 1 },
     ],
     pr: { number: 88, state: "open" },
   },
@@ -194,8 +349,8 @@ export const CHECKOUTS: readonly MockCheckout[] = [
     worktree: false,
     path: "~/dev/tiny-cli",
     changes: [
-      { path: "CHANGELOG.md", status: "M", added: 6, removed: 0 },
-      { path: "package.json", status: "M", added: 1, removed: 1 },
+      { path: "CHANGELOG.md", status: "M", added: 6, removed: 0, by: "a-tiny-claude", turn: 1 },
+      { path: "package.json", status: "M", added: 1, removed: 1, by: "a-tiny-claude", turn: 1 },
     ],
     pr: null,
   },
@@ -336,7 +491,7 @@ export const AGENTS: readonly MockAgent[] = [
       [
         ["fg", "• "],
         ["fg", "Added src/auth/refresh.test.ts "],
-        ["ok", "(+58 -0)"],
+        ["ok", "(+22 -0)"],
       ],
       blank,
       [
@@ -482,7 +637,7 @@ export const AGENTS: readonly MockAgent[] = [
       [
         ["fg", "• "],
         ["fg", "Edited lib/leaderboard.ts "],
-        ["ok", "(+11 -3)"],
+        ["ok", "(+10 -3)"],
       ],
       blank,
       [
