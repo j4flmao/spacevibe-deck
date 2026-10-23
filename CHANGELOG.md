@@ -7,6 +7,9 @@ the release PR, and frozen at the tag — never an auto-generated commit list.
 
 ## Unreleased
 
+- **Settings switches and buttons have a new look.** Toggles in Settings are now switches
+  instead of an on/off button, and the text buttons on Settings pages share one style.
+  Nothing moves and no setting changes.
 - **Retired themes open in Dark.** Tokyo Night, Dracula, One Dark and Catppuccin Mocha are
   gone, and a profile still set to one of them opens in Dark. Colour overrides saved by an
   older version no longer apply. A terminal theme file from the themes folder now recolours
