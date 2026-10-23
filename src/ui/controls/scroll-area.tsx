@@ -1,7 +1,8 @@
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import { cn } from "cn";
+import { withRef } from "./with-ref";
 
-function ScrollArea({
+const ScrollArea = withRef(function ScrollArea({
   className,
   children,
   ...props
@@ -22,9 +23,9 @@ function ScrollArea({
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   );
-}
+});
 
-function ScrollBar({
+const ScrollBar = withRef(function ScrollBar({
   className,
   orientation = "vertical",
   ...props
@@ -46,6 +47,6 @@ function ScrollBar({
       />
     </ScrollAreaPrimitive.Scrollbar>
   );
-}
+});
 
 export { ScrollArea, ScrollBar };

@@ -3,8 +3,9 @@
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
+import { withRef } from "./with-ref";
 
-function Tabs({
+const Tabs = withRef(function Tabs({
   className,
   orientation = "horizontal",
   ...props
@@ -17,7 +18,7 @@ function Tabs({
       {...props}
     />
   );
-}
+});
 
 const tabsListVariants = cva(
   "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
@@ -34,7 +35,7 @@ const tabsListVariants = cva(
   },
 );
 
-function TabsList({
+const TabsList = withRef(function TabsList({
   className,
   variant = "default",
   ...props
@@ -47,9 +48,12 @@ function TabsList({
       {...props}
     />
   );
-}
+});
 
-function TabsTrigger({ className, ...props }: Omit<TabsPrimitive.Tab.Props, "ref">) {
+const TabsTrigger = withRef(function TabsTrigger({
+  className,
+  ...props
+}: Omit<TabsPrimitive.Tab.Props, "ref">) {
   return (
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
@@ -63,9 +67,12 @@ function TabsTrigger({ className, ...props }: Omit<TabsPrimitive.Tab.Props, "ref
       {...props}
     />
   );
-}
+});
 
-function TabsContent({ className, ...props }: Omit<TabsPrimitive.Panel.Props, "ref">) {
+const TabsContent = withRef(function TabsContent({
+  className,
+  ...props
+}: Omit<TabsPrimitive.Panel.Props, "ref">) {
   return (
     <TabsPrimitive.Panel
       data-slot="tabs-content"
@@ -73,6 +80,6 @@ function TabsContent({ className, ...props }: Omit<TabsPrimitive.Panel.Props, "r
       {...props}
     />
   );
-}
+});
 
 export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };
