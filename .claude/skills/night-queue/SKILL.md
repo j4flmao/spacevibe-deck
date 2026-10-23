@@ -77,8 +77,9 @@ Post no comment on the issue: a `night-shift:` comment would make the night skip
   (`gh api 'repos/mxrsv/spacevibe-deck/issues?labels=claude-ready&state=open&creator=mxrsv&sort=created&direction=asc&per_page=100'`,
   dropping entries with a `pull_request` key).
 
-The night does one task per run, oldest first, skips a task that already has an open night PR,
-and starts nothing while 3 night PRs are open. Reply in the owner's language with the issue link
+The default runner does one task per run, oldest first, skips a task that already has an open night PR,
+and starts nothing while 3 night PRs are open. A task with a `lane: <name>` line is taken only by that
+lane's runner, one at a time per lane, so say how many nights a lane's slices need, not the set. Reply in the owner's language with the issue link
 and one of: runs tonight; runs in about N nights; or waiting, because 3 night PRs are open and one
 has to be merged or closed first.
 
