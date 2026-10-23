@@ -66,7 +66,10 @@ in implementation evidence; do not silently re-resolve `latest` between waves.
   already owns controls. Compose product-specific controls from those primitives. Callers
   select upstream variants and sizes; they do not recreate control colors or geometry.
   Layout-only composition is allowed. No parallel Button/Switch/Dialog implementation for
-  each feature, and no new generic `utils.ts` file for class composition.
+  each feature, and no new generic `utils.ts` file for class composition. The shared set may
+  be narrowed to the sizes and variants Deck's surfaces use, each with one documented role.
+  Narrowing removes options and never alters the computed result of one that stays, so UI-1
+  still holds for every kept option.
 - **UI-5 Runtime compatibility.** Keep Electron, Vite, Preact and signals unless a separate
   architecture decision approves a change. Base UI must work through the real renderer
   boundary, not only a React demo. A failed compatibility gate does not authorize replacing
