@@ -132,7 +132,7 @@ stop where the table says.
 None of these is wired into the [unattended routine](#unattended-routine) yet:
 `test-deck-app`'s launch recipe is macOS-only, and `respond-to-pr-comments` is not enabled there.
 `night-runner` and `night-digest` run only from their routines; never invoke them in a session.
-`night-queue` runs in any session when the owner hands work to the night shift.
+`night-queue` is a user-scope skill (`~/.claude/skills/night-queue/`): it runs in any session when the owner hands work to the night shift.
 
 ## Sessions and checkouts
 
@@ -172,7 +172,7 @@ that needs the owner becomes a night comment, and the run stops.
 
 - **The tasks live in skills.** The runner follows [`night-runner`](.claude/skills/night-runner/SKILL.md),
   the digest follows [`night-digest`](.claude/skills/night-digest/SKILL.md), and any session the
-  owner opens files night work with [`night-queue`](.claude/skills/night-queue/SKILL.md). Each
+  owner opens files night work with the user-scope skill `night-queue` (`~/.claude/skills/night-queue/`, not in this repo). Each
   routine prompt only points at its skill, so change the skill on `main`, not the routine. No
   routine may edit these skills or this section: a task that needs it is a fork.
 - **What the owner does.** Hand work to the night through `night-queue` or by adding
