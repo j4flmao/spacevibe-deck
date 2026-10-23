@@ -80,7 +80,7 @@ export function DiffQueue({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- the handler reads signals' current values when it fires, so the listener mounts once
   }, []);
 
   const author = agentById(file.change.by);
