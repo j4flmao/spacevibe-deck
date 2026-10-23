@@ -73,7 +73,7 @@ export function splitPath(path: string) {
 
 export function Counts({ added, removed }: { added: number; removed: number }) {
   return (
-    <span className="shrink-0 font-mono text-[11.5px] tabular-nums">
+    <span className="shrink-0 font-mono text-code tabular-nums">
       <span className="text-(--term-ok)">+{added}</span>{" "}
       <span className="text-(--term-err)">−{removed}</span>
     </span>
@@ -86,7 +86,7 @@ export function StatusLetter({ status }: { status: MockFileChange["status"] }) {
       role="img"
       aria-label={STATUS_WORD[status]}
       className={cn(
-        "w-3 shrink-0 text-center font-mono text-[11.5px] font-semibold",
+        "w-3 shrink-0 text-center font-mono text-code font-semibold",
         STATUS_CLASS[status],
       )}
     >
@@ -193,7 +193,7 @@ export function Preview({ change }: { change: MockFileChange }) {
     .filter((l) => l.kind !== "ctx")
     .slice(0, 4);
   return (
-    <pre className="m-0 mb-1 ml-9 mr-3 overflow-hidden rounded-md bg-muted px-2 py-1.5 font-mono text-[11px] leading-4">
+    <pre className="m-0 mb-1 ml-9 mr-3 overflow-hidden rounded-md bg-muted px-2 py-1.5 font-mono text-2xs leading-4">
       {lines.map((line, index) => (
         <div key={index} className="truncate">
           <span className={line.kind === "add" ? "text-(--term-ok)" : "text-(--term-err)"}>

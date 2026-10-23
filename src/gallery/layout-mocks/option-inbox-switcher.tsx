@@ -70,7 +70,7 @@ export function InboxSwitcher({
               if (items.length === 0) return null;
               return (
                 <div key={section} role="group" aria-label={SECTION_LABEL[section]}>
-                  <div className="flex items-center gap-1.5 px-2 pt-2 pb-1 text-[11px] font-medium text-muted-foreground">
+                  <div className="flex items-center gap-1.5 px-2 pt-2 pb-1 text-2xs font-medium text-muted-foreground">
                     {SECTION_LABEL[section]}
                     <span className="tabular-nums">{items.length}</span>
                   </div>
@@ -111,11 +111,11 @@ export function InboxSwitcher({
             <MockTerminal
               lines={current.terminal}
               lastRows={PREVIEW_ROWS}
-              className="min-h-0 flex-1 px-4 py-3 text-[13px]"
+              className="min-h-0 flex-1 px-4 py-3 text-sm"
             />
           </div>
         </div>
-        <div className="flex h-9 shrink-0 items-center gap-4 border-t px-3 text-[11px] text-muted-foreground">
+        <div className="flex h-9 shrink-0 items-center gap-4 border-t px-3 text-2xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <KbdGroup>
               <Kbd>⌘</Kbd>

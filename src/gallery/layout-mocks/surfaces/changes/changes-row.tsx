@@ -62,7 +62,7 @@ export function FileRow({
           className={cn(ROW_PRESS, !onToggle && "pl-2")}
         >
           <StatusLetter status={change.status} />
-          <span className="min-w-0 flex-1 truncate font-mono text-[11.5px]" title={change.path}>
+          <span className="min-w-0 flex-1 truncate font-mono text-code" title={change.path}>
             {fullPath ? <span className="text-muted-foreground">{dir}</span> : null}
             <span className="text-foreground">{file}</span>
           </span>

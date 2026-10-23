@@ -156,10 +156,7 @@ export function DiffComposer({
         </div>
       ) : null}
       {variant === "inline" ? null : (
-        <p
-          className="m-0 truncate font-mono text-[11px] text-muted-foreground"
-          title={review.payload}
-        >
+        <p className="m-0 truncate font-mono text-2xs text-muted-foreground" title={review.payload}>
           {review.payload}
         </p>
       )}

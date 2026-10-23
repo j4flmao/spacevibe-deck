@@ -44,7 +44,7 @@ export function FileButton({
       title={path}
       onClick={onOpen}
       className={cn(
-        "flex w-full cursor-default items-center gap-2 px-3 text-left font-mono text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+        "flex w-full cursor-default items-center gap-2 px-3 text-left font-mono text-code outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
         rail ? "min-h-9 flex-wrap py-1.5" : "h-7",
         active ? "bg-accent" : "hover:bg-muted",
       )}
@@ -58,7 +58,7 @@ export function FileButton({
       </span>
       <Counts change={file.change} />
       {rail && dir ? (
-        <span className="w-full truncate pl-5 text-[10.5px] text-foreground">{dir}</span>
+        <span className="w-full truncate pl-5 text-2xs text-foreground">{dir}</span>
       ) : null}
     </button>
   );

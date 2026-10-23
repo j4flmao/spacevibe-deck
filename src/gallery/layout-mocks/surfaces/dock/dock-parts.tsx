@@ -85,7 +85,7 @@ export function changeTotals(agent: MockAgent) {
   };
 }
 
-export const SECTION_LABEL = "text-[11px] font-medium text-muted-foreground";
+export const SECTION_LABEL = "text-2xs font-medium text-muted-foreground";
 
 const STATUS_CLASS: Readonly<Record<MockFileChange["status"], string>> = {
   M: "text-(--term-warn)",
@@ -103,7 +103,7 @@ export function AgentIdentity({ agent }: { readonly agent: MockAgent }) {
         <span className="truncate text-xs font-medium text-foreground">
           {AGENT_NAME[agent.kind]}
         </span>
-        <span className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+        <span className="flex min-w-0 items-center gap-1 text-2xs text-muted-foreground">
           <span className="truncate">
             {project.name} / {checkout.branch ?? "no branch"}
           </span>
@@ -127,7 +127,7 @@ export function ChangesList({ agent }: { readonly agent: MockAgent }) {
           return (
             <li
               key={change.path}
-              className="flex h-7 items-center gap-2 px-3 font-mono text-[11.5px] hover:bg-muted"
+              className="flex h-7 items-center gap-2 px-3 font-mono text-code hover:bg-muted"
             >
               <span
                 className={cn(
@@ -149,7 +149,7 @@ export function ChangesList({ agent }: { readonly agent: MockAgent }) {
           );
         })}
       </ul>
-      <p className="m-0 flex h-8 items-center justify-between border-t px-3 text-[11.5px] tabular-nums">
+      <p className="m-0 flex h-8 items-center justify-between border-t px-3 text-xs tabular-nums">
         <span className="text-foreground">
           {sum.files} {sum.files === 1 ? "file" : "files"}
         </span>
@@ -224,7 +224,7 @@ function TreeRows({
                 if (node.children) open.value = { ...open.value, [node.path]: !expanded };
               }}
               style={{ paddingLeft: 12 + depth * 14 }}
-              className="flex h-7 w-full items-center gap-1.5 pr-3 text-left font-mono text-[11.5px] text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="flex h-7 w-full items-center gap-1.5 pr-3 text-left font-mono text-code text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
             >
               {node.children ? (
                 <DockIcon name={expanded ? "down" : "right"} size={11} />
@@ -321,7 +321,7 @@ export function AskBlock({
   return (
     <section aria-label="Ask" className="px-3 py-2">
       <div className="rounded-md border border-amber-600/50 bg-muted p-2 dark:border-amber-400/50">
-        <p className="m-0 font-mono text-[11.5px] text-foreground">{ask}</p>
+        <p className="m-0 font-mono text-code text-foreground">{ask}</p>
         <div className="mt-2 flex gap-1.5">
           <Button size="sm" variant="secondary" onClick={() => onFocus(agent.id)}>
             Open pane

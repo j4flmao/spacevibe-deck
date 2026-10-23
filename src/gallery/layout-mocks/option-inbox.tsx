@@ -126,7 +126,7 @@ function InboxRow({
       </span>
       <span
         className={cn(
-          "line-clamp-2 min-w-0 text-[13px] leading-[18px] text-foreground",
+          "line-clamp-2 min-w-0 text-sm leading-[18px] text-foreground",
           selected && "font-medium",
         )}
       >
@@ -134,7 +134,7 @@ function InboxRow({
       </span>
       <span
         className={cn(
-          "text-right text-[11px] leading-[18px] tabular-nums",
+          "text-right text-2xs leading-[18px] tabular-nums",
           selected ? "text-foreground" : "text-muted-foreground",
         )}
       >
@@ -142,7 +142,7 @@ function InboxRow({
       </span>
       <span
         className={cn(
-          "col-span-2 col-start-3 mt-0.5 truncate text-[11px] leading-4",
+          "col-span-2 col-start-3 mt-0.5 truncate text-2xs leading-4",
           asking || selected ? "text-foreground" : "text-muted-foreground",
         )}
       >
@@ -179,7 +179,7 @@ function SectionHeader({
       <span className="tabular-nums">{count}</span>
     </>
   );
-  const cls = "flex h-6 items-center gap-1.5 text-[11px] font-medium text-muted-foreground";
+  const cls = "flex h-6 items-center gap-1.5 text-2xs font-medium text-muted-foreground";
   return collapsible ? (
     <button
       type="button"

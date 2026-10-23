@@ -179,7 +179,7 @@ export function DiffQueue({
             </div>
           )}
           <nav aria-label="Hunk queue" className="flex flex-col">
-            <h3 className="m-0 px-1 pb-1 text-[11px] font-medium text-muted-foreground">Queue</h3>
+            <h3 className="m-0 px-1 pb-1 text-2xs font-medium text-muted-foreground">Queue</h3>
             {steps.map((item, index) => {
               const f = review.files[item.file];
               const name = f.change.path.slice(f.change.path.lastIndexOf("/") + 1);
@@ -191,7 +191,7 @@ export function DiffQueue({
                   aria-current={index === at.value ? "step" : undefined}
                   onClick={() => go(index)}
                   className={cn(
-                    "flex h-8 w-full cursor-default items-center gap-2 rounded-md px-2 text-left font-mono text-[11.5px] outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "flex h-8 w-full cursor-default items-center gap-2 rounded-md px-2 text-left font-mono text-code outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     index === at.value ? "bg-accent" : "hover:bg-muted",
                   )}
                 >

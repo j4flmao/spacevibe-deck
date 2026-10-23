@@ -190,7 +190,7 @@ export function DiffCode({
       role="table"
       aria-label={`Diff of ${file.change.path}`}
       className={cn(
-        "min-w-0 overflow-auto bg-background py-1 font-mono text-[12px] leading-5",
+        "min-w-0 overflow-auto bg-background py-1 font-mono text-code leading-5",
         className,
       )}
     >

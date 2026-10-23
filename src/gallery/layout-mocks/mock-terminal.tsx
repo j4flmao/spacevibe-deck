@@ -29,7 +29,7 @@ export function MockTerminal({
   return (
     <pre
       className={cn(
-        "m-0 min-h-0 overflow-hidden bg-(--term-bg) px-3 py-2 font-mono text-[12px] leading-[1.5] text-(--term-fg)",
+        "m-0 min-h-0 overflow-hidden bg-(--term-bg) px-3 py-2 font-mono text-code leading-[1.5] text-(--term-fg)",
         className,
       )}
     >

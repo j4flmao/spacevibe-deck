@@ -68,7 +68,7 @@ function RenameField({ thread, state }: { readonly thread: Thread; readonly stat
         autoFocus
         defaultValue={thread.title}
         aria-label={`Rename ${thread.title}`}
-        className="h-6 text-[13px]"
+        className="h-6 text-sm"
         onKeyDown={(event: KeyboardEvent) => {
           event.stopPropagation();
           if (event.key === "Enter") {
@@ -191,13 +191,13 @@ export function ThreadRow({
           </span>
           <span
             className={cn(
-              "truncate text-[13px] leading-[18px] text-foreground",
+              "truncate text-sm leading-[18px] text-foreground",
               selected && "font-medium",
             )}
           >
             {thread.title}
           </span>
-          <span className="col-start-2 flex min-w-0 items-center gap-1.5 text-[11px] leading-4 text-muted-foreground">
+          <span className="col-start-2 flex min-w-0 items-center gap-1.5 text-2xs leading-4 text-muted-foreground">
             <AgentLogo kind={thread.kind} className="size-3" />
             {projectName === undefined ? null : (
               <span className="min-w-0 shrink truncate">{projectName}</span>

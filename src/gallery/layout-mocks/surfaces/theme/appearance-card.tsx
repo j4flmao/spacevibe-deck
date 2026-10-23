@@ -73,7 +73,7 @@ export function ThemeCard({ theme, selected, custom, onPick, onHover }: CardProp
       <Preview theme={theme} />
       <span className="flex items-center justify-between gap-1 px-0.5">
         <span className="truncate font-medium">{theme.label}</span>
-        {custom && <span className="text-[0.625rem] text-muted-foreground">Custom</span>}
+        {custom && <span className="text-3xs text-muted-foreground">Custom</span>}
         {selected && (
           <HugeiconsIcon
             icon={Tick02Icon}

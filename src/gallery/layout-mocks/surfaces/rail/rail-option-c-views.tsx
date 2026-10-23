@@ -63,13 +63,11 @@ function ProjectHeader({
       >
         <span
           aria-hidden="true"
-          className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-[9px] font-semibold text-muted-foreground"
+          className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted text-3xs font-semibold text-muted-foreground"
         >
           {initials(project.name)}
         </span>
-        <span className="min-w-0 truncate text-[13px] font-medium text-foreground">
-          {project.name}
-        </span>
+        <span className="min-w-0 truncate text-sm font-medium text-foreground">{project.name}</span>
         <HugeiconsIcon
           icon={ArrowDown01Icon}
           size={10}
@@ -83,7 +81,7 @@ function ProjectHeader({
         {open ? null : (
           <span
             className={cn(
-              "ml-auto flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground tabular-nums",
+              "ml-auto flex shrink-0 items-center gap-1.5 text-2xs text-muted-foreground tabular-nums",
               "group-hover/item:invisible group-focus-within/item:invisible group-has-[[data-popup-open]]/item:invisible",
             )}
           >

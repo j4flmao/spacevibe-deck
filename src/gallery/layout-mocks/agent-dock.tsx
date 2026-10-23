@@ -25,7 +25,7 @@ function ChangeRow({ change }: { readonly change: MockFileChange }) {
   const dir = cut < 0 ? "" : change.path.slice(0, cut + 1);
   const file = change.path.slice(cut + 1);
   return (
-    <li className="flex h-7 items-center gap-2 px-3 font-mono text-[11.5px] hover:bg-muted">
+    <li className="flex h-7 items-center gap-2 px-3 font-mono text-code hover:bg-muted">
       <span className={cn("w-3 shrink-0 text-center font-semibold", STATUS_CLASS[change.status])}>
         {change.status}
       </span>
@@ -56,7 +56,7 @@ function Fact({
   );
 }
 
-const SECTION_LABEL = "px-3 pt-2.5 pb-1 text-[11px] font-medium text-muted-foreground";
+const SECTION_LABEL = "px-3 pt-2.5 pb-1 text-2xs font-medium text-muted-foreground";
 
 function AttentionStrip({
   agent,
@@ -75,7 +75,7 @@ function AttentionStrip({
         <section aria-label="Ask">
           <h3 className={cn(SECTION_LABEL, "m-0")}>Ask</h3>
           <div className="mx-3 rounded-md border border-amber-600/50 bg-muted p-2 dark:border-amber-400/50">
-            <p className="m-0 font-mono text-[11.5px] text-foreground">{ask}</p>
+            <p className="m-0 font-mono text-code text-foreground">{ask}</p>
             <div className="mt-2 flex gap-1.5">
               <Button size="sm" variant="secondary" onClick={() => onFocus(agent.id)}>
                 Open pane
@@ -142,7 +142,7 @@ export function AgentDock({
           <span className="truncate text-xs font-medium text-foreground">
             {AGENT_NAME[agent.kind]}
           </span>
-          <span className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+          <span className="flex min-w-0 items-center gap-1 text-2xs text-muted-foreground">
             <span className="truncate">
               {project.name} / {checkout.branch ?? "no branch"}
             </span>
@@ -176,7 +176,7 @@ export function AgentDock({
                   ))}
                 </ul>
               </ScrollArea>
-              <footer className="flex h-8 items-center justify-between border-y px-3 text-[11.5px] tabular-nums">
+              <footer className="flex h-8 items-center justify-between border-y px-3 text-xs tabular-nums">
                 <span className="text-foreground">
                   {sum.files} {sum.files === 1 ? "file" : "files"}
                 </span>

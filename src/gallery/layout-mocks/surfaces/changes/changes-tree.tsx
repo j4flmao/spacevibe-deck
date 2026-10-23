@@ -76,10 +76,10 @@ export function TreeChanges({
           <span className="text-muted-foreground">
             <Chevron open={open} />
           </span>
-          <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-foreground">
+          <span className="min-w-0 flex-1 truncate font-mono text-code text-foreground">
             {node.label}
           </span>
-          <span className="shrink-0 text-[11px] text-muted-foreground tabular-nums">
+          <span className="shrink-0 text-2xs text-muted-foreground tabular-nums">
             {files.length}
           </span>
           <Counts added={sums.added} removed={sums.removed} />

@@ -109,11 +109,7 @@ function Row({
 }
 
 export function Head({ title }: { readonly title: string }) {
-  return (
-    <h3 className="m-0 px-5 pt-3 pb-1 text-[0.6875rem] font-medium text-muted-foreground">
-      {title}
-    </h3>
-  );
+  return <h3 className="m-0 px-5 pt-3 pb-1 text-2xs font-medium text-muted-foreground">{title}</h3>;
 }
 
 function NotificationBlock() {

@@ -1,6 +1,7 @@
 /* Layout mocks run on the app's own preset and controls; the preset already scans them, so this
    file only widens Tailwind's scan to the mock sources. */
 @import "../../ui/preset.css";
+@import "../../ui/type-scale.css";
 @source "./";
 
 html,

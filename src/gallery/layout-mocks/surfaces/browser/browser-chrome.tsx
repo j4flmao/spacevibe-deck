@@ -168,7 +168,7 @@ export function InspectBar({
       ) : picked ? (
         <>
           <code
-            className="min-w-0 flex-1 truncate rounded-sm bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground"
+            className="min-w-0 flex-1 truncate rounded-sm bg-muted px-1.5 py-0.5 font-mono text-2xs text-foreground"
             title={picked.selector}
           >
             {picked.selector}
@@ -240,7 +240,7 @@ export function NativeView({
           />
         </div>
       </div>
-      <p className="m-0 text-center font-mono text-[11px] text-muted-foreground tabular-nums">
+      <p className="m-0 text-center font-mono text-2xs text-muted-foreground tabular-nums">
         Native view {width} x {height}
         {scaled < 1 ? ` · ${emulate} px emulated` : ""}
       </p>
