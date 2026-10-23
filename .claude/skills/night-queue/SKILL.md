@@ -1,6 +1,6 @@
 ---
 name: night-queue
-description: Queue a task for tonight's unattended night run on mxrsv/spacevibe-deck. Use when the owner asks, in any language, to hand work to the night shift ("tonight, fix X", "queue this for the night"), from a claude.ai session or a local one. Files one `claude-ready` issue; writes no code.
+description: Queue a task for tonight's unattended night run on mxrsv/spacevibe-deck. Use when the owner asks, in any language, to hand work to the night shift ("tonight, fix X", "queue this for the night"), from a claude.ai session or a local one. Files one `claude-ready` issue; writes no code. Also cuts a shadcn migration lane into several small issues (section 5).
 ---
 
 # Queue a night task
@@ -81,3 +81,46 @@ The night does one task per run, oldest first, skips a task that already has an 
 and starts nothing while 3 night PRs are open. Reply in the owner's language with the issue link
 and one of: runs tonight; runs in about N nights; or waiting, because 3 night PRs are open and one
 has to be merged or closed first.
+
+## 5. Cut a migration lane into slices
+
+For the shadcn Base UI migration ([`UI-1..UI-11`](../../../docs/specs/2026-10-21-shadcn-base-ui-migration.md),
+[`LAY-12`, `LAY-13`](../../../docs/specs/2026-10-22-agent-first-shell-layout.md)) one lane is too
+big for a night. Cut it into slices, each filed through section 3 with the same form fields. Draft
+all of them to `~/scratch/spacevibe-deck/night-queue/<lane>-<n>-<slug>.md`, show the owner the
+whole set, and file only after one yes for the set.
+
+**Inventory the lane** from a checkout at `origin/main`, the clone the night will use:
+
+```bash
+D=<lane directories>
+grep -rnE "<(button|input|select|textarea)\b" $D --include='*.tsx' | grep -v '\.test\.'
+grep -rnoE "cfg-[a-z0-9_-]+" $D --include='*.tsx' | grep -v '\.test\.'
+grep -rnE "text-\[[0-9.]+(px|rem)\]" $D
+grep -rlE "cfg-|querySelector\(.select" $D --include='*.test.tsx'   # tests tied to legacy markup
+ls src/ui/controls                                                  # what a slice may import
+```
+
+Before promising that a legacy class or its CSS can go, count its users repo-wide
+(`grep -rlE "<class>" src --include='*.tsx'`, `src/gallery/` and `src/ui/controls/` included): a
+shared control or another lane may still emit it.
+
+**Each slice** is one concern (one control kind or one surface), names its files (about 6 source
+files at most, plus tests), merges alone, and is checkable in about 5 minutes. It is import-only:
+it never edits `src/ui/controls/*`, `src/ui/preset.css`, `src/ui/type-scale.css`, `package.json`,
+`vite.config.ts`, `CHANGELOG.md` or `docs/DESIGN-LANGUAGE.md`. A slice that needs a new control,
+variant or size is a day session: report the gap instead of drafting it. Migrated tests select by
+`[data-slot="button"]`, `[role="switch"]` and `aria-disabled`, never by `cfg-*` classes, and
+migrating them belongs to the slice.
+
+**Two extra lines** above `### Goal`: `lane: <name>` and, only when a slice needs an earlier slice
+of the same lane, `depends on: #<n>`. The runner does not read `depends on` (it takes the oldest
+owner task), so file a dependent slice only after its predecessor's PR is merged. Under
+`### Where to look` add `Checkpoint:` (what a partial result that is still mergeable looks like);
+under `### Out of scope` list the files above as "Do not touch" and the stop conditions: a new
+control is needed, a test cannot move to preset selectors, a DL invariant is touched. On any of
+these the runner changes nothing further and posts a `night-shift:` comment with the question.
+
+**Order**: lanes own disjoint directories and a slice depends only on its own lane. The slice that
+deletes dead CSS goes last and removes only selectors the repo-wide grep shows have no users left.
+Say how many nights the set needs, given the cap in section 4.
