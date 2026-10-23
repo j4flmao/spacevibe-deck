@@ -1,7 +1,7 @@
-/* Layout mocks reuse the pilot's preset unchanged; this file only widens Tailwind's scan. */
-@import "../shadcn-preview/preset.css";
+/* Layout mocks run on the app's own preset and controls; the preset already scans them, so this
+   file only widens Tailwind's scan to the mock sources. */
+@import "../../ui/preset.css";
 @source "./";
-@source "../../ui/controls/{tooltip,kbd,hover-card,scroll-area,tabs,toggle,toggle-group}.tsx";
 
 html,
 body,

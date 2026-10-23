@@ -141,6 +141,7 @@
 @layer base {
   :is(.ui-preset, [data-slot]) {
     font-family: var(--font-sans);
+    line-height: 1.5;
     -webkit-text-size-adjust: 100%;
     tab-size: 4;
     -webkit-tap-highlight-color: transparent;

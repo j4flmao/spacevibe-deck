@@ -49,7 +49,7 @@ export function LayoutMocks() {
 
   return (
     <TooltipProvider>
-      <div className="h-full bg-background text-foreground">
+      <div className="ui-preset h-full bg-background text-foreground">
         {board ? (
           <SurfaceBoard key={board.id} surface={board} optionId={surfaceOption.value} />
         ) : (
