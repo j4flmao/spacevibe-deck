@@ -106,6 +106,21 @@ rail C and the Command-style Settings.
   `src/ui/controls` and `src/ui/preset.css`, so the mock sets the density and there is no second
   copy to drift. Primitives and blocks are reviewed inside the mock's own surfaces in light,
   dark and each theme state; there is no separate specimen catalog.
+- **LAY-13 Type scale.** Shell text uses five named steps declared once in one config file,
+  never as a literal at a use site: `sm` 14px (what the user reads: row titles, prose), `xs`
+  12px (labels, timestamps, counters, secondary lines), `2xs` 11px (captions, uppercase
+  labels), `3xs` 10px (badges, pills) and `code` 12px monospace (paths, diff lines, tool
+  output). The mock's 51 arbitrary font-size classes move onto these: `11.5px` mono paths become
+  `code`, `13px` row titles become `sm`, the `0.6875rem` spelling of 11px becomes `2xs`. Text
+  inside a mock web page (the browser stage's fake page) is page content, not Deck chrome, and
+  is exempt. A lint rule rejects an arbitrary font-size class in shell code, added as a
+  ratchet: existing uses are listed as debt and new ones fail. Because the steps live in one
+  file, changing a size later is a one-line edit. Scaling the steps with a user setting and
+  tying `--spacing` to them is out of scope: it would change every control's geometry (UI-1)
+  and is a separate decision. Decided by the owner 2026-10-24; this rewrites design-language
+  §4 typography for shell surfaces, so the design language is updated in the same change as
+  the code. Alternative turned down: keeping the 12.5px and 10.5px steps of the existing
+  `--type-*` tokens, because the preset and the mock both sit on 12px and 10px.
 - **LAY-9 Window sizes.** The layout holds at 1440×900 and at 1280×800 with the dock open.
 - **LAY-10 Regions.** The rail and the dock share one surface (the `sidebar` token) with no
   gap between them and the stage. The stage's panes sit flush, each on the terminal background
