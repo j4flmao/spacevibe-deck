@@ -15,6 +15,7 @@ import { ConfigGroup, ConfigRow } from "../controls/config-row";
 import { CHROME_ICON, DeckIcon, ROW_ICON } from "../controls/deck-icon";
 import { ThemeCardPreview } from "./theme-card-preview";
 import { LoadError } from "../controls/load-error";
+import { Button } from "../controls/button";
 
 /**
  * The theme gallery (DL-24).
@@ -121,25 +122,22 @@ export function ThemeGallery() {
         <LoadError message={themeLoadState.value.message} onRetry={() => void loadCustomThemes()} />
       ) : null}
       <ConfigRow label="Import theme" desc="iTerm2, Windows Terminal, Ghostty, Alacritty">
-        <button
+        <Button
           type="button"
-          class="cfg-btn"
+          variant="outline"
+          size="sm"
           disabled={themesLoading.value || themeLoadState.value.status === "error"}
           onClick={() => void importCustomThemes()}
         >
           {themesLoading.value ? "reading…" : "choose files"}
-          <span class="cfg-btn__hint">
-            <DeckIcon icon={ArrowSquareIn} size={ROW_ICON} />
-          </span>
-        </button>
+          <DeckIcon icon={ArrowSquareIn} size={ROW_ICON} />
+        </Button>
       </ConfigRow>
       <ConfigRow label="Themes folder" desc="Delete a file here to remove its theme">
-        <button type="button" class="cfg-btn" onClick={() => void openThemesFolder()}>
+        <Button type="button" variant="outline" size="sm" onClick={() => void openThemesFolder()}>
           reveal
-          <span class="cfg-btn__hint">
-            <DeckIcon icon={FolderOpen} size={ROW_ICON} />
-          </span>
-        </button>
+          <DeckIcon icon={FolderOpen} size={ROW_ICON} />
+        </Button>
       </ConfigRow>
       {/* DL-24.6. The pill reads `skipped` rather than `not a theme` because
           the list holds two kinds of file now: one the parser rejected, and one

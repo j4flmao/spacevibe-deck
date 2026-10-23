@@ -78,7 +78,7 @@ describe("ThemeGallery", () => {
     Array.from(host.querySelectorAll<HTMLButtonElement>(".theme-card"));
 
   const pill = (text: string): HTMLButtonElement | undefined =>
-    Array.from(host.querySelectorAll<HTMLButtonElement>(".cfg-btn")).find((button) =>
+    Array.from(host.querySelectorAll<HTMLButtonElement>('[data-slot="button"]')).find((button) =>
       button.textContent?.includes(text),
     );
 

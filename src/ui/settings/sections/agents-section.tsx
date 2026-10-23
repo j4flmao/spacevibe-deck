@@ -21,6 +21,7 @@ import { CommitInput } from "../../controls/commit-input";
 import { useNoteAgentListWhileSettingsOpen } from "../../../launcher/agent-install-control";
 import { LaunchProfileEditor } from "../launch-profile-editor";
 import { QuickAgentsSection } from "../quick-agents-section";
+import { Button } from "../../controls/button";
 
 /**
  * Why a declared command is rejected, or `null` when it is fine. The binary is
@@ -251,16 +252,17 @@ export function AgentsSection() {
                     onCommit={(command) => retargetAgent(agent.id, command)}
                   />
                 ) : (
-                  <button
+                  <Button
                     type="button"
-                    class="cfg-btn"
+                    variant="outline"
+                    size="sm"
                     title={`${agent.command} — click to edit`}
                     onClick={() => {
                       editing.value = commandKey(agent.id);
                     }}
                   >
                     {agent.command}
-                  </button>
+                  </Button>
                 )}
               </div>
               <button
@@ -343,9 +345,10 @@ export function AgentsSection() {
           label="Add agent"
           desc="Declare a new CLI identity and the binary Deck can run"
         >
-          <button
+          <Button
             type="button"
-            class="cfg-btn"
+            variant="outline"
+            size="sm"
             onClick={() => {
               if (draftOpen.value) {
                 commitDraft();
@@ -355,14 +358,14 @@ export function AgentsSection() {
             }}
           >
             {draftOpen.value ? "add" : <DeckIcon icon={Plus} size={ROW_ICON} />}
-          </button>
+          </Button>
         </ConfigRow>
       </SettingsGroup>
       <SettingsGroup title="Usage">
         <ConfigRow label="Token usage" desc="Tokens and estimated cost for Claude Code and Codex">
-          <button type="button" class="cfg-btn" onClick={openUsage}>
+          <Button type="button" variant="outline" size="sm" onClick={openUsage}>
             open …
-          </button>
+          </Button>
         </ConfigRow>
       </SettingsGroup>
     </>

@@ -8,6 +8,7 @@ import { getDesktopEnvironment } from "../../../lib/platform";
 import { ConfigRow } from "../../controls/config-row";
 import { reportPersistError } from "../../../chrome/events";
 import type { UpdateCheckResult, UpdatePhase } from "../../../updater/update-controller";
+import { Button } from "../../controls/button";
 
 /**
  * The pill's word for each phase. Same vocabulary as the chrome action, so a
@@ -110,9 +111,10 @@ export function AboutSection() {
   return (
     <>
       <ConfigRow label="Check for updates" desc={desc}>
-        <button
+        <Button
           type="button"
-          class={`cfg-btn ${busy.value || working ? "cfg-btn--disabled" : ""}`}
+          variant="outline"
+          size="sm"
           disabled={controller === null || busy.value || working || cannotRetry}
           onClick={() => void handleUpdateAction()}
         >
@@ -121,17 +123,17 @@ export function AboutSection() {
             : busy.value && (phase === "hidden" || phase === "check-failed")
               ? "checking…"
               : PILL[phase]}
-        </button>
+        </Button>
       </ConfigRow>
       <ConfigRow label="Release notes" desc="What changed in each version">
-        <button type="button" class="cfg-btn" onClick={() => void handleReleaseNotes()}>
+        <Button type="button" variant="outline" size="sm" onClick={() => void handleReleaseNotes()}>
           open …
-        </button>
+        </Button>
       </ConfigRow>
       <ConfigRow label="Feedback" desc="Report a bug or suggest an idea">
-        <button type="button" class="cfg-btn" onClick={() => void handleFeedback()}>
+        <Button type="button" variant="outline" size="sm" onClick={() => void handleFeedback()}>
           open …
-        </button>
+        </Button>
       </ConfigRow>
     </>
   );

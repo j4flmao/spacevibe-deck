@@ -29,6 +29,8 @@ import {
 import { AgentLaunchFlags } from "./agent-launch-flags";
 import { agentLaunchCommand } from "../../lib/launch-command";
 import { modelsFor, runtimeFor, type AgentRuntimeDefault } from "../../launcher/runtime-catalog";
+import { Button } from "../controls/button";
+import { Switch } from "../controls/switch";
 
 /**
  * The agent catalog in Settings → Agents.
@@ -117,17 +119,12 @@ function EnabledToggle({
   onChange: (next: boolean) => void;
 }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
+    <Switch
       aria-label={`${agent.label} availability`}
-      class={`cfg-btn lp-enabled ${enabled ? "cfg-btn--on" : "cfg-btn--off"}`}
+      checked={enabled}
       title={enabled ? "Enabled in agent pickers" : "Disabled in agent pickers"}
-      onClick={() => onChange(!enabled)}
-    >
-      {enabled ? "on" : "off"}
-    </button>
+      onCheckedChange={onChange}
+    />
   );
 }
 
@@ -172,24 +169,17 @@ function SignalsToggle({
 }) {
   const shown = available && on;
   return (
-    <button
-      type="button"
-      role="switch"
-      class={`cfg-btn lp-signals ${shown ? "cfg-btn--on" : "cfg-btn--off"}${
-        available ? "" : " cfg-btn--disabled"
-      }`}
+    <Switch
       aria-label={`${agent.label} signals`}
-      aria-checked={shown}
+      checked={shown}
       aria-disabled={available ? undefined : true}
       title={available ? undefined : NOT_AVAILABLE_ON_WINDOWS}
-      onClick={() => {
+      onCheckedChange={(next) => {
         if (available) {
-          onChange(!on);
+          onChange(next);
         }
       }}
-    >
-      {shown ? "on" : "off"}
-    </button>
+    />
   );
 }
 
@@ -241,9 +231,11 @@ function AgentRow({
         </div>
         <AgentInstallControl agentId={agent.id} label={agent.label} />
         <EnabledToggle agent={agent} enabled={enabled} onChange={onToggle} />
-        <button
+        <Button
           type="button"
-          class="cfg-btn lp-agent__disclosure"
+          variant="outline"
+          size="icon-sm"
+          class="lp-agent__disclosure"
           aria-label={`Configure ${agent.label}`}
           aria-expanded={expanded.value}
           aria-controls={detailsId}
@@ -253,7 +245,7 @@ function AgentRow({
           }}
         >
           <DeckIcon icon={expanded.value ? CaretDown : CaretRight} size={ROW_ICON} />
-        </button>
+        </Button>
       </div>
       {/* Keep drafts mounted when collapsed; an invalid value must survive reopening. */}
       <div ref={detailsRef} id={detailsId} class="lp-agent-details" hidden={!expanded.value}>
@@ -265,15 +257,16 @@ function AgentRow({
             </p>
             {!configureLaunch.value && (
               <ConfigRow label="Launch settings" desc="Optional before installation.">
-                <button
+                <Button
                   type="button"
-                  class="cfg-btn"
+                  variant="outline"
+                  size="sm"
                   onClick={() => {
                     configureLaunch.value = true;
                   }}
                 >
                   Configure launch
-                </button>
+                </Button>
               </ConfigRow>
             )}
           </>
@@ -511,16 +504,18 @@ export function LaunchProfileEditor() {
       <div class="lp-head">
         <span class="lp-head__title">Installed</span>
         <span class="lp-head__count">{installed.length} detected</span>
-        <button
+        <Button
           type="button"
-          class="cfg-btn lp-head__refresh"
+          variant="outline"
+          size="sm"
+          class="lp-head__refresh"
           aria-label="Refresh installed agents"
           disabled={refreshing.value}
           onClick={refresh}
         >
           <DeckIcon icon={ArrowClockwise} size={ROW_ICON} />
           Refresh
-        </button>
+        </Button>
       </div>
       {installed.length === 0 ? (
         <p class="lp-empty" role="status">
@@ -564,15 +559,16 @@ export function LaunchProfileEditor() {
               }
             }}
           />
-          <button
+          <Button
             type="button"
-            class="cfg-btn"
+            variant="outline"
+            size="sm"
             aria-label="Add"
             disabled={draft.value.trim() === ""}
             onClick={add}
           >
             Add
-          </button>
+          </Button>
         </div>
       </ConfigRow>
       {draftError.value !== null && (

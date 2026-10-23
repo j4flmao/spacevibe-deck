@@ -5,6 +5,7 @@ import { settings } from "../../../settings/settings-store";
 import { DeckIcon, ROW_ICON } from "../../controls/deck-icon";
 import { ConfigRow } from "../../controls/config-row";
 import { confirmReset, resetPromptOpen } from "../confirm-reset";
+import { Button } from "../../controls/button";
 
 interface ResetRowSpec {
   readonly scope: SettingScope;
@@ -49,9 +50,10 @@ export function ResetSection() {
         const keys = changedKeys(settings.value, keysFor(spec.scope));
         return (
           <ConfigRow key={spec.scope} label={spec.label} desc={spec.desc} danger>
-            <button
+            <Button
               type="button"
-              class="cfg-btn cfg-btn--danger"
+              variant="destructive"
+              size="sm"
               title={
                 keys.length === 0 ? "Nothing to reset" : `${spec.label} — asks for confirmation`
               }
@@ -60,7 +62,7 @@ export function ResetSection() {
             >
               <DeckIcon icon={ArrowCounterClockwise} size={ROW_ICON} />
               reset
-            </button>
+            </Button>
           </ConfigRow>
         );
       })}

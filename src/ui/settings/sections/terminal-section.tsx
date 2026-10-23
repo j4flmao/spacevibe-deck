@@ -4,6 +4,7 @@ import { settings, updateSettings } from "../../../settings/settings-store";
 import { DeckIcon, ROW_ICON } from "../../controls/deck-icon";
 import { ConfigRow } from "../../controls/config-row";
 import { scrollbackLabel } from "../../../settings/settings-rows";
+import { Button } from "../../controls/button";
 
 export function TerminalSection() {
   const current = settings.value;
@@ -20,18 +21,17 @@ export function TerminalSection() {
 
   return (
     <ConfigRow settingKey="scrollback" desc="Lines kept per pane">
-      <button
+      <Button
         type="button"
-        class="cfg-btn"
+        variant="outline"
+        size="sm"
         title="Next scrollback size"
         aria-label={`Scrollback: ${scrollbackLabel(current.scrollback)}. Switch to next size`}
         onClick={cycleScrollback}
       >
         {scrollbackLabel(current.scrollback)}
-        <span class="cfg-btn__hint">
-          <DeckIcon icon={Repeat} size={ROW_ICON} />
-        </span>
-      </button>
+        <DeckIcon icon={Repeat} size={ROW_ICON} />
+      </Button>
     </ConfigRow>
   );
 }
