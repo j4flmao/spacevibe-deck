@@ -1,6 +1,7 @@
 import { render } from "preact";
 import "@xterm/xterm/css/xterm.css";
 import "./styles.css";
+import "./ui/preset-entry.css";
 import { initSettings, listenStoreWriteFailures } from "./settings/settings-store";
 import { loadCustomThemes } from "./settings/custom-themes-store";
 import { initLogo } from "./settings/logo-store";

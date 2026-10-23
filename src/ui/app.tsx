@@ -1092,7 +1092,11 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
   useSignalEffect(() => {
     const current = settings.value;
     tabsRef.current?.applySettings(current);
-    applyThemeVars(document.documentElement.style, activeTheme(current));
+    const theme = activeTheme(current);
+    applyThemeVars(document.documentElement.style, theme);
+    // The preset's own light/dark tokens follow the theme's mode, not its palette (UI-2). The
+    // class sits on the root so a portalled popup inherits it.
+    document.documentElement.classList.toggle("dark", theme.type === "dark");
   });
 
   /**
