@@ -64,6 +64,9 @@ const SmallButtonsSection = lazy(() =>
 const PresetControlsSection = lazy(() =>
   import("./sections/preset-controls-section").then((m) => m.PresetControlsSection),
 );
+const ShadcnDeckSection = lazy(() =>
+  import("./sections/shadcn-deck-section").then((m) => m.ShadcnDeckSection),
+);
 
 export interface GallerySection {
   readonly id: string;
@@ -88,6 +91,7 @@ export interface GallerySection {
  * `window chrome`, next to the shell it cross-checks.
  */
 export const GALLERY_SECTIONS: readonly GallerySection[] = [
+  { id: "shadcn-deck", label: "shadcn · Deck overview", Section: ShadcnDeckSection },
   /* Registered 2026-10-10: the Settings exploration round (docs/plans/2026-10-04-settings-redesign.md);
      remove once the owner picks a direction and it is promoted into the real Settings. */
   { id: "settings-explore", label: "★ settings · exploration", Section: SettingsExploreSection },
