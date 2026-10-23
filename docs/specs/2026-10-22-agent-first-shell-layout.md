@@ -99,8 +99,13 @@ rail C and the Command-style Settings.
   compositions of primitives for patterns used by two or more features: the agent row, the
   foldable section header, the setting row, the selectable theme card and the panel surface;
   data reaches them through props. A feature composes blocks and primitives and adds only its own
-  logic; it does not hand-build a pattern the library covers. Every primitive and block has a
-  gallery specimen listing its variants in light, dark and each theme state.
+  logic; it does not hand-build a pattern the library covers. The primitive set is narrowed to
+  the sizes and variants this mock's surfaces use, each with one named role; an option no mock
+  surface uses is removed, not kept. Narrowing only removes options: it never changes the
+  computed result of one that stays (UI-1, UI-4). The mock and the app import the same
+  `src/ui/controls` and `src/ui/preset.css`, so the mock sets the density and there is no second
+  copy to drift. Primitives and blocks are reviewed inside the mock's own surfaces in light,
+  dark and each theme state; there is no separate specimen catalog.
 - **LAY-9 Window sizes.** The layout holds at 1440×900 and at 1280×800 with the dock open.
 - **LAY-10 Regions.** The rail and the dock share one surface (the `sidebar` token) with no
   gap between them and the stage. The stage's panes sit flush, each on the terminal background
@@ -277,4 +282,4 @@ shapes. Ribbon's chip bar and Filmstrip, kept in the gallery as considered alter
 | AC-5 | Measured text contrast meets AA for every composition-chosen pair in both modes; stock pairs below it follow the parent specification's contrast decision.             |
 | AC-6 | No PTY, IPC, persistence or tab-materialization change. The affected design-language patterns (§11 settings, §18.7 and §18.12 regions and panes, §19 dock, §24 theme gallery, §27 rail, §28 footer, §35 spaces) are rewritten in the same change; no invariant (DL §1-4, §7, §20, §21) changes except through the approved theme rewrite.     |
 | AC-7 | Rail and dock render on the same surface token; panes are flush with 1px borders, no gap and no radius, in every built-in theme. |
-| AC-8 | Every primitive and block has a specimen; new shell UI contains no raw control or hand-built row, section header, setting row, theme card or panel surface where the library has one (a policy test fails otherwise). |
+| AC-8 | Every primitive and block is exercised by a surface of the mock and reviewed there; no separate specimen catalog exists; new shell UI contains no raw control or hand-built row, section header, setting row, theme card or panel surface where the library has one (a policy test fails otherwise). |
