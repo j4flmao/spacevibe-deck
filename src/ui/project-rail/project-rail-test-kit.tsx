@@ -23,6 +23,7 @@ import { workspacesData } from "../../open-board/workspaces-store";
 import { WORKSPACES_VERSION } from "../../lib/workspace-recents";
 import { sessionArchive } from "../../terminal/session-journal";
 import { paneModels, paneTails } from "../../terminal/session-tail-store";
+import { updateSettings } from "../../settings/settings-store";
 import { resetProjectRailState } from "./project-rail-state";
 
 const fileClient: FileClient = {
@@ -263,6 +264,7 @@ export function installRailHarness(): void {
     sessionArchive.value = {};
     paneTails.value = new Map();
     paneModels.value = new Map();
+    updateSettings({ railOrder: [] });
     resetProjectRailState();
   });
 
@@ -277,6 +279,7 @@ export function installRailHarness(): void {
     sessionArchive.value = {};
     paneTails.value = new Map();
     paneModels.value = new Map();
+    updateSettings({ railOrder: [] });
     resetProjectRailState();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();

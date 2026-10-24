@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "../contr
 import { addFolderToRail } from "../rail-add-folder";
 import { activeTabWorkspace, focusedCheckout } from "../rail-create";
 import type { CardActions } from "../worktree-card-menus";
+import { launchAgent } from "./project-rail-commands";
 import { MenuEntry, RailPopupGuard, Tip } from "./project-rail-menu-parts";
 
 export interface ProjectRailCreateProps {
@@ -47,13 +48,7 @@ export function ProjectRailCreate({
 
   const focused = focusedCheckout(stream);
   const agentPath = focused?.group.path ?? (focused === null ? activeTabWorkspace() : null);
-  const openAgent = (): void => {
-    if (agentPath !== null && actions?.onOpenAgentLauncher !== undefined) {
-      actions.onOpenAgentLauncher(agentPath);
-      return;
-    }
-    onOpenBoard();
-  };
+  const openAgent = (): void => launchAgent(agentPath, actions, onOpenBoard);
 
   return (
     <div className="relative shrink-0">

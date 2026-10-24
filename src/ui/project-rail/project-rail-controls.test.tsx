@@ -41,7 +41,6 @@ import {
   headers,
   host,
   installRailHarness,
-  item,
   menuItems,
   menuLabels,
   mount,
@@ -252,22 +251,6 @@ describe("Organize", () => {
     await organize("Priority");
 
     expect(first()).toEqual(["pane:11", "pane:12", "pane:21"]);
-  });
-
-  it("keeps archived rows undrawn even with Show archived on, until their section lands", async () => {
-    mount();
-    await settle();
-    click(item("pane:12")?.querySelector('button[aria-label^="Archive"]'));
-
-    const toggle = () =>
-      document.body.querySelector<HTMLElement>('[role="menuitemcheckbox"]') as HTMLElement;
-    await activate(trigger("Organize"));
-    expect(toggle().getAttribute("aria-checked")).toBe("false");
-    await activate(toggle());
-
-    expect(toggle().getAttribute("aria-checked")).toBe("true");
-    expect(rowIds()).not.toContain("pane:12");
-    await closeMenu();
   });
 });
 

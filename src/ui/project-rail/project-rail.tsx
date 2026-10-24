@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "preact/hooks";
 import type { AgentRailView } from "../agent-rail-model";
 import { Button } from "../controls/button";
 import { buildRailView } from "../rail-view-model";
-import type { RailRowDeps } from "./project-rail-commands";
+import { RAIL_STOPS, recoverRailFocus, rememberRailFocus } from "./project-rail-focus";
 import { isRailItemFocused, type RailSelection } from "./project-rail-model";
+import { ArchivedSection, HiddenSection } from "./project-rail-parked";
+import { projectCommandsFor, type ProjectDeps } from "./project-rail-project-commands";
 import { FlatSection, ProjectSection, type RailRowEnv } from "./project-rail-sections";
 import {
   foldedProjects,
@@ -11,21 +13,20 @@ import {
   railViewState,
   runRailClock,
   setRailQuery,
+  showArchived,
 } from "./project-rail-state";
-
-/** The things arrow keys walk: every project header and every row of an open project. */
-const STOPS = "[data-rail-project],[data-rail-row]";
 
 /** While a search is set no project is folded: every one with a match shows it. */
 const NO_FOLDS: ReadonlySet<string> = new Set();
 
-export interface ProjectRailProps extends RailSelection, RailRowDeps {
+export interface ProjectRailProps extends RailSelection, ProjectDeps {
   /** The view `AgentRail` already builds, so the two rails cannot disagree about it. */
   readonly view: AgentRailView;
 }
 
 /**
- * Up and down walk the list, and Enter presses the row. Local to the list on purpose: a
+ * Up and down walk the list (Home and End jump to its ends), and Enter presses a row; on a
+ * header or a section head it is the button's own press. Local to the list on purpose: a
  * bare key is the terminal's, so nothing here listens on the window.
  */
 function onListKeyDown(event: KeyboardEvent): void {
@@ -37,7 +38,7 @@ function onListKeyDown(event: KeyboardEvent): void {
     event.altKey ||
     event.shiftKey ||
     !(target instanceof HTMLElement) ||
-    !target.matches(STOPS)
+    !target.matches(RAIL_STOPS)
   ) {
     return;
   }
@@ -47,12 +48,21 @@ function onListKeyDown(event: KeyboardEvent): void {
     target.click();
     return;
   }
-  const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
-  if (step === 0 || !(event.currentTarget instanceof HTMLElement)) {
+  if (!(event.currentTarget instanceof HTMLElement)) {
     return;
   }
-  const stops = [...event.currentTarget.querySelectorAll<HTMLElement>(STOPS)];
-  const next = stops[stops.indexOf(target) + step];
+  const stops = [...event.currentTarget.querySelectorAll<HTMLElement>(RAIL_STOPS)];
+  const at = stops.indexOf(target);
+  const next =
+    event.key === "ArrowDown"
+      ? stops[at + 1]
+      : event.key === "ArrowUp"
+        ? stops[at - 1]
+        : event.key === "Home"
+          ? stops[0]
+          : event.key === "End"
+            ? stops[stops.length - 1]
+            : undefined;
   if (next !== undefined) {
     event.preventDefault();
     next.focus();
@@ -82,27 +92,36 @@ export function ProjectRail({ view, onFocusPane, onSelectTab, ...deps }: Project
   const rows = model.groups
     .filter((group) => !folded.has(group.key))
     .flatMap((group) => group.items);
-  // One Tab stop for all rows: where the keyboard last was, else the focused row, else the first.
+  // One Tab stop for all rows: where the keyboard last was (an archived row included), else the
+  // focused row, else the first.
   const tabStopId = (
-    rows.find((item) => item.id === activeId) ??
+    [...rows, ...(showArchived.value ? model.archived : [])].find((item) => item.id === activeId) ??
     rows.find(isRailItemFocused) ??
     rows[0]
   )?.id;
   const env: RailRowEnv = {
     tabStopId,
+    activeId,
     pinned: state.pinned,
     selection: { onFocusPane, onSelectTab },
     deps,
+    projects: byProject ? projectCommandsFor(model.groups, view.stream, deps) : new Map(),
   };
+  // A row that archived, hid or closed took the keyboard with it: hand it to a neighbour.
+  useEffect(recoverRailFocus);
   return (
     <section
       aria-label="Open agents"
       onKeyDown={onListKeyDown}
       onFocusCapture={(event: FocusEvent) => {
-        const row =
-          event.target instanceof Element ? event.target.closest("[data-rail-item]") : null;
-        if (row !== null) {
-          setActiveId(row.getAttribute("data-rail-item"));
+        const { target, currentTarget } = event;
+        if (!(target instanceof Element) || !(currentTarget instanceof HTMLElement)) {
+          return;
+        }
+        rememberRailFocus(currentTarget, target);
+        const owner = target.closest("[data-rail-item]");
+        if (owner !== null) {
+          setActiveId(owner.getAttribute("data-rail-item"));
         }
       }}
       className="ui-preset min-w-0 bg-transparent pb-3"
@@ -124,6 +143,8 @@ export function ProjectRail({ view, onFocusPane, onSelectTab, ...deps }: Project
           ) : null}
         </div>
       ) : null}
+      <ArchivedSection items={model.archived} env={env} />
+      <HiddenSection projects={model.hidden} />
     </section>
   );
 }

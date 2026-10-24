@@ -91,7 +91,11 @@ describe("row buttons", () => {
     mount();
     await settle();
     const tabbable = () =>
-      [...host.querySelectorAll<HTMLElement>("[data-rail-item] button")]
+      [
+        ...host.querySelectorAll<HTMLElement>(
+          '[data-rail-item^="pane:"] button, [data-rail-item^="shell:"] button',
+        ),
+      ]
         .filter((entry) => entry.tabIndex === 0)
         .map((entry) => entry.closest("[data-rail-item]")?.getAttribute("data-rail-item"));
 

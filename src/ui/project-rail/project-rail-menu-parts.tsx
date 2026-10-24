@@ -6,6 +6,10 @@ import { DropdownMenuItem } from "../controls/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../controls/tooltip";
 import { useStageOverlayFlag } from "../worktree-card-menus";
 
+/** Hover actions show on hover, keyboard focus or while their menu is open; they never take room. */
+export const REVEAL =
+  "pointer-events-none opacity-0 group-hover/item:pointer-events-auto group-hover/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:opacity-100 has-[[data-popup-open]]:pointer-events-auto has-[[data-popup-open]]:opacity-100";
+
 /** An icon button's tooltip: `button` is the trigger element, `children` its glyph. */
 export function Tip({
   label,
@@ -46,7 +50,11 @@ export function MenuEntry({
   );
 }
 
-function HoldStageOverlay() {
+/**
+ * Mount inside a surface that covers the stage (a dialog): the native browser view paints over
+ * any DOM, so it must hide while one is up, and Esc must reach the surface, not the launch page.
+ */
+export function StageCover() {
   useStageOverlayFlag();
   return null;
 }
@@ -59,5 +67,5 @@ function HoldStageOverlay() {
  * under them, the flag's other job, is not needed.
  */
 export function RailPopupGuard() {
-  return agentLaunchPage.request.value === null ? null : <HoldStageOverlay />;
+  return agentLaunchPage.request.value === null ? null : <StageCover />;
 }

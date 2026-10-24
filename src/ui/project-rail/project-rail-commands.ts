@@ -7,7 +7,7 @@
 import { writeText } from "../../host/shell-host";
 import type { RailItem } from "../rail-view-model";
 import type { CardActions } from "../worktree-card-menus";
-import { archiveItem, togglePin } from "./project-rail-state";
+import { archiveItem, togglePin, unarchiveItem } from "./project-rail-state";
 
 /** The host callbacks `AgentRail` already receives, handed through unchanged. */
 export interface RailRowDeps {
@@ -20,8 +20,11 @@ export interface RailRowDeps {
 }
 
 export interface RowCommands {
-  pin(): void;
+  /** Absent on an archived row: unarchiving would not give the pin back. */
+  pin?(): void;
+  /** Archives a row; on an archived one it brings the row back. */
   archive(): void;
+  readonly archived: boolean;
   /** The shipped row's ✕: closes the pane (agent row) or the tab (shell-only row). */
   close(): void;
   /** Tab-level, agent rows only, like the shipped rail. */
@@ -39,13 +42,14 @@ function copyText(text: string): void {
   });
 }
 
-export function rowCommands(item: RailItem, deps: RailRowDeps): RowCommands {
+export function rowCommands(item: RailItem, deps: RailRowDeps, archived = false): RowCommands {
   const { entry, checkout } = item;
   const { onRenameTab, cardActions } = deps;
   const onOpenFolder = cardActions?.onOpenFolder;
   return {
-    pin: () => togglePin(item.id),
-    archive: () => archiveItem(item.id),
+    pin: archived ? undefined : () => togglePin(item.id),
+    archive: archived ? () => unarchiveItem(item.id) : () => archiveItem(item.id),
+    archived,
     close: () => {
       if (entry.kind === "agent") {
         deps.onClosePane(entry.tabIndex, entry.paneId);
@@ -62,4 +66,20 @@ export function rowCommands(item: RailItem, deps: RailRowDeps): RowCommands {
     openFolder: onOpenFolder === undefined ? undefined : () => onOpenFolder(checkout.path),
     openFolderLabel: cardActions?.filesAppLabel ?? "Finder",
   };
+}
+
+/**
+ * Start an agent where the shipped create row's Agent button does: the launch page on `path`
+ * when it is wired, else the board (also what a project with no checkout to name gets).
+ */
+export function launchAgent(
+  path: string | null,
+  actions: CardActions | undefined,
+  onOpenBoard: () => void,
+): void {
+  if (path !== null && actions?.onOpenAgentLauncher !== undefined) {
+    actions.onOpenAgentLauncher(path);
+    return;
+  }
+  onOpenBoard();
 }

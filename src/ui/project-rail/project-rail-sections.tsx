@@ -1,28 +1,36 @@
 import type { RailGroup, RailItem } from "../rail-view-model";
-import { rowCommands, type RailRowDeps } from "./project-rail-commands";
+import { rowCommands } from "./project-rail-commands";
 import { ProjectRailHeader } from "./project-rail-header";
 import { selectRailItem, type RailSelection } from "./project-rail-model";
 import { ProjectRailRow } from "./project-rail-row";
+import type { ProjectCommands, ProjectDeps } from "./project-rail-project-commands";
 import { toggleProjectFolded } from "./project-rail-state";
 
 /** What every row of the list needs besides its own item. */
 export interface RailRowEnv {
   /** The one row Tab reaches. */
   readonly tabStopId: string | undefined;
+  /** The wrapper the keyboard last stood on: its hover buttons are in the Tab order too. */
+  readonly activeId: string | null;
   readonly pinned: ReadonlySet<string>;
   readonly selection: RailSelection;
-  readonly deps: RailRowDeps;
+  readonly deps: ProjectDeps;
+  /** Each shown project's header commands, by project key. */
+  readonly projects: ReadonlyMap<string, ProjectCommands>;
 }
 
-function RailRows({
+export function RailRows({
   items,
   env,
   named,
+  archived = false,
 }: {
   readonly items: readonly RailItem[];
   readonly env: RailRowEnv;
   /** Outside By project a row names its own project (LAY-3). */
   readonly named: boolean;
+  /** The rows of the Archived section: no pin, "Unarchive" for archive. */
+  readonly archived?: boolean;
 }) {
   return (
     <>
@@ -32,7 +40,8 @@ function RailRows({
           item={item}
           tabStop={item.id === env.tabStopId}
           pinned={env.pinned.has(item.id)}
-          commands={rowCommands(item, env.deps)}
+          archived={archived}
+          commands={rowCommands(item, env.deps, archived)}
           projectName={named ? item.project : undefined}
           onSelect={() => selectRailItem(item, env.selection)}
         />
@@ -56,6 +65,9 @@ export function ProjectSection({
       <ProjectRailHeader
         group={group}
         folded={folded}
+        commands={env.projects.get(group.key) as ProjectCommands}
+        active={env.activeId === `project:${group.key}`}
+        agentDisabled={env.deps.agentDisabled}
         onToggle={() => toggleProjectFolded(group.key)}
       />
       {folded ? null : <RailRows items={group.items} env={env} named={false} />}

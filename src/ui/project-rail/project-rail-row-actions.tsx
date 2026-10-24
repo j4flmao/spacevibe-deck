@@ -1,5 +1,6 @@
 import {
   Archive,
+  ArrowUUpLeft,
   Copy,
   DotsThree,
   FolderOpen,
@@ -20,11 +21,8 @@ import {
   DropdownMenuTrigger,
 } from "../controls/dropdown-menu";
 import type { RowCommands } from "./project-rail-commands";
-import { MenuEntry, RailPopupGuard, Tip } from "./project-rail-menu-parts";
-
-/** Hover actions show on hover, keyboard focus or while their menu is open; they never take room. */
-const REVEAL =
-  "pointer-events-none opacity-0 group-hover/item:pointer-events-auto group-hover/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:opacity-100 has-[[data-popup-open]]:pointer-events-auto has-[[data-popup-open]]:opacity-100";
+import { MenuEntry, RailPopupGuard, REVEAL, Tip } from "./project-rail-menu-parts";
+import { recoverRailFocus } from "./project-rail-focus";
 
 export interface ProjectRailRowActionsProps {
   /** The row's title, so every button names the row it acts on. */
@@ -52,6 +50,8 @@ export function ProjectRailRowActions({
 }: ProjectRailRowActionsProps) {
   const tabIndex = tabStop ? 0 : -1;
   const pinLabel = pinned ? "Unpin" : "Pin";
+  const archiveLabel = commands.archived ? "Unarchive" : "Archive";
+  const archiveIcon = commands.archived ? ArrowUUpLeft : Archive;
   // The menu hands focus back to its trigger as it closes, and the field would lose it to that.
   const renameWhenClosed = useRef(false);
   return (
@@ -61,42 +61,49 @@ export function ProjectRailRowActions({
         REVEAL,
       )}
     >
+      {commands.pin === undefined ? null : (
+        <Tip
+          label={pinLabel}
+          button={
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              tabIndex={tabIndex}
+              aria-label={`${pinLabel} ${title}`}
+              onClick={commands.pin}
+            />
+          }
+        >
+          <DeckIcon icon={pinned ? PushPinSlash : PushPin} size={ROW_ICON} />
+        </Tip>
+      )}
       <Tip
-        label={pinLabel}
+        label={archiveLabel}
         button={
           <Button
             variant="ghost"
             size="icon-xs"
             tabIndex={tabIndex}
-            aria-label={`${pinLabel} ${title}`}
-            onClick={commands.pin}
-          />
-        }
-      >
-        <DeckIcon icon={pinned ? PushPinSlash : PushPin} size={ROW_ICON} />
-      </Tip>
-      <Tip
-        label="Archive"
-        button={
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            tabIndex={tabIndex}
-            aria-label={`Archive ${title}`}
+            aria-label={`${archiveLabel} ${title}`}
             onClick={commands.archive}
           />
         }
       >
-        <DeckIcon icon={Archive} size={ROW_ICON} />
+        <DeckIcon icon={archiveIcon} size={ROW_ICON} />
       </Tip>
       <DropdownMenu
         open={menuOpen}
         onOpenChange={onMenuOpenChange}
         onOpenChangeComplete={(open: boolean) => {
-          if (!open && renameWhenClosed.current) {
+          if (open) {
+            return;
+          }
+          if (renameWhenClosed.current) {
             renameWhenClosed.current = false;
             onRename();
           }
+          // The row an entry removed took the menu's trigger, and focus, with it.
+          recoverRailFocus();
         }}
       >
         <Tip
@@ -128,9 +135,11 @@ export function ProjectRailRowActions({
               Rename
             </MenuEntry>
           )}
-          <MenuEntry icon={pinned ? PushPinSlash : PushPin} onClick={commands.pin}>
-            {pinLabel}
-          </MenuEntry>
+          {commands.pin === undefined ? null : (
+            <MenuEntry icon={pinned ? PushPinSlash : PushPin} onClick={commands.pin}>
+              {pinLabel}
+            </MenuEntry>
+          )}
           <DropdownMenuSeparator />
           <MenuEntry icon={Copy} onClick={commands.copyPath}>
             Copy path
@@ -148,8 +157,8 @@ export function ProjectRailRowActions({
             </MenuEntry>
           )}
           <DropdownMenuSeparator />
-          <MenuEntry icon={Archive} onClick={commands.archive}>
-            Archive
+          <MenuEntry icon={archiveIcon} onClick={commands.archive}>
+            {archiveLabel}
           </MenuEntry>
           <MenuEntry icon={X} variant="destructive" onClick={commands.close}>
             Close

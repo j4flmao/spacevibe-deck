@@ -24,6 +24,8 @@ export interface ProjectRailRowProps {
   readonly tabStop: boolean;
   readonly pinned: boolean;
   readonly commands: RowCommands;
+  /** A row of the Archived section: its title is quieter. */
+  readonly archived?: boolean;
   /** Set when the list is not grouped by project, so the row names its own project (LAY-3). */
   readonly projectName?: string;
   readonly onSelect: () => void;
@@ -39,6 +41,7 @@ export function ProjectRailRow({
   tabStop,
   pinned,
   commands,
+  archived = false,
   projectName,
   onSelect,
 }: ProjectRailRowProps) {
@@ -111,7 +114,8 @@ export function ProjectRailRow({
             </span>
             <span
               className={cn(
-                "truncate text-sm leading-[18px] text-foreground",
+                "truncate text-sm leading-[18px]",
+                archived ? "text-muted-foreground" : "text-foreground",
                 focused && "font-medium",
               )}
             >

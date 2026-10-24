@@ -7,9 +7,11 @@
  * clock the rows' time-in-state reads.
  */
 import { signal } from "@preact/signals";
+import { forgetRailFocus } from "./project-rail-focus";
 import {
   INITIAL_RAIL_VIEW_STATE,
   setArchived,
+  setProjectHidden,
   togglePinned,
   type RailGrouping,
   type RailSorting,
@@ -31,16 +33,31 @@ export function setRailSorting(sorting: RailSorting): void {
   railViewState.value = { ...railViewState.value, sorting };
 }
 
-/** Organize's "Show archived". Nothing draws archived rows until their section lands. */
+/**
+ * Organize's "Show archived" and the Archived section's head are one switch: the section's open
+ * state. The section is there whenever a row is archived and starts folded, as the mock has it.
+ */
 export const showArchived = signal(false);
+
+/** The Hidden section's open state. */
+export const hiddenOpen = signal(false);
 
 export function togglePin(id: string): void {
   railViewState.value = togglePinned(railViewState.value, id);
 }
 
-/** Archived rows are drawn nowhere until the Archived section lands. */
+/** An archived row leaves its project and waits in the Archived section. */
 export function archiveItem(id: string): void {
   railViewState.value = setArchived(railViewState.value, id, true);
+}
+
+export function unarchiveItem(id: string): void {
+  railViewState.value = setArchived(railViewState.value, id, false);
+}
+
+/** A hidden project leaves the list and waits in the Hidden section. */
+export function setRailProjectHidden(key: string, hidden: boolean): void {
+  railViewState.value = setProjectHidden(railViewState.value, key, hidden);
 }
 
 /** `RailGroup.key`s. A new Set per change (C1), so the signal notifies. */
@@ -82,8 +99,10 @@ export function runRailClock(): () => void {
 
 /** Module signals outlive a test; the suites call this between cases. */
 export function resetProjectRailState(): void {
+  forgetRailFocus();
   railViewState.value = INITIAL_RAIL_VIEW_STATE;
   foldedProjects.value = new Set();
   showArchived.value = false;
+  hiddenOpen.value = false;
   railNow.value = Date.now();
 }

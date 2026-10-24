@@ -343,6 +343,10 @@ function WorktreeCardRail(props: AgentRailProps) {
             onCloseTab={props.onCloseTab}
             onRenameTab={props.onRenameTab}
             cardActions={props.cardActions}
+            onCloseProject={props.onCloseProject}
+            onRemoveWorkspace={props.onRemoveWorkspace}
+            onOpenBoard={props.legacy.onOpenWorkspace}
+            agentDisabled={props.legacy.openWorkspaceDisabled}
           />
         </div>
         {props.footer}
