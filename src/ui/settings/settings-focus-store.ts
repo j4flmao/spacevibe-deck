@@ -12,13 +12,14 @@ export const settingsTarget = signal<keyof Settings | null>(null);
 
 /**
  * Opens Settings on a page, and on one row of it when `key` is given (SET-3).
- * Command Settings reads the same call as "scope to this area": the area's
- * section mounts and its row paints from `settingsTarget`, as the screen does.
+ * Command Settings reads the same call as "scope to this area, and make this
+ * row the active one"; a legacy piece inside the area still paints its row from
+ * `settingsTarget`, as the screen does.
  */
 export function openSettingsAt(page: CategoryId, key?: keyof Settings): void {
   settingsQuery.value = "";
   activeCategory.value = page;
   settingsTarget.value = key ?? null;
-  revealInCommand(page);
+  revealInCommand(page, key);
   settingsOpen.value = true;
 }

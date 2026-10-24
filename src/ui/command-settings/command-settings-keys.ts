@@ -4,8 +4,9 @@ import {
   moveActive,
   type CommandItem,
 } from "../../settings/command-hits";
-import { trapTab } from "../focus-trap";
+import { focusableItems, trapTab } from "../focus-trap";
 import { chooseArea, openItem } from "./command-settings-actions";
+import { isLiveHit, LIVE_ROW_ATTRIBUTE, rowDomId } from "./command-settings-live";
 import { commandActiveKey, commandQuery, commandScope } from "./command-settings-state";
 
 /*
@@ -43,15 +44,22 @@ export interface CommandKeyContext {
   readonly onClose: () => void;
 }
 
-/** Escape: a field hands focus back to the search, then the query, the area, the surface. */
+/** Focus inside a live row's control: a switch, a menu trigger, a segment or a field. */
+function inLiveRow(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(`[${LIVE_ROW_ATTRIBUTE}]`) !== null;
+}
+
+/** Escape: a control hands focus back to the search, then the query, the area, the surface. */
 function escape(event: KeyboardEvent, context: CommandKeyContext): void {
   const { search } = context;
   const target = event.target;
   event.preventDefault();
-  if (isField(target) && target !== search) {
+  if ((isField(target) && target !== search) || inLiveRow(target)) {
     // Blur first: a text field commits its draft on blur, so leaving never drops what was typed.
-    // An UNCOMMITTED draft never gets here; the field reverts it and stops the event.
-    target.blur();
+    // An UNCOMMITTED draft never gets here; the field reverts it and stops the event. Without
+    // this step the ladder below would clear the query or leave the area under a focused
+    // control, unmount the row, and strand focus on the body.
+    if (target instanceof HTMLElement) target.blur();
     search?.focus({ preventScroll: true });
     return;
   }
@@ -80,11 +88,12 @@ export function handleCommandKey(event: KeyboardEvent, context: CommandKeyContex
   if (target instanceof Element && target.closest(".xterm")) {
     return;
   }
-  if (event.key === "Tab") {
-    trapTab(event, context.root);
+  // A menu portals out of the surface and owns Tab, Escape and the arrows while it is open.
+  if (popupOpen()) {
     return;
   }
-  if (popupOpen()) {
+  if (event.key === "Tab") {
+    trapTab(event, context.root);
     return;
   }
   if (event.key === "Escape") {
@@ -118,7 +127,13 @@ export function handleCommandKey(event: KeyboardEvent, context: CommandKeyContex
     const item = items.find((entry) => entry.key === key);
     if (item !== undefined) {
       event.preventDefault();
-      openItem(item);
+      // Enter on a live row goes into its control and never changes the value itself.
+      if (item.type === "hit" && isLiveHit(item.hit)) {
+        const row = document.getElementById(rowDomId(item.key));
+        if (row !== null) focusableItems(row)[0]?.focus();
+      } else {
+        openItem(item);
+      }
     }
     return;
   }

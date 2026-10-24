@@ -5,17 +5,21 @@ import type { AttentionIssue, CommandAreaId, CommandHit } from "../../settings/c
 import { SETTINGS_PAGES, type SettingsPage } from "../../settings/settings-registry";
 import { Button } from "../controls/button";
 import { DeckIcon, ROW_ICON } from "../controls/deck-icon";
+import { LogoRow } from "../controls/logo-row";
+import { AppearancePreview } from "../settings/appearance-preview";
 import { PageResetBar } from "../settings/page-reset-bar";
 import { SETTINGS_CATEGORIES } from "../settings/settings-categories";
+import { SettingsGroup } from "../settings/settings-group";
+import { ThemeModeSelector } from "../settings/theme-mode-selector";
+import { rowDomId } from "./command-settings-live";
 import { commandActiveKey } from "./command-settings-state";
+import type { LegacyPiece } from "./command-settings-view";
 
 const SEVERITY_DOT = {
   error: "bg-red-600 dark:bg-red-500",
   warning: "bg-amber-500 dark:bg-amber-400",
   info: "bg-muted-foreground",
 } as const;
-
-export const rowDomId = (key: string): string => `command-row-${key}`;
 
 /** The areas whose section is drawn with the Studio treatment (Appearance and Agents). */
 const STUDIO_AREAS: ReadonlySet<CommandAreaId> = new Set(["appearance", "agents"]);
@@ -135,25 +139,91 @@ export function EmptyRow({
 }
 
 /**
- * An area's own Settings section, mounted as is. It keeps the markup and the
- * legacy classes the old screen gave it, so it reads the way it always did
- * until a later slice replaces it row by row.
+ * The legacy markup around a section or a piece of one: the classes the old screen gave it, so
+ * it reads the way it always did until a later slice replaces it.
  */
+function LegacyBox({
+  area,
+  label,
+  head,
+  children,
+}: {
+  readonly area: CommandAreaId;
+  readonly label: string;
+  readonly head?: ComponentChildren;
+  readonly children: ComponentChildren;
+}) {
+  const studio = STUDIO_AREAS.has(area);
+  return (
+    <li className={cn("px-1 pb-3", studio && "settings-screen__doc--studio")}>
+      <section aria-label={label}>
+        {head}
+        <div className={cn("settings-screen__fields", studio && "settings-screen__fields--studio")}>
+          {children}
+        </div>
+      </section>
+    </li>
+  );
+}
+
+/** An area's own Settings section, mounted as is. */
 export function SectionMount({ area }: { readonly area: CommandAreaId }) {
   const category = SETTINGS_CATEGORIES.find((entry) => entry.id === area);
   if (category === undefined) {
     return null;
   }
   const Section = category.Section;
-  const studio = STUDIO_AREAS.has(area);
   return (
-    <li className={cn("px-1 pb-3", studio && "settings-screen__doc--studio")}>
-      <section aria-label={category.label}>
-        {isSettingsPage(area) ? <PageResetBar page={area} label={category.label} /> : null}
-        <div className={cn("settings-screen__fields", studio && "settings-screen__fields--studio")}>
-          <Section />
-        </div>
-      </section>
-    </li>
+    <LegacyBox
+      area={area}
+      label={category.label}
+      head={isSettingsPage(area) ? <PageResetBar page={area} label={category.label} /> : null}
+    >
+      <Section />
+    </LegacyBox>
   );
+}
+
+export function PieceMount({
+  area,
+  piece,
+}: {
+  readonly area: CommandAreaId;
+  readonly piece: LegacyPiece;
+}) {
+  switch (piece) {
+    case "reset":
+      return (
+        <li className="px-3 empty:hidden">
+          {isSettingsPage(area) ? (
+            <PageResetBar
+              page={area}
+              label={SETTINGS_CATEGORIES.find((entry) => entry.id === area)?.label ?? area}
+            />
+          ) : null}
+        </li>
+      );
+    case "theme":
+      return (
+        <LegacyBox area={area} label="Color mode">
+          <SettingsGroup settingKey="themeId" description="Choose a light or dark workspace.">
+            <ThemeModeSelector presentation="cards" />
+          </SettingsGroup>
+        </LegacyBox>
+      );
+    case "preview":
+      return (
+        <LegacyBox area={area} label="Typography preview">
+          <AppearancePreview />
+        </LegacyBox>
+      );
+    case "logo":
+      return (
+        <LegacyBox area={area} label="Identity">
+          <SettingsGroup title="Identity">
+            <LogoRow />
+          </SettingsGroup>
+        </LegacyBox>
+      );
+  }
 }

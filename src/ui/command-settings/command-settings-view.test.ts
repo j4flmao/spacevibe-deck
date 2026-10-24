@@ -124,12 +124,34 @@ describe("the sentence an attention row reads as", () => {
 });
 
 describe("the list for a query and a scope", () => {
-  it("is the area's own section when an area is chosen and nothing is typed", () => {
-    expect(commandListItems("", "terminal", commandSources())).toEqual([
-      { type: "section", key: "section:terminal", area: "terminal" },
+  it("is the area's own section for an area no row edits yet", () => {
+    expect(commandListItems("", "agents", commandSources())).toEqual([
+      { type: "section", key: "section:agents", area: "agents" },
     ]);
     expect(commandListItems("   ", "privacy", commandSources())).toEqual([
       { type: "section", key: "section:privacy", area: "privacy" },
+    ]);
+  });
+
+  it("is the area's live rows behind its reset bar when an area is chosen and nothing is typed", () => {
+    expect(commandListItems("", "terminal", commandSources()).map((item) => item.key)).toEqual([
+      "piece:terminal:reset",
+      "setting:scrollback",
+    ]);
+  });
+
+  it("puts the colour mode, the preview and the logo into Appearance as legacy pieces", () => {
+    const keys = commandListItems("", "appearance", commandSources()).map((item) => item.key);
+    expect(keys).toEqual([
+      "piece:appearance:reset",
+      "piece:appearance:theme",
+      "setting:fontFamily",
+      "setting:fontSize",
+      "piece:appearance:preview",
+      "setting:showPaneBar",
+      "setting:showStatusBar",
+      "setting:tabBarPosition",
+      "piece:appearance:logo",
     ]);
   });
 
@@ -146,6 +168,7 @@ describe("the list for a query and a scope", () => {
     const all = commandListItems("font", null, commandSources());
     expect(all.some((item) => item.type === "head")).toBe(true);
     const inside = commandListItems("font", "appearance", commandSources());
+    expect(inside.length).toBeGreaterThan(0);
     expect(inside.every((item) => item.type === "hit")).toBe(true);
     expect(commandListItems("font", "terminal", commandSources())).toEqual([
       { type: "empty", key: "empty", query: "font" },

@@ -27,70 +27,36 @@ vi.mock("../../chrome/events", async (importOriginal) => {
 
 import { DEFAULT_SETTINGS } from "../../settings/settings-schema";
 import { settings, settingsLoadState } from "../../settings/settings-store";
-import { mount, press, settle } from "../controls/preset-test-kit";
-import { settingsTarget } from "../settings/settings-focus-store";
+import { byRole, mount, press, settle, waitUntil } from "../controls/preset-test-kit";
 import { CommandSettings } from "./command-settings";
-import { commandActiveKey, commandQuery, commandScope } from "./command-settings-state";
+import { commandQuery, commandScope } from "./command-settings-state";
+import {
+  activeRow,
+  badge,
+  chip,
+  clickIn,
+  controlOf,
+  openSurface as open,
+  resetCommandSettings,
+  rowLabels,
+  rowOf,
+  search,
+  typeInto,
+} from "./command-settings-test-kit";
 
-const scrolled: Element[] = [];
-
-beforeEach(() => {
-  settings.value = DEFAULT_SETTINGS;
-  settingsLoadState.value = { status: "ready" };
-  commandQuery.value = "";
-  commandScope.value = null;
-  commandActiveKey.value = null;
-  settingsTarget.value = null;
-  scrolled.length = 0;
-  // jsdom has no layout, so it has no scrollIntoView either.
-  Element.prototype.scrollIntoView = vi.fn(function (this: Element) {
-    scrolled.push(this);
-  });
-});
+beforeEach(resetCommandSettings);
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const search = (): HTMLInputElement =>
-  document.querySelector<HTMLInputElement>(
-    'input[aria-label="Search settings"]',
-  ) as HTMLInputElement;
-
-async function typeInto(input: HTMLInputElement, text: string): Promise<void> {
-  await act(async () => {
-    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-    set?.call(input, text);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-  await settle();
-}
-
-async function open(onClose = vi.fn()) {
-  const view = await mount(<CommandSettings open onClose={onClose} />);
-  return { view, onClose };
-}
-
-const rowLabels = (): string[] =>
-  [...document.querySelectorAll('[aria-label="Results"] li > button[id^="command-row-"]')].map(
-    (row) => row.querySelector(".truncate")?.textContent ?? "",
-  );
-
-const activeRow = (): HTMLElement | null =>
-  document.querySelector<HTMLElement>('[aria-label="Results"] [aria-current]');
-
-const chip = (label: string): HTMLElement =>
-  [...document.querySelectorAll<HTMLElement>('[data-slot="toggle-group-item"]')].find(
-    (item) => item.textContent === label,
-  ) as HTMLElement;
-
 describe("Command Settings frame", () => {
   it("puts focus in the search field and offers every area as a chip", async () => {
     await open();
     expect(document.activeElement).toBe(search());
-    const chips = [...document.querySelectorAll('[data-slot="toggle-group-item"]')].map(
-      (item) => item.textContent,
-    );
+    const chips = [
+      ...document.querySelectorAll('[aria-label="Areas"] [data-slot="toggle-group-item"]'),
+    ].map((item) => item.textContent);
     expect(chips).toEqual([
       "Appearance",
       "Browser",
@@ -110,32 +76,29 @@ describe("Command Settings frame", () => {
     expect(view.host.innerHTML).toBe("");
   });
 
-  it("lists what changed on the home list, and Enter opens that row's area with the row revealed", async () => {
+  it("lists what changed as live rows, and Enter goes into the control without changing it", async () => {
     settings.value = { ...DEFAULT_SETTINGS, scrollback: 1000 };
     await open();
-    expect(rowLabels()).toContain("Scrollback");
-    expect(activeRow()?.textContent).toContain("Scrollback");
+    expect(rowLabels()).toEqual(["Scrollback"]);
+    expect(activeRow()).toBe(rowOf("changed:setting:scrollback"));
     expect(activeRow()?.textContent).toContain("1k lines");
     expect(activeRow()?.textContent).toContain("Terminal");
 
     await press(search(), { key: "Enter" });
 
-    expect(document.querySelector('[data-slot="badge"]')?.textContent).toBe("Terminal");
-    const row = document.querySelector('[data-setting="scrollback"]');
-    expect(row?.classList.contains("is-target")).toBe(true);
-    expect(scrolled).toContain(row);
+    // Enter moved focus into the row's menu; it did not open another area or touch the value.
+    expect(document.activeElement).toBe(controlOf("changed:setting:scrollback", "[role=combobox]"));
+    expect(badge()).toBeUndefined();
+    expect(settings.value.scrollback).toBe(1000);
   });
 
-  it("opens a row's area on a click and leaves typing where it was", async () => {
-    settings.value = { ...DEFAULT_SETTINGS, scrollback: 1000 };
+  it("opens an area from its stand-in row and keeps typing in the field", async () => {
     await open();
-    const row = document.querySelector<HTMLElement>(
-      '[id="command-row-changed:setting:scrollback"]',
-    );
-    row?.focus();
-    await act(async () => row?.click());
-    await settle();
-    expect(document.querySelector('[data-slot="badge"]')?.textContent).toBe("Terminal");
+    await typeInto(search(), "terminal");
+    const entry = rowOf("area:terminal");
+    entry?.focus();
+    await clickIn(entry);
+    expect(badge()).toBe("Terminal");
     // The row unmounted with the list; the search field took focus rather than the body.
     expect(document.activeElement).toBe(search());
   });
@@ -164,37 +127,41 @@ describe("Command Settings frame", () => {
     expect(rowLabels()).toEqual([]);
   });
 
-  it("walks rows with the arrows and opens the highlighted one with Enter", async () => {
+  it("walks rows with the arrows, and Enter goes into the highlighted row's control", async () => {
     await open();
     await typeInto(search(), "font");
-    const labels = rowLabels();
-    expect(labels.length).toBeGreaterThan(1);
-    expect(activeRow()?.textContent).toContain(labels[0]);
+    expect(rowLabels().slice(0, 2)).toEqual(["Font", "Font size"]);
+    expect(activeRow()).toBe(rowOf("setting:fontFamily"));
 
     await press(search(), { key: "ArrowDown" });
-    expect(activeRow()?.textContent).toContain(labels[1]);
+    expect(activeRow()).toBe(rowOf("setting:fontSize"));
     await press(search(), { key: "ArrowUp" });
     await press(search(), { key: "ArrowUp" });
-    expect(activeRow()?.textContent).toContain(labels[0]);
+    expect(activeRow()).toBe(rowOf("setting:fontFamily"));
 
     await press(search(), { key: "ArrowDown" });
     await press(search(), { key: "Enter" });
-    expect(document.querySelector('[data-slot="badge"]')?.textContent).toBe("Appearance");
-    expect(commandQuery.value).toBe("");
+    expect(document.activeElement).toBe(controlOf("setting:fontSize", "input"));
+    expect(settings.value.fontSize).toBe(DEFAULT_SETTINGS.fontSize);
+    expect(commandQuery.value).toBe("font");
   });
 
-  it("scopes to an area from its chip, mounts the section, and leaves with the badge button", async () => {
+  it("scopes to an area from its chip, lists its rows, and leaves with the badge button", async () => {
     await open();
-    await act(async () => chip("Terminal").click());
-    await settle();
-    expect(document.querySelector('[data-slot="badge"]')?.textContent).toBe("Terminal");
-    expect(document.querySelector('[data-setting="scrollback"]')).not.toBeNull();
+    await clickIn(chip("Terminal"));
+    expect(badge()).toBe("Terminal");
+    expect(rowLabels()).toEqual(["Scrollback"]);
 
-    const leave = document.querySelector<HTMLElement>('button[aria-label="Leave Terminal"]');
-    await act(async () => leave?.click());
-    await settle();
-    expect(document.querySelector('[data-slot="badge"]')).toBeNull();
-    expect(document.querySelector('[data-setting="scrollback"]')).toBeNull();
+    await clickIn(document.querySelector<HTMLElement>('button[aria-label="Leave Terminal"]'));
+    expect(badge()).toBeUndefined();
+    expect(rowLabels()).toEqual([]);
+  });
+
+  it("mounts the legacy section of an area no row edits yet", async () => {
+    await open();
+    await clickIn(chip("Shortcuts"));
+    expect(document.querySelector('section[aria-label="Shortcuts"]')).not.toBeNull();
+    expect(rowLabels()).toEqual([]);
   });
 
   it("returns focus to where it was once it closes with nothing else holding it", async () => {
@@ -266,9 +233,7 @@ describe("Command Settings keyboard", () => {
   it("keeps an uncommitted draft's Escape for the field, and only then lets Escape through", async () => {
     commandScope.value = "browser";
     const { onClose } = await open();
-    const field = document.querySelector<HTMLInputElement>(
-      'input[aria-label="Browser home address"]',
-    ) as HTMLInputElement;
+    const field = controlOf("setting:browserHomeUrl", "input") as HTMLInputElement;
     field.focus();
     await typeInto(field, "http://localhost:9999");
 
@@ -288,15 +253,46 @@ describe("Command Settings keyboard", () => {
   it("commits a typed value when Escape moves focus out of its field", async () => {
     commandScope.value = "browser";
     await open();
-    const field = document.querySelector<HTMLInputElement>(
-      'input[aria-label="Browser home address"]',
-    ) as HTMLInputElement;
+    const field = controlOf("setting:browserHomeUrl", "input") as HTMLInputElement;
     field.focus();
     await typeInto(field, "http://localhost:4000");
     // Enter commits; the draft is now the saved value, so Escape is no longer claimed.
     await press(field, { key: "Enter" });
     await press(field, { key: "Escape" });
     expect(settings.value.browserHomeUrl).toBe("http://localhost:4000");
+  });
+
+  it("brings Escape back from a live row's control to the search field, nothing else", async () => {
+    commandScope.value = "terminal";
+    const { onClose } = await open();
+    await press(search(), { key: "Enter" });
+    const trigger = controlOf("setting:scrollback", "[role=combobox]");
+    expect(document.activeElement).toBe(trigger);
+
+    await press(trigger, { key: "Escape" });
+    expect(document.activeElement).toBe(search());
+    expect(commandScope.value).toBe("terminal");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("leaves Escape and Tab to a menu that is open", async () => {
+    commandScope.value = "terminal";
+    const { onClose } = await open();
+    await clickIn(controlOf("setting:scrollback", "[role=combobox]"));
+    const list = byRole("listbox") as HTMLElement;
+    expect(list).not.toBeNull();
+
+    const tab = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    list.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(false);
+
+    await press(list, { key: "Escape" });
+    await waitUntil(
+      () => byRole("listbox") === null || byRole("listbox")?.closest("[hidden]") !== null,
+    );
+    expect(commandScope.value).toBe("terminal");
+    expect(commandQuery.value).toBe("");
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("keeps Tab inside the surface, wrapping at both ends and pulling stray focus back in", async () => {

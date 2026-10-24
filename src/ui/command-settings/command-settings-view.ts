@@ -27,18 +27,70 @@ export function commandSources(): CommandSources {
   };
 }
 
-/**
- * What the field shows. With an area chosen and nothing typed, the area is its
- * own section: the sections still hold every control, and a hit row cannot edit
- * what it names yet, so listing rows there would leave a setting read-only.
- */
+/** What a live area cannot draw as a row: content with no registry key, or a kind a row does not edit. */
+export type LegacyPiece = "reset" | "theme" | "preview" | "logo";
+
+/** The list as drawn: the model's items, plus the legacy pieces an area view mounts in place. */
+export type ListItem =
+  | CommandItem
+  | {
+      readonly type: "piece";
+      readonly key: string;
+      readonly area: CommandAreaId;
+      readonly piece: LegacyPiece;
+    };
+
+/** The items the keyboard walks: pieces are not rows. */
+export function commandItemsOf(items: readonly ListItem[]): readonly CommandItem[] {
+  return items.filter((item): item is CommandItem => item.type !== "piece");
+}
+
+/** Areas whose settings no row edits yet: their own section is mounted as is. */
+const SECTION_AREAS: ReadonlySet<CommandAreaId> = new Set([
+  "agents",
+  "shortcuts",
+  "about",
+  "privacy",
+  "reset",
+]);
+
+/** An area with nothing typed: its live rows, and the legacy pieces that have no row. */
+function areaItems(area: CommandAreaId, sources: CommandSources): readonly ListItem[] {
+  if (SECTION_AREAS.has(area)) {
+    return [{ type: "section", key: `section:${area}`, area }];
+  }
+  const piece = (name: LegacyPiece): ListItem => ({
+    type: "piece",
+    key: `piece:${area}:${name}`,
+    area,
+    piece: name,
+  });
+  // The colour mode is edited by its cards, not by a row.
+  const rows = buildCommandItems("", area, sources).filter(
+    (item) => item.key !== "setting:themeId",
+  );
+  if (area !== "appearance") {
+    return [piece("reset"), ...rows];
+  }
+  const afterType = rows.findIndex((item) => item.key === "setting:fontSize") + 1;
+  return [
+    piece("reset"),
+    piece("theme"),
+    ...rows.slice(0, afterType),
+    piece("preview"),
+    ...rows.slice(afterType),
+    piece("logo"),
+  ];
+}
+
+/** What the field shows: results for a query, else the area's rows, else the home lists. */
 export function commandListItems(
   query: string,
   scope: CommandAreaId | null,
   sources: CommandSources,
-): readonly CommandItem[] {
+): readonly ListItem[] {
   if (query.trim() === "" && scope !== null) {
-    return [{ type: "section", key: `section:${scope}`, area: scope }];
+    return areaItems(scope, sources);
   }
   return buildCommandItems(query, scope, sources);
 }
@@ -47,7 +99,7 @@ export function areaLabel(area: CommandAreaId, sources: CommandSources): string 
   return sources.areas.find((entry) => entry.id === area)?.label ?? area;
 }
 
-function settingValueText(key: keyof Settings, current: Settings): string {
+export function settingValueText(key: keyof Settings, current: Settings): string {
   const { control, value } = settingRow(key, current);
   switch (control.kind) {
     case "switch":

@@ -5,18 +5,20 @@ import type {
   CommandItem,
 } from "../../settings/command-hits";
 import { settingsTarget } from "../settings/settings-focus-store";
+import { isLiveHit } from "./command-settings-live";
 import { commandActiveKey, commandScope, revealInCommand } from "./command-settings-state";
 
 /*
- * What a press on a row or a chip does. The legacy sections mounted inside an
- * area paint a deep-linked row from `settingsTarget` (`ConfigRow` scrolls to it
- * and marks it), so the target is written here and cleared whenever the user
- * moves: a stale target would repaint when the area is entered again.
+ * What a press on a stand-in row or a chip does. The legacy sections and pieces
+ * mounted inside an area paint a deep-linked row from `settingsTarget`
+ * (`ConfigRow` scrolls to it and marks it), so the target is written here and
+ * cleared whenever the user moves: a stale target would repaint when the area
+ * is entered again.
  */
 
-/** A row of the home list or of results: open its area, and its row when it has one. */
+/** A stand-in row of the home list or of results: open its area, and its row when it has one. */
 export function openHit(hit: CommandHit): void {
-  revealInCommand(hit.area);
+  revealInCommand(hit.area, hit.kind === "setting" ? hit.key : undefined);
   settingsTarget.value = hit.kind === "setting" ? hit.key : null;
 }
 
@@ -25,9 +27,13 @@ export function openIssue(issue: AttentionIssue): void {
   settingsTarget.value = null;
 }
 
-/** Enter on the highlighted row. Heads, sections and the empty line have nothing to open. */
+/**
+ * Enter on the highlighted row. A live row has nothing to open: its control is
+ * right there, and Enter only moves focus into it (`command-settings-keys.ts`).
+ * Heads, pieces, sections and the empty line have nothing to open either.
+ */
 export function openItem(item: CommandItem): void {
-  if (item.type === "hit") {
+  if (item.type === "hit" && !isLiveHit(item.hit)) {
     openHit(item.hit);
   } else if (item.type === "attention") {
     openIssue(item.issue);

@@ -27,12 +27,16 @@ vi.mock("../../chrome/events", async (importOriginal) => {
 
 import { settingsOpen } from "../../chrome/events";
 import { initializeDesktopEnvironment, resetDesktopEnvironmentForTests } from "../../lib/platform";
-import { DEFAULT_SETTINGS } from "../../settings/settings-schema";
-import { settings, settingsLoadState } from "../../settings/settings-store";
 import { mount, press, settle } from "../controls/preset-test-kit";
 import { activeCategory } from "../settings/active-category-store";
 import { openSettingsAt, settingsTarget } from "../settings/settings-focus-store";
-import { commandActiveKey, commandQuery, commandScope } from "./command-settings-state";
+import {
+  activeRow,
+  badge,
+  resetCommandSettings,
+  rowOf,
+  scrolled,
+} from "./command-settings-test-kit";
 import { SettingsSurface } from "./settings-surface";
 
 /** What `app.tsx` mounts: the surface fed by the shared `settingsOpen` signal. */
@@ -54,15 +58,9 @@ function pinHost(isDevelopment: boolean): void {
 }
 
 beforeEach(() => {
-  settings.value = DEFAULT_SETTINGS;
-  settingsLoadState.value = { status: "ready" };
+  resetCommandSettings();
   settingsOpen.value = false;
   activeCategory.value = "appearance";
-  commandQuery.value = "";
-  commandScope.value = null;
-  commandActiveKey.value = null;
-  settingsTarget.value = null;
-  Element.prototype.scrollIntoView = vi.fn();
 });
 
 afterEach(() => {
@@ -71,8 +69,6 @@ afterEach(() => {
 });
 
 const dialog = (): HTMLElement | null => document.querySelector('section[role="dialog"]');
-const badge = (): string | undefined =>
-  document.querySelector('[data-slot="badge"]')?.textContent ?? undefined;
 
 async function openAt(...args: Parameters<typeof openSettingsAt>): Promise<void> {
   await act(async () => openSettingsAt(...args));
@@ -109,16 +105,14 @@ describe("Settings entrance with the commandSettings switch on", () => {
     expect(document.querySelector('section[aria-label="Shortcuts"]')).not.toBeNull();
   });
 
-  it("scopes to the area and reveals the named row", async () => {
-    const scrolled: Element[] = [];
-    Element.prototype.scrollIntoView = vi.fn(function (this: Element) {
-      scrolled.push(this);
-    });
+  it("scopes to the area and makes the named row the active one, scrolled into view", async () => {
     await mount(<Entrance />);
-    await openAt("terminal", "scrollback");
-    expect(badge()).toBe("Terminal");
-    const row = document.querySelector('[data-setting="scrollback"]');
-    expect(row?.classList.contains("is-target")).toBe(true);
+    await openAt("appearance", "showStatusBar");
+    expect(badge()).toBe("Appearance");
+    const row = rowOf("setting:showStatusBar");
+    expect(row).not.toBeNull();
+    // Not the first row: the key, not the fallback, made it active.
+    expect(activeRow()).toBe(row);
     expect(scrolled).toContain(row);
   });
 
@@ -134,7 +128,7 @@ describe("Settings entrance with the commandSettings switch on", () => {
     await openAt("terminal", "scrollback");
     await openAt("agents");
     expect(badge()).toBe("Agents");
-    expect(document.querySelector('[data-setting="scrollback"]')).toBeNull();
+    expect(rowOf("setting:scrollback")).toBeNull();
   });
 
   async function setOpen(value: boolean): Promise<void> {
@@ -162,14 +156,12 @@ describe("Settings entrance with the commandSettings switch on", () => {
 
   it("forgets a revealed row when it closes, so the next visit to the area is plain", async () => {
     await mount(<Entrance />);
-    await openAt("terminal", "scrollback");
-    expect(settingsTarget.value).toBe("scrollback");
+    await openAt("appearance", "showStatusBar");
+    expect(settingsTarget.value).toBe("showStatusBar");
     await setOpen(false);
     expect(settingsTarget.value).toBeNull();
     await setOpen(true);
-    expect(document.querySelector('[data-setting="scrollback"]')?.className).not.toContain(
-      "is-target",
-    );
+    expect(activeRow()).toBe(rowOf("setting:fontFamily"));
   });
 
   it("closes through the callback when Escape has nothing left to clear", async () => {

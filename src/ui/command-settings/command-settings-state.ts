@@ -1,5 +1,7 @@
 import { signal } from "@preact/signals";
 import type { CommandAreaId } from "../../settings/command-hits";
+import type { Settings } from "../../settings/settings-schema";
+import { isLiveKey } from "./command-settings-live";
 
 /*
  * Command Settings keeps its state in module signals, like the screen it
@@ -17,9 +19,13 @@ export const commandScope = signal<CommandAreaId | null>(null);
 /** The highlighted row, by key; the list falls back to its first row when it no longer holds it. */
 export const commandActiveKey = signal<string | null>(null);
 
-/** Show one area with nothing typed: the entrance every deep link and every row takes. */
-export function revealInCommand(area: CommandAreaId): void {
+/**
+ * Show one area with nothing typed: the entrance every deep link and every row takes. A key
+ * with a live row there becomes the active row (the surface scrolls it into view); a key
+ * edited by a legacy piece has no row of its own, so the area opens on its first row.
+ */
+export function revealInCommand(area: CommandAreaId, key?: keyof Settings): void {
   commandQuery.value = "";
   commandScope.value = area;
-  commandActiveKey.value = null;
+  commandActiveKey.value = key !== undefined && isLiveKey(key) ? `setting:${key}` : null;
 }

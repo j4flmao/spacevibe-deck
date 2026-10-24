@@ -1,109 +1,26 @@
 import { useEffect, useRef } from "preact/hooks";
 import { activeKeyIn, isNavigable, type CommandItem } from "../../settings/command-hits";
-import type { CommandSources } from "../../settings/command-search";
 import { CaretLeft } from "@phosphor-icons/react";
 import { initSettings, settingsLoadState } from "../../settings/settings-store";
 import { Button } from "../controls/button";
 import { DeckIcon, ROW_ICON } from "../controls/deck-icon";
 import { LoadError } from "../controls/load-error";
 import { settingsTarget } from "../settings/settings-focus-store";
-import { openHit, openIssue } from "./command-settings-actions";
 import { AreaChips, Footer, SearchField } from "./command-settings-frame";
 import { handleCommandKey } from "./command-settings-keys";
-import {
-  AttentionRow,
-  EmptyRow,
-  Head,
-  HitRow,
-  rowDomId,
-  SectionMount,
-} from "./command-settings-rows";
+import { enterLabel, List } from "./command-settings-list";
+import { rowDomId } from "./command-settings-live";
 import { commandActiveKey, commandQuery, commandScope } from "./command-settings-state";
 import {
   areaLabel,
+  commandItemsOf,
   commandListItems,
   commandSources,
-  hitValueText,
-  issueText,
 } from "./command-settings-view";
 
 interface CommandSettingsProps {
   readonly open: boolean;
   readonly onClose: () => void;
-}
-
-/** What Enter does on the highlighted row, for the footer hint. */
-function enterLabel(item: CommandItem | undefined): string | null {
-  if (item === undefined) {
-    return null;
-  }
-  return item.type === "hit" && item.hit.kind === "area" ? "Open" : "Go to";
-}
-
-interface ListProps {
-  readonly items: readonly CommandItem[];
-  readonly active: string | null;
-  readonly sources: CommandSources;
-  /** The home list has no area headings, so a row names its own area. */
-  readonly crumbs: boolean;
-  /** A row or button that unmounts itself on press leaves focus on the body; the search takes it back. */
-  readonly focusSearch: () => void;
-}
-
-function List({ items, active, sources, crumbs, focusSearch }: ListProps) {
-  return (
-    <ul className="m-0 list-none">
-      {items.map((item) => {
-        switch (item.type) {
-          case "head":
-            return <Head key={item.key} title={item.title} />;
-          case "hit":
-            return (
-              <HitRow
-                key={item.key}
-                itemKey={item.key}
-                hit={item.hit}
-                value={hitValueText(item.hit, sources)}
-                crumb={crumbs ? areaLabel(item.hit.area, sources) : null}
-                active={item.key === active}
-                onOpen={() => {
-                  openHit(item.hit);
-                  focusSearch();
-                }}
-              />
-            );
-          case "attention":
-            return (
-              <AttentionRow
-                key={item.key}
-                itemKey={item.key}
-                issue={item.issue}
-                text={issueText(item.issue, sources)}
-                crumb={areaLabel(item.issue.area, sources)}
-                active={item.key === active}
-                onOpen={() => {
-                  openIssue(item.issue);
-                  focusSearch();
-                }}
-              />
-            );
-          case "section":
-            return <SectionMount key={item.key} area={item.area} />;
-          case "empty":
-            return (
-              <EmptyRow
-                key={item.key}
-                query={item.query}
-                onClear={() => {
-                  commandQuery.value = "";
-                  focusSearch();
-                }}
-              />
-            );
-        }
-      })}
-    </ul>
-  );
 }
 
 /**
@@ -128,7 +45,9 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
   const query = commandQuery.value;
   const scope = commandScope.value;
   const sources = commandSources();
-  const items = commandListItems(query, scope, sources);
+  const listItems = commandListItems(query, scope, sources);
+  // The keyboard walks rows, not the pieces drawn between them.
+  const items = commandItemsOf(listItems);
   itemsRef.current = items;
   const activeKey = activeKeyIn(items, commandActiveKey.value);
   const current = items.find((item) => item.key === activeKey);
@@ -144,6 +63,7 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
     return () => {
       settingsTarget.value = null;
       commandQuery.value = "";
+      commandActiveKey.value = null;
       const focused = document.activeElement;
       const stranded = focused === null || focused === document.body || root?.contains(focused);
       if (stranded && previous instanceof HTMLElement && previous.isConnected) {
@@ -164,6 +84,14 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  // A row that unmounts under focus (a reset in the Changed list, a value flipped back to its
+  // default) leaves it on the body, where Escape and the arrows reach nothing: the search takes it.
+  useEffect(() => {
+    if (document.activeElement === document.body) {
+      searchRef.current?.focus({ preventScroll: true });
+    }
+  });
 
   useEffect(() => {
     if (activeKey !== null) {
@@ -215,10 +143,11 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
         >
           <fieldset disabled={loading} className="min-w-0">
             <List
-              items={items}
+              items={listItems}
               active={activeKey}
               sources={sources}
               crumbs={scope === null && query.trim() === ""}
+              locked={loading}
               focusSearch={focusSearch}
             />
           </fieldset>
