@@ -4,6 +4,7 @@ import { dockNarrow } from "./agent-dock-layout";
 import { dockSheetOpen } from "./agent-dock-state";
 import { DockColumn, type DockBodies } from "./dock-column";
 import { DockEdge } from "./dock-edge";
+import { dockRoot } from "./dock-root";
 import { useFocusedRailItem } from "./use-focused-rail-item";
 import { useRevealDockTab } from "./use-reveal-dock-tab";
 
@@ -24,6 +25,7 @@ export interface AgentDockProps {
 export function AgentDock({ entered, onClose, bodies }: AgentDockProps) {
   const narrow = dockNarrow.value;
   const item = useFocusedRailItem();
+  const root = dockRoot.value;
   useRevealDockTab();
   // The browser yields while the sheet is open, so a stale flag would hide it for good.
   useEffect(() => {
@@ -43,10 +45,11 @@ export function AgentDock({ entered, onClose, bodies }: AgentDockProps) {
       aria-label="Agent dock"
     >
       {narrow ? (
-        <DockEdge item={item} bodies={bodies} />
+        <DockEdge item={item} root={root} bodies={bodies} />
       ) : (
         <DockColumn
           item={item}
+          root={root}
           bodies={bodies}
           closeLabel="Hide the side panel"
           closeChord={shortcutLabel("toggle-dock")}

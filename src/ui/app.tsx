@@ -2120,17 +2120,22 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
    */
   const dockTab = (): DockTab => resolveDockTab(settings.value.dockTab, sessionsSupported.value);
 
+  /**
+   * The Explorer over one folder: the legacy dock roots it at the tab's folder, the stacked dock
+   * at the checkout the focused agent stands in (`agent-dock/dock-root.ts`).
+   */
+  const explorerAt = (workspacePath: string | null) => (
+    <ExplorerTab
+      controller={fileController}
+      onDocumentEmpty={() => tabsRef.current?.focusActive()}
+      workspacePath={workspacePath}
+      canCreate={fileCreateAvailable}
+      changesAvailable={gitChangesAvailable}
+    />
+  );
   /** What each dock surface shows: the legacy column mounts one, the stacked dock all of them. */
   const dockBodies = {
-    files: (
-      <ExplorerTab
-        controller={fileController}
-        onDocumentEmpty={() => tabsRef.current?.focusActive()}
-        workspacePath={activeWorkspace.value}
-        canCreate={fileCreateAvailable}
-        changesAvailable={gitChangesAvailable}
-      />
-    ),
+    files: explorerAt(activeWorkspace.value),
     usage: <UsageDockTab onOpenDetails={() => tabsRef.current?.runAction("open-usage")} />,
     history: <SessionsDockTab onResume={(entry) => void resumeSessionEntry(entry)} />,
   };
@@ -2776,6 +2781,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
                   onClose={() => tabsRef.current?.runAction("toggle-dock")}
                   bodies={{
                     ...dockBodies,
+                    files: explorerAt,
                     history: sessionsSupported.value ? dockBodies.history : null,
                   }}
                 />

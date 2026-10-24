@@ -20,7 +20,7 @@ function handleLabel(item: RailItem | null): string {
   return `${OPEN_LABEL}, ${displayAgent(item.entry.agent)}, ${statusLabel(item)}`;
 }
 
-type DockEdgeProps = Pick<DockColumnProps, "item" | "bodies">;
+type DockEdgeProps = Pick<DockColumnProps, "item" | "root" | "bodies">;
 
 /**
  * The narrow rule (LAY-9, OD-4): under 1360px the dock is a 32px handle, and opening it draws the
@@ -29,7 +29,7 @@ type DockEdgeProps = Pick<DockColumnProps, "item" | "bodies">;
  *
  * The sheet's own header control closes the sheet only; hiding the dock stays the toggle's job.
  */
-export function DockEdge({ item, bodies }: DockEdgeProps) {
+export function DockEdge({ item, root, bodies }: DockEdgeProps) {
   const setOpen = (open: boolean): void => {
     dockSheetOpen.value = open;
   };
@@ -62,6 +62,7 @@ export function DockEdge({ item, bodies }: DockEdgeProps) {
         <SheetTitle className="sr-only">Side panel</SheetTitle>
         <DockColumn
           item={item}
+          root={root}
           bodies={bodies}
           closeLabel="Close the side panel"
           closeChord={null}

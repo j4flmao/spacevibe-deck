@@ -19,7 +19,16 @@ vi.mock("../../host/bridge", () => ({ invoke: vi.fn(async () => null) }));
 import { initializeDesktopEnvironment, resetDesktopEnvironmentForTests } from "../../lib/platform";
 import { DEFAULT_SETTINGS } from "../../settings/settings-schema";
 import { settings } from "../../settings/settings-store";
-import { activeTabIndex, tabViews, type PaneView, type TabView } from "../../terminal/tabs-store";
+import { activeWorkspace } from "../../files/file-surface-store";
+import { repositoryScans } from "../../repositories/repositories-store";
+import type { RepositoryScan } from "../../repositories/repository-client";
+import {
+  activeTabIndex,
+  statusInfo,
+  tabViews,
+  type PaneView,
+  type TabView,
+} from "../../terminal/tabs-store";
 import { browserPanelObscured } from "../app-policy";
 import { byRole, click, mount, press, settle, waitUntil } from "../controls/preset-test-kit";
 import { AgentDock } from "./agent-dock";
@@ -74,7 +83,7 @@ function twoAgents(focusedKey: number | null): TabView[] {
 }
 
 const BODIES = {
-  files: <p>files body</p>,
+  files: (root: string | null) => <p>files body at {root ?? "no folder"}</p>,
   usage: <p>usage body</p>,
   history: <p>history body</p>,
 };
@@ -126,6 +135,9 @@ beforeEach(() => {
   settings.value = DEFAULT_SETTINGS;
   tabViews.value = twoAgents(1);
   activeTabIndex.value = 0;
+  activeWorkspace.value = "/r/main";
+  repositoryScans.value = new Map();
+  statusInfo.value = { branch: null, cwd: null, agent: null, paneCount: 1, home: "/home/test" };
   resetAgentDockState();
   resetRevealDockTabForTests();
 });
@@ -136,6 +148,8 @@ afterEach(async () => {
   resetDesktopEnvironmentForTests();
   tabViews.value = [];
   activeTabIndex.value = -1;
+  activeWorkspace.value = null;
+  repositoryScans.value = new Map();
   resetAgentDockState();
 });
 
@@ -257,6 +271,90 @@ describe("the stacked dock in a wide window", () => {
     });
     const view = await mount(dock());
     expect(trigger("History").getAttribute("aria-expanded")).toBe("true");
+    await view.unmount();
+  });
+});
+
+describe("the folder the sections show", () => {
+  const repository = (root: string, ...worktrees: string[]): RepositoryScan => ({
+    kind: "repository",
+    key: `${root}/.git`,
+    root,
+    worktrees: worktrees.map((path) => ({
+      path,
+      head: "a",
+      branch: "b",
+      bare: false,
+      detached: false,
+      locked: null,
+      prunable: null,
+    })),
+  });
+
+  beforeEach(() => resizeTo(1440));
+
+  it("starts on the tab's folder, then follows the focused agent into another checkout", async () => {
+    repositoryScans.value = new Map([["/r/main", repository("/r/main", "/r/main", "/r/side")]]);
+    const view = await mount(dock());
+    expect(bodyText()).toContain("files body at /r/main");
+
+    await act(async () => {
+      statusInfo.value = { ...statusInfo.value, cwd: "/r/side/src" };
+    });
+    await settle();
+    expect(bodyText()).toContain("files body at /r/side");
+    // The tab's own folder is what file tabs and the watcher key on: it is not rewritten.
+    expect(activeWorkspace.value).toBe("/r/main");
+    await view.unmount();
+  });
+
+  it("follows focus between two agents of one project standing in different checkouts", async () => {
+    repositoryScans.value = new Map([["/r/main", repository("/r/main", "/r/main", "/r/side")]]);
+    tabViews.value = [
+      tab({ key: 1, panes: [pane({ paneId: 11, focused: true })] }),
+      tab({ key: 2, panes: [pane({ paneId: 21, agent: "codex" })] }),
+    ];
+    statusInfo.value = { ...statusInfo.value, cwd: "/r/main" };
+    const view = await mount(dock());
+    expect(bodyText()).toContain("files body at /r/main");
+
+    tabViews.value = [
+      tab({ key: 1, panes: [pane({ paneId: 11 })] }),
+      tab({ key: 2, panes: [pane({ paneId: 21, agent: "codex", focused: true })] }),
+    ];
+    activeTabIndex.value = 1;
+    statusInfo.value = { ...statusInfo.value, cwd: "/r/side" };
+    await settle();
+    expect(bodyText()).toContain("files body at /r/side");
+    await view.unmount();
+  });
+
+  it("keeps the tab's folder while a file surface holds the keyboard", async () => {
+    repositoryScans.value = new Map([["/r/main", repository("/r/main", "/r/main", "/r/side")]]);
+    const view = await mount(dock());
+    await act(async () => {
+      statusInfo.value = { ...statusInfo.value, cwd: "/r/side", paneCount: null };
+    });
+    await settle();
+    expect(bodyText()).toContain("files body at /r/main");
+    await view.unmount();
+  });
+
+  it("is never the home directory: a cwd in no known checkout keeps the tab's folder", async () => {
+    const view = await mount(dock());
+    await act(async () => {
+      statusInfo.value = { ...statusInfo.value, cwd: "/home/test/projects/other" };
+    });
+    await settle();
+    expect(bodyText()).toContain("files body at /r/main");
+    await view.unmount();
+  });
+
+  it("shows no folder rather than a guess when the window has none", async () => {
+    activeWorkspace.value = null;
+    tabViews.value = twoAgents(null);
+    const view = await mount(dock());
+    expect(bodyText()).toContain("files body at no folder");
     await view.unmount();
   });
 });
