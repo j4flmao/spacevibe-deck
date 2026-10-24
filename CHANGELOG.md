@@ -10,6 +10,9 @@ the release PR, and frozen at the tag — never an auto-generated commit list.
 - **Older Codex conversations are back.** Codex compresses conversations it has not touched
   for a week, and Deck stopped seeing them. Session history, resume and usage now include them
   again.
+- **opencode 2 panes reopen the right conversation.** Deck could not see sessions started in
+  opencode 2 and reopened an older one from the same folder instead. It now resumes the
+  session the pane last had, and the sidebar shows what opencode 2 last said.
 - **Agent alerts reach you outside Deck.** Background agents notify when they finish, need
   input or approval, or fail. Click an alert to return to its pane; the macOS Dock badge sums
   the panes that need you across windows. Alerts are on by default, including a one-time
