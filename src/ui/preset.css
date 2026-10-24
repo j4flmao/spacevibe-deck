@@ -19,7 +19,7 @@
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
-@source "./controls/{badge,button,dialog,dropdown-menu,field,input,kbd,label,popover,scroll-area,select,separator,switch,tabs,toggle,toggle-group,tooltip}.tsx";
+@source "./controls/{badge,button,dialog,dropdown-menu,field,input,kbd,label,popover,scroll-area,select,separator,sheet,switch,tabs,toggle,toggle-group,tooltip}.tsx";
 @source "./blocks";
 @source "./project-rail";
 @import "tw-animate-css";

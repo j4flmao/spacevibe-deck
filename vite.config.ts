@@ -15,7 +15,7 @@ import { PRESET_CONTROLS_FILE } from "./scripts/preset-controls-bundle.mjs";
  * the bundle that script builds with the aliases applied; the build and dev server never see it.
  */
 const PRESET_CONTROL_FILE =
-  /[\\/]src[\\/]ui[\\/]controls[\\/](badge|button|dialog|dropdown-menu|field|input|kbd|label|popover|scroll-area|select|separator|switch|tabs|toggle|toggle-group|tooltip)\.tsx$/;
+  /[\\/]src[\\/]ui[\\/]controls[\\/](badge|button|dialog|dropdown-menu|field|input|kbd|label|popover|scroll-area|select|separator|sheet|switch|tabs|toggle|toggle-group|tooltip)\.tsx$/;
 const presetControlsInTests: Plugin = {
   name: "deck-preset-controls-in-tests",
   enforce: "pre",

@@ -17,6 +17,7 @@ const ROOTLESS = new Set([
   "DropdownMenuSub",
   "Popover",
   "Select",
+  "Sheet",
   "Tooltip",
   "TooltipProvider",
 ]);
