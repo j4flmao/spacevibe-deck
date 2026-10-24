@@ -13,6 +13,8 @@ the release PR, and frozen at the tag — never an auto-generated commit list.
 - **opencode 2 panes reopen the right conversation.** Deck could not see sessions started in
   opencode 2 and reopened an older one from the same folder instead. It now resumes the
   session the pane last had, and the sidebar shows what opencode 2 last said.
+- **fish panes no longer open on a failed status.** The first prompt of a new fish pane showed
+  `[1]`, or a red prompt character, although nothing had failed.
 - **Agent alerts reach you outside Deck.** Background agents notify when they finish, need
   input or approval, or fail. Click an alert to return to its pane; the macOS Dock badge sums
   the panes that need you across windows. Alerts are on by default, including a one-time

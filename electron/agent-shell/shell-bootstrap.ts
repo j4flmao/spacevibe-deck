@@ -226,11 +226,17 @@ function escapeFishDoubleQuoted(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("$", "\\$");
 }
 
+/**
+ * An `if` block, not `contains …; or set …`: fish's `set` passes the previous
+ * status through, so that form left `$status` at 1 and the first prompt of
+ * every pane showed a failed command.
+ */
 function fishInitCommand(binDir: string): string {
   return [
     `set -l _deck_bin "${escapeFishDoubleQuoted(binDir)}"`,
-    'contains -- "$_deck_bin" $PATH',
-    'or set -gx PATH "$_deck_bin" $PATH',
+    'if not contains -- "$_deck_bin" $PATH',
+    'set -gx PATH "$_deck_bin" $PATH',
+    "end",
   ].join("; ");
 }
 
