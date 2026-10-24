@@ -54,7 +54,13 @@ function openReset(scope: SettingScope): void {
 
 /** One row per reset scope; each asks first, naming what goes and what stays (FBK-3). */
 export function ResetRows() {
-  useEffect(() => closeReset, []);
+  useEffect(
+    () => () => {
+      // Only a flag this dialog set is this dialog's to clear.
+      if (resetScope.value !== null) closeReset();
+    },
+    [],
+  );
   const open = resetScope.value;
   const spec = RESET_ROWS.find((row) => row.scope === open);
   const keys = spec === undefined ? [] : changedKeys(settings.value, keysFor(spec.scope));
