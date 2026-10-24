@@ -264,7 +264,11 @@ The renderer reads the validated host development identity at invocation time th
 `!app.isPackaged`, including dev-once with a production Vite renderer; browser-only preview
 may use Vite's dev mode. A dev URL cannot override a packaged host. Main-owned handlers use
 [the IPC guard](../../electron/ipc/release-switch-guard.ts); never accept a renderer's claim
-that a feature is enabled. Shared IPC services guard only the feature-specific branch.
+that a feature is enabled. Shared IPC services guard only the feature-specific branch. Without a
+host the renderer trusts Vite's dev mode except under Vitest (`MODE === "test"`), so a unit test
+sees every switch off unless it pins a host identity as
+[the availability test](../../src/terminal/action-availability.test.ts) does; read the snapshot
+when the guard runs, never into a module-level constant.
 
 Each feature adoption must guard its mount and clicks, direct actions, default/rebound
 shortcuts, native menu/registry entries, IPC, restore and background starts. Reuse
