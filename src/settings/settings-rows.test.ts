@@ -118,9 +118,19 @@ describe("an agent's own changes", () => {
     expect(after.disabledAgents).toEqual(["codex"]);
     expect(after.defaultLaunchProfiles).toEqual({ codex: "fast" });
     expect(after.agentRuntimeDefaults).toEqual({ codex: { model: "x", effort: null } });
-    expect(after.launchProfiles).toEqual(edited.launchProfiles);
+    // The starred command goes with its star (the Reset command button's own patch); the models stay.
+    expect(after.launchProfiles).toEqual([]);
     expect(after.agentModels).toEqual(edited.agentModels);
     expect(after.quickAgentIds).toEqual(["claude"]);
+  });
+
+  it("keeps another command of the agent's, and every saved command when only the switch changed", () => {
+    const saved: Settings = {
+      ...DEFAULT_SETTINGS,
+      disabledAgents: ["claude"],
+      launchProfiles: [{ id: "plan", command: "claude --plan" }],
+    };
+    expect(agentResetPatch("claude", saved)).not.toHaveProperty("launchProfiles");
   });
 
   it("puts the Signals switch back with the revision, so the next load reads it as chosen", () => {

@@ -1,4 +1,5 @@
 import { isMarkedChanged, marksChange } from "./settings-changes";
+import { withAgentCommand } from "../lib/launch-profile";
 import { SETTINGS_REGISTRY, type SettingsPage } from "./settings-registry";
 import { DEFAULT_SIGNAL_ADAPTERS, signalAdaptersPatch } from "./signal-adapter-choice";
 import {
@@ -187,26 +188,29 @@ function withoutAgent<T>(record: Readonly<Record<string, T>>, agentId: string): 
 }
 
 /**
- * The patch that puts everything `agentChanged` looks at back to the defaults. Saved commands and
- * declared models are the user's data (FBK-3) and stay: only the star on a command, and the
- * choice of default model, are undone. The Signals switch goes through `signalAdaptersPatch`
- * like every write of it, or the next load would read the stored value as unchosen.
+ * The patch that puts everything `agentChanged` looks at back to the defaults. A starred command is
+ * taken back the way the launch flags editor's Reset command takes it back (`withAgentCommand`):
+ * the preset in force is deleted along with its star, because an unstarred preset of the agent's
+ * own still beats the shipped command at launch. That is the one piece of the user's saved
+ * commands a reset removes. Declared models stay. The Signals switch goes through
+ * `signalAdaptersPatch` like every write of it, or the next load would read the stored value as
+ * unchosen.
  */
 export function agentResetPatch(agentId: string, current: Settings): Partial<Settings> {
   const adapters = current.agentSignalAdapters;
   const hasAdapter = Object.hasOwn(DEFAULT_SIGNAL_ADAPTERS, agentId);
   const defaults = DEFAULT_SETTINGS;
-  const star = defaults.defaultLaunchProfiles[agentId];
   const runtime = defaults.agentRuntimeDefaults[agentId];
+  const starChanged =
+    current.defaultLaunchProfiles[agentId] !== defaults.defaultLaunchProfiles[agentId];
   return {
     disabledAgents: [
       ...current.disabledAgents.filter((id) => id !== agentId),
       ...(defaults.disabledAgents.includes(agentId) ? [agentId] : []),
     ],
-    defaultLaunchProfiles:
-      star === undefined
-        ? withoutAgent(current.defaultLaunchProfiles, agentId)
-        : { ...current.defaultLaunchProfiles, [agentId]: star },
+    ...(starChanged
+      ? withAgentCommand(agentId, "", current.launchProfiles, current.defaultLaunchProfiles)
+      : {}),
     agentRuntimeDefaults:
       runtime === undefined
         ? withoutAgent(current.agentRuntimeDefaults, agentId)

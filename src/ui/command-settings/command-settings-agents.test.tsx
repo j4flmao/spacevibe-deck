@@ -47,6 +47,7 @@ import {
   typeInto,
 } from "./command-settings-test-kit";
 import { BUILTIN_AGENTS } from "../../lib/agent-catalog";
+import { agentLaunchCommand } from "../../lib/launch-command";
 import { agentHooksSupported } from "../../settings/agent-hooks-support-store";
 import { DEFAULT_SETTINGS } from "../../settings/settings-schema";
 import { settings } from "../../settings/settings-store";
@@ -152,6 +153,28 @@ describe("an agent row", () => {
     expect(row("claude").textContent).not.toContain("Changed");
     // codex was off before and is still off: another agent's edit is not this row's to undo.
     expect(row("codex").textContent).toContain("Changed");
+  });
+
+  it("puts the shipped launch command back, not just the mark", async () => {
+    const plan = { id: "lp:plan", command: "claude --permission-mode plan" };
+    settings.value = {
+      ...DEFAULT_SETTINGS,
+      launchProfiles: [plan],
+      defaultLaunchProfiles: { claude: plan.id },
+    };
+    await open();
+    expect(row("claude").textContent).toContain("--permission-mode plan");
+
+    await clickIn(row("claude").querySelector("button[aria-label^='Reset']"));
+    expect(row("claude").textContent).not.toContain("--permission-mode plan");
+    expect(row("claude").textContent).not.toContain("Changed");
+    expect(
+      agentLaunchCommand(
+        "claude",
+        settings.value.launchProfiles,
+        settings.value.defaultLaunchProfiles,
+      ),
+    ).toBe(agentLaunchCommand("claude", [], {}));
   });
 
   it("keeps the details out of the document until the row is opened", async () => {
