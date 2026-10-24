@@ -3,6 +3,7 @@
 // controls without Node's CJS resolution reaching React (see that script).
 export * from "./badge";
 export * from "./button";
+export * from "./collapsible";
 export * from "./dialog";
 export * from "./dropdown-menu";
 export * from "./field";
