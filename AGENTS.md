@@ -293,6 +293,15 @@ that needs the owner becomes a night comment, and the run stops.
   debt counted per file in
   [`arbitrary-font-size-debt.txt`](scripts/oxlint-plugin-deck/arbitrary-font-size-debt.txt):
   lower a count when you pay one off, and never raise one.
+- **R12. Shipping UI uses the controls.** A `.tsx` file under `src/` renders a button, input,
+  select or textarea through [`src/ui/controls`](src/ui/controls), never a raw `<button>`,
+  `<input>`, `<select>` or `<textarea>`; `scripts/ui-raw-controls.test.ts` fails on a new one. A
+  whole-row target no control spans carries `// raw-control: <reason>` directly above the element.
+  Older uses are debt counted per file in
+  [`ui-raw-controls-debt.txt`](scripts/ui-raw-controls-debt.txt): lower a count when you migrate
+  one, never raise one; `src/ui/blocks/` takes none. The test does not see a hand-built row,
+  section header, setting row, theme card or panel surface, nor a control built in `.ts`: review
+  holds those to the library.
 
 ## Known traps
 

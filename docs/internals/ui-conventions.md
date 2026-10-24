@@ -112,9 +112,17 @@ appears only in a shipping file outside those controls leaves its element unstyl
 - **`Button` for an action.** 62 `<Button>` in the mocks. An icon-only one carries
   `aria-label`: 19 `size="icon*"` buttons, 0 without a label, for example
   [`option-inbox.tsx:67`](../../src/gallery/layout-mocks/option-inbox.tsx). A whole list or
-  tree row that is one-click target is today a raw `<button type="button">`: 17 of them, all
-  typed, for example the tree row at
+  tree row that is one-click target is a raw `<button type="button">` in the mocks: 17 of them,
+  all typed, for example the tree row at
   [`changes-tree.tsx:69`](../../src/gallery/layout-mocks/surfaces/changes/changes-tree.tsx).
+  The mocks are not scanned, but shipping code is
+  ([R12](../../AGENTS.md), [`ui-raw-controls.test.ts`](../../scripts/ui-raw-controls.test.ts)):
+  a raw `<button>`, `<input>`, `<select>` or `<textarea>` in a shipping `.tsx` file fails the
+  test unless the debt file lists the file or the line directly above the element reads
+  `// raw-control: <reason>` (`{/* raw-control: <reason> */}` among JSX children). A row ported
+  from the mock takes that comment, naming why no control variant spans the row. A hand-built
+  row, section header, setting row, theme card or panel surface is not detected; review holds
+  those to the library.
 - **`<a href>` for navigation.** The mocks have no navigation target (0 `<a>`). The shipping
   example is the install link at
   [`src/launcher/agent-install-control.tsx:44`](../../src/launcher/agent-install-control.tsx),
