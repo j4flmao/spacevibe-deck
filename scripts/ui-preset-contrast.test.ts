@@ -105,6 +105,7 @@ const PAIRS: readonly Pair[] = [
     kind: "text",
     pair: ink("--popover-foreground", "--popover"),
   },
+  { id: "foreground on popover", kind: "text", pair: ink("--foreground", "--popover") },
   {
     id: "primary-foreground on primary",
     kind: "text",
