@@ -224,6 +224,8 @@ import { AgentDock } from "./agent-dock/agent-dock";
 import { agentDockEnabled, dockStageWidth } from "./agent-dock/agent-dock-layout";
 import { dockSheetOpen, setDockSectionOpen } from "./agent-dock/agent-dock-state";
 import { DockChanges } from "./agent-dock/dock-changes";
+import { DockHistory } from "./agent-dock/dock-history";
+import { DockUsage } from "./agent-dock/dock-usage";
 import { changedFileCount, DockChangesWatch } from "./agent-dock/dock-changes-watch";
 import { DockSlot } from "./agent-dock/dock-slot";
 import { SidebarActions } from "./sidebar-actions";
@@ -2783,8 +2785,6 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
                   selection={{ onFocusPane: focusRailPane, onSelectTab: selectTab }}
                   onClose={() => tabsRef.current?.runAction("toggle-dock")}
                   bodies={{
-                    ...dockBodies,
-                    // Changes is its own section here, so the Explorer keeps only the files.
                     changes: gitChangesAvailable
                       ? {
                           watch: (root) => <DockChangesWatch root={root} />,
@@ -2792,8 +2792,24 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
                           count: changedFileCount,
                         }
                       : null,
+                    // Changes is its own section here, so the Explorer keeps only the files.
                     files: (root) => explorerAt(root, false),
-                    history: sessionsSupported.value ? dockBodies.history : null,
+                    usage: ({ item, space }) => (
+                      <DockUsage
+                        item={item}
+                        space={space}
+                        onOpenDetails={() => tabsRef.current?.runAction("open-usage")}
+                      />
+                    ),
+                    history: sessionsSupported.value
+                      ? ({ item, cwd }) => (
+                          <DockHistory
+                            item={item}
+                            cwd={cwd}
+                            onResume={(entry) => void resumeSessionEntry(entry)}
+                          />
+                        )
+                      : null,
                   }}
                 />
               }

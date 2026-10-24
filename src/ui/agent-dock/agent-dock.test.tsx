@@ -93,8 +93,8 @@ const BODIES = {
     count: () => null,
   },
   files: (root: string | null) => <p>files body at {root ?? "no folder"}</p>,
-  usage: <p>usage body</p>,
-  history: <p>history body</p>,
+  usage: () => <p>usage body</p>,
+  history: () => <p>history body</p>,
 };
 
 function dock(overrides: Partial<Parameters<typeof AgentDock>[0]> = {}) {

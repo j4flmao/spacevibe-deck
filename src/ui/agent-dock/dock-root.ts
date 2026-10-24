@@ -81,3 +81,13 @@ export const dockRoot = computed(() => {
     fallback: activeWorkspace.value,
   });
 });
+
+/**
+ * The focused pane's working directory, exactly as the shell reports it, or null when it is not
+ * known or no pane holds the keyboard (a file surface does). The History section matches sessions
+ * on it exactly, where the root takes the checkout containing it.
+ */
+export const focusedCwd = computed(() => {
+  const info = statusInfo.value;
+  return info.paneCount === null ? null : info.cwd;
+});

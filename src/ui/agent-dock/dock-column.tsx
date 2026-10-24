@@ -29,9 +29,17 @@ export interface DockBodies {
   readonly changes: DockChangesBodies | null;
   /** The file tree and the open document, rooted at `root`, the folder the focused agent stands in. */
   readonly files: (root: string | null) => ComponentChildren;
-  readonly usage: ComponentChildren;
+  /** Usage and History are about the focused agent, so they take who it is and where it stands. */
+  readonly usage: (context: DockContext) => ComponentChildren;
   /** Null where the host cannot list sessions, so the section is left out. */
-  readonly history: ComponentChildren | null;
+  readonly history: ((context: DockContext) => ComponentChildren) | null;
+}
+
+export interface DockContext {
+  readonly item: RailItem | null;
+  readonly space: readonly RailItem[];
+  /** The focused pane's working directory, exactly; null when unknown. */
+  readonly cwd: string | null;
 }
 
 export interface DockColumnProps {
@@ -42,6 +50,7 @@ export interface DockColumnProps {
   readonly selection: RailSelection;
   /** The folder the sections show (`dock-root.ts`). */
   readonly root: string | null;
+  readonly cwd: string | null;
   readonly bodies: DockBodies;
   readonly closeLabel: string;
   readonly closeChord: string | null;
@@ -57,6 +66,7 @@ export function DockColumn({
   space,
   selection,
   root,
+  cwd,
   bodies,
   closeLabel,
   closeChord,
@@ -70,14 +80,14 @@ export function DockColumn({
         {bodies.changes === null ? null : bodies.changes.section(root)}
         <DockSpace agents={space} selection={selection} />
         <DockSection id="usage" title="Usage">
-          <div className="max-h-96 overflow-y-auto">{bodies.usage}</div>
+          <div className="max-h-96 overflow-y-auto">{bodies.usage({ item, space, cwd })}</div>
         </DockSection>
         <DockSection id="files" title="Files">
           <div className="h-96 min-h-0">{bodies.files(root)}</div>
         </DockSection>
         {bodies.history === null ? null : (
           <DockSection id="history" title="History">
-            <div className="max-h-96 overflow-y-auto">{bodies.history}</div>
+            <div className="max-h-96 overflow-y-auto">{bodies.history({ item, space, cwd })}</div>
           </DockSection>
         )}
       </div>

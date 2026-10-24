@@ -70,7 +70,7 @@ function dock() {
       bodies={{
         changes: null,
         files: () => <p>files body</p>,
-        usage: <p>usage body</p>,
+        usage: () => <p>usage body</p>,
         history: null,
       }}
     />
@@ -232,7 +232,7 @@ describe("In this space", () => {
     expect(rows[0].textContent).toContain("Codex, working");
     expect(rows[0].querySelector('[data-state="working"]')).not.toBeNull();
     expect(rows[0].querySelector("svg, img")).not.toBeNull();
-    expect(rows[0].textContent).toContain("main");
+    expect(rows[0].textContent).toContain("Codex · main");
     expect(rows[1].textContent).toContain("Gemini, needs you");
     expect(
       document.body.querySelector(
@@ -332,8 +332,8 @@ describe("the order of the sections", () => {
             count: () => null,
           },
           files: () => <p>files body</p>,
-          usage: <p>usage body</p>,
-          history: <p>history body</p>,
+          usage: () => <p>usage body</p>,
+          history: () => <p>history body</p>,
         }}
       />,
     );

@@ -55,7 +55,10 @@ export function DockSpace({ agents, selection }: DockSpaceProps) {
                   {item.entry.kind === "agent" ? (
                     <AgentGlyph agent={item.entry.agent} className="size-3 shrink-0" />
                   ) : null}
-                  <span className="truncate">{item.branch}</span>
+                  <span className="truncate" aria-hidden="true">
+                    {item.entry.kind === "agent" ? `${displayAgent(item.entry.agent)} · ` : ""}
+                    {item.branch}
+                  </span>
                   <span className="ml-auto shrink-0 tabular-nums">
                     <StateAge changedAt={item.changedAt} />
                   </span>

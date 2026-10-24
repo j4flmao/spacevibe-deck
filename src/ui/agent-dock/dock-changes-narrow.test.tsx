@@ -126,8 +126,8 @@ function dock() {
           count: (root) => changedFileCount(root, controller),
         },
         files: () => <p>files body</p>,
-        usage: <p>usage body</p>,
-        history: <p>history body</p>,
+        usage: () => <p>usage body</p>,
+        history: () => <p>history body</p>,
       }}
     />
   );
