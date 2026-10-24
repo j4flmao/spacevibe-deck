@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from "preact/hooks";
 import type { AgentRailView } from "../agent-rail-model";
 import { Button } from "../controls/button";
 import { buildRailView } from "../rail-view-model";
-import { RAIL_STOPS, recoverRailFocus, rememberRailFocus } from "./project-rail-focus";
+import {
+  forgetRailFocus,
+  RAIL_STOPS,
+  recoverRailFocus,
+  rememberRailFocus,
+} from "./project-rail-focus";
 import { isRailItemFocused, type RailSelection } from "./project-rail-model";
 import { ArchivedSection, HiddenSection } from "./project-rail-parked";
 import { projectCommandsFor, type ProjectDeps } from "./project-rail-project-commands";
@@ -113,6 +118,20 @@ export function ProjectRail({ view, onFocusPane, onSelectTab, ...deps }: Project
     <section
       aria-label="Open agents"
       onKeyDown={onListKeyDown}
+      onBlurCapture={(event: FocusEvent) => {
+        // Focus that went to an element of its own (the terminal, another field) is not lost,
+        // and a later close must not pull it back here. A popup of the rail's keeps the memory,
+        // and so does a removal, which leaves no related target.
+        const { relatedTarget: next, currentTarget } = event;
+        if (
+          next instanceof Element &&
+          currentTarget instanceof Node &&
+          !currentTarget.contains(next) &&
+          next.closest('[role="menu"],[role="dialog"],[role="listbox"]') === null
+        ) {
+          forgetRailFocus();
+        }
+      }}
       onFocusCapture={(event: FocusEvent) => {
         const { target, currentTarget } = event;
         if (!(target instanceof Element) || !(currentTarget instanceof HTMLElement)) {

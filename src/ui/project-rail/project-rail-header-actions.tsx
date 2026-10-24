@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "../controls/dropdown-menu";
 import { recoverRailFocus } from "./project-rail-focus";
-import { MenuEntry, RailPopupGuard, REVEAL, Tip } from "./project-rail-menu-parts";
+import { MenuEntry, RailPopupGuard, REVEAL_HEADER, Tip } from "./project-rail-menu-parts";
 import type { ProjectCommands } from "./project-rail-project-commands";
 
 export interface ProjectRailHeaderActionsProps {
@@ -40,7 +40,7 @@ export function ProjectRailHeaderActions({
   // The menu hands focus back to its trigger as it closes; the dialog must open after that.
   const removeWhenClosed = useRef(false);
   return (
-    <div className={cn("absolute top-1 right-1 flex items-center gap-0.5", REVEAL)}>
+    <div className={cn("absolute top-1 right-1 flex items-center gap-0.5", REVEAL_HEADER)}>
       <Tip
         label="New agent"
         button={

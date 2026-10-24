@@ -26,6 +26,7 @@ vi.mock("../controls/deck-icon", () => ({
 
 import { resetDesktopEnvironmentForTests } from "../../lib/platform";
 import { settings } from "../../settings/settings-store";
+import { archiveItem } from "./project-rail-state";
 import { byRole, waitUntil } from "../controls/preset-test-kit";
 import type { CardActions } from "../worktree-card-menus";
 import {
@@ -123,16 +124,6 @@ describe("project header", () => {
     mount({ legacy: { onOpenWorkspace, openWorkspaceDisabled: true, onResumeWorktree: () => {} } });
     await settle();
     expect(headerButton(API, "New agent in")?.hasAttribute("disabled")).toBe(true);
-  });
-
-  it("hides the count while the header is hovered or focused, and not otherwise", async () => {
-    mount();
-    await settle();
-    click(headers()[0]);
-
-    const count = headers()[0].querySelector("span.tabular-nums") as HTMLElement;
-    expect(count.className).toContain("group-hover/item:invisible");
-    expect(count.className).toContain("group-focus-within/item:invisible");
   });
 
   it("offers the project menu from a right-click as from its button, with the end entries disabled", async () => {
@@ -309,7 +300,7 @@ describe("remove", () => {
     expect(names()).toContain("main");
   });
 
-  it("forgets a remembered project at once, with the shipped arguments", async () => {
+  it("forgets a remembered project through the shipped callback, after saying nothing is closed", async () => {
     const shipped = await pressedArgs(false, () =>
       host.querySelector("button.asr-cluster__remove:not(.asr-cluster__remove--live)"),
     );
@@ -322,9 +313,14 @@ describe("remove", () => {
     await settle();
     await openMenuByRightClick(`project:${NOTES}`);
     await pick("Remove");
-    await waitUntil(() => byRole("menu") === null);
+    await waitUntil(() => document.body.querySelector('[role="dialog"]') !== null);
+    expect(onRemoveWorkspace).not.toHaveBeenCalled();
+    expect(text(document.body.querySelector('[role="dialog"]'))).toContain("Nothing is open in it");
+    const confirm = [...document.body.querySelectorAll('[role="dialog"] button')].find(
+      (button) => text(button) === "Remove",
+    );
+    await activate(confirm as HTMLElement);
 
-    expect(document.body.querySelector('[role="dialog"]')).toBeNull();
     expect(onRemoveWorkspace.mock.calls).toEqual(shipped.onRemoveWorkspace.mock.calls);
     expect(onRemoveWorkspace.mock.calls[0]).toEqual([["/w/notes"]]);
   });
@@ -471,5 +467,22 @@ describe("keyboard", () => {
 
     expect(document.activeElement).toBe(headers()[1]);
     expect(text(headers()[1])).toContain("api");
+  });
+
+  it("does not pull the keyboard back after it has gone to an element of its own", async () => {
+    mount();
+    await settle();
+    const elsewhere = document.createElement("button");
+    document.body.appendChild(elsewhere);
+    act(() => row("pane:12")?.focus());
+    act(() => elsewhere.focus());
+    act(() => elsewhere.blur());
+    expect(document.activeElement).toBe(document.body);
+
+    act(() => archiveItem("pane:12"));
+
+    expect(rowIds()).not.toContain("pane:12");
+    expect(document.activeElement).toBe(document.body);
+    elsewhere.remove();
   });
 });

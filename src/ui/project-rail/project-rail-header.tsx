@@ -70,7 +70,7 @@ export function ProjectRailHeader({
           )}
         />
         {folded ? (
-          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-2xs text-muted-foreground tabular-nums group-hover/item:invisible group-focus-within/item:invisible group-has-[[data-popup-open]]/item:invisible">
+          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-2xs text-muted-foreground tabular-nums group-hover/item:invisible group-has-[:focus-visible]/item:invisible group-has-[[data-popup-open]]/item:invisible">
             {rollup === null ? null : (
               <AgentStateMark status={rollup.status} confidence={rollup.confidence} />
             )}
@@ -89,19 +89,9 @@ export function ProjectRailHeader({
         agentDisabled={agentDisabled}
         menuOpen={menuOpen}
         onMenuOpenChange={setMenuOpen}
-        onRemove={() => {
-          // A live project closes its tabs, so it asks first; a remembered one only leaves the rail.
-          if (removal === undefined) {
-            return;
-          }
-          if (removal.tabCount > 0) {
-            setConfirming(true);
-          } else {
-            removal.run();
-          }
-        }}
+        onRemove={() => setConfirming(true)}
       />
-      {removal === undefined || removal.tabCount === 0 ? null : (
+      {removal === undefined ? null : (
         <ProjectRailRemoveDialog
           open={confirming}
           onOpenChange={setConfirming}

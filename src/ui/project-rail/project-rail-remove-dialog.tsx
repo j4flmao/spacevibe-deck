@@ -20,9 +20,10 @@ export interface ProjectRailRemoveDialogProps {
 }
 
 /**
- * Confirms taking a live project off the rail, which closes every tab of it. The shipped header
- * asked nothing of its own (a busy agent still raises the host's close dialog, which this
- * leaves in place); a menu item is easier to hit than that ✕ was.
+ * Confirms taking a project off the rail. A live one closes every tab of it; a remembered one
+ * only leaves the list. The shipped header asked nothing of its own (a busy agent still raises
+ * the host's close dialog, so a live Remove can ask twice); a menu item is easier to hit than
+ * that ✕ was.
  */
 export function ProjectRailRemoveDialog({
   open,
@@ -46,7 +47,9 @@ export function ProjectRailRemoveDialog({
         <DialogHeader>
           <DialogTitle>Remove {name}?</DialogTitle>
           <DialogDescription>
-            Closes {tabCount} {tabCount === 1 ? "tab" : "tabs"} and takes the project off the rail.
+            {tabCount === 0
+              ? "Nothing is open in it. It only leaves the rail."
+              : `Closes ${tabCount} ${tabCount === 1 ? "tab" : "tabs"} and takes the project off the rail.`}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

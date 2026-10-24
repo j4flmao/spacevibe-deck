@@ -10,6 +10,13 @@ import { useStageOverlayFlag } from "../worktree-card-menus";
 export const REVEAL =
   "pointer-events-none opacity-0 group-hover/item:pointer-events-auto group-hover/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:opacity-100 has-[[data-popup-open]]:pointer-events-auto has-[[data-popup-open]]:opacity-100";
 
+/**
+ * A project header's version: keyboard focus, not any focus. A press on the header focuses it
+ * for good, and the folded count and mark must stay readable once the pointer has moved off.
+ */
+export const REVEAL_HEADER =
+  "pointer-events-none opacity-0 group-hover/item:pointer-events-auto group-hover/item:opacity-100 group-has-[:focus-visible]/item:pointer-events-auto group-has-[:focus-visible]/item:opacity-100 has-[[data-popup-open]]:pointer-events-auto has-[[data-popup-open]]:opacity-100";
+
 /** An icon button's tooltip: `button` is the trigger element, `children` its glyph. */
 export function Tip({
   label,
