@@ -4,6 +4,7 @@ import { SearchAddon } from "@xterm/addon-search";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { UnicodeGraphemesAddon } from "@xterm/addon-unicode-graphemes";
 import { WebglAddon } from "@xterm/addon-webgl";
+import { disposeWebglAddon } from "./webgl-addon-dispose";
 import type { Settings } from "../settings/settings-schema";
 import { monoFontFallback } from "../settings/mono-font-fallback";
 import { applyHiddenPaneRenderFix } from "./hidden-pane-render-fix";
@@ -418,7 +419,7 @@ export function createPane(
       return false;
     }
     webglAddon = undefined;
-    addon.dispose();
+    disposeWebglAddon(addon);
     return true;
   }
 
@@ -597,7 +598,9 @@ export function createPane(
     // Explicit like `serializeAddon` above, though `term.dispose()` would also
     // reach it: this one holds a GPU context, so it is released on the line
     // that decides to, not as a side effect further down.
-    webglAddon?.dispose();
+    if (webglAddon !== undefined) {
+      disposeWebglAddon(webglAddon);
+    }
     webglAddon = undefined;
     term.dispose();
     element.remove();
