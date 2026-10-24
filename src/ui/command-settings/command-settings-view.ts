@@ -1,6 +1,6 @@
 import { externalApp, type ExternalAppId } from "../../lib/external-app-catalog";
 import { bindingOf, chordsForAction, resolveKeymap } from "../../lib/keybindings";
-import { getDesktopEnvironment, type DesktopPlatform } from "../../lib/platform";
+import { getDesktopEnvironment } from "../../lib/platform";
 import { formatShortcutBinding } from "../../lib/shortcut-label";
 import type {
   AttentionIssue,
@@ -8,7 +8,11 @@ import type {
   CommandHit,
   CommandItem,
 } from "../../settings/command-hits";
-import { buildCommandItems, type CommandSources } from "../../settings/command-search";
+import {
+  buildCommandItems,
+  shortcutPlatform,
+  type CommandSources,
+} from "../../settings/command-search";
 import { settingRow } from "../../settings/settings-rows";
 import type { Settings } from "../../settings/settings-schema";
 import { settings } from "../../settings/settings-store";
@@ -46,13 +50,7 @@ export function commandItemsOf(items: readonly ListItem[]): readonly CommandItem
 }
 
 /** Areas whose settings no row edits yet: their own section is mounted as is. */
-const SECTION_AREAS: ReadonlySet<CommandAreaId> = new Set([
-  "agents",
-  "shortcuts",
-  "about",
-  "privacy",
-  "reset",
-]);
+const SECTION_AREAS: ReadonlySet<CommandAreaId> = new Set(["agents", "about", "privacy", "reset"]);
 
 /** An area with nothing typed: its live rows, and the legacy pieces that have no row. */
 function areaItems(area: CommandAreaId, sources: CommandSources): readonly ListItem[] {
@@ -127,13 +125,10 @@ function chordText(action: ActionId, sources: CommandSources): string {
     return "Unbound";
   }
   return chords
-    .map((chord) => formatShortcutBinding(bindingOf(chord, action), platformOf(sources)))
+    .map((chord) =>
+      formatShortcutBinding(bindingOf(chord, action), shortcutPlatform(sources.platform)),
+    )
     .join(" · ");
-}
-
-/** `CommandSources` carries the platform as a string; the formatter wants the app's own union. */
-function platformOf(sources: CommandSources): DesktopPlatform {
-  return sources.platform === "windows" ? "windows" : "macos";
 }
 
 /** The value a hit row prints beside its label; an area entry has none. */
@@ -160,6 +155,9 @@ export function issueText(issue: AttentionIssue, sources: CommandSources): strin
       sources.shortcuts.flatMap((group) => group.rows).find((row) => row.action === action)
         ?.label ?? action,
   );
-  const keys = formatShortcutBinding(bindingOf(issue.chord, issue.actions[0]), platformOf(sources));
+  const keys = formatShortcutBinding(
+    bindingOf(issue.chord, issue.actions[0]),
+    shortcutPlatform(sources.platform),
+  );
   return `${keys} is bound to ${names.join(" and ")}`;
 }

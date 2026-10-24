@@ -1,13 +1,17 @@
 import { BUILTIN_AGENTS } from "../lib/agent-catalog";
 import {
+  bindingOf,
   chordConflicts,
   chordId,
   chordOf,
+  chordsForAction,
   isOverridden,
   keymapPlatform,
   resolveKeymap,
   type Chord,
 } from "../lib/keybindings";
+import type { DesktopPlatform } from "../lib/platform";
+import { formatShortcutBinding } from "../lib/shortcut-label";
 import type { ActionId } from "../terminal/action-registry";
 import {
   agentHit,
@@ -88,6 +92,33 @@ function shortcutRows(sources: CommandSources) {
   );
 }
 
+/** `CommandSources` carries the platform as a string; the chord formatter wants the app's own union. */
+export function shortcutPlatform(platform: string): DesktopPlatform {
+  return platform === "windows" ? "windows" : "macos";
+}
+
+const MODIFIER_NAMES: Readonly<Record<string, string>> = {
+  "⌘": "cmd command",
+  "⌥": "opt option alt",
+  "⇧": "shift",
+  "⌃": "ctrl control",
+};
+
+/** The chords an action answers to, as printed and as a person spells them: `⌘D` and `cmd d`. */
+function chordText(
+  keymap: ReturnType<typeof resolveKeymap>,
+  platform: string,
+  action: ActionId,
+): string {
+  const printed = chordsForAction(keymap, action).map((chord) =>
+    formatShortcutBinding(bindingOf(chord, action), shortcutPlatform(platform)),
+  );
+  const spelled = printed.map((text) =>
+    text.replace(/[⌘⌥⇧⌃]/gu, (glyph) => ` ${MODIFIER_NAMES[glyph]} `),
+  );
+  return [...printed, ...spelled].join(" ");
+}
+
 function hasAll(words: readonly string[], ...texts: readonly string[]): boolean {
   const haystack = texts.join(" ").toLowerCase();
   return words.every((word) => haystack.includes(word));
@@ -138,7 +169,14 @@ export function searchHits(
   hits.push(...listed.map(agentHit));
 
   const rows = shortcutRows(sources);
-  const matched = broad ? rows.filter((row) => hasAll(words, row.label, row.group)) : [];
+  // A chord is typed with `+` between keys, and nothing else in the index is.
+  const chordWords = q.replace(/\+/g, " ").split(/\s+/).filter(Boolean);
+  const keymap = broad ? resolveKeymap(sources.platform, sources.settings.keybindings) : [];
+  const matched = broad
+    ? rows.filter((row) =>
+        hasAll(chordWords, row.label, row.group, chordText(keymap, sources.platform, row.action)),
+      )
+    : [];
   hits.push(...matched.map(shortcutHit));
   if (shortcutKeyMatched) {
     // "keys", "hotkey": the setting itself matched, so offer the area and what needs a look there.

@@ -1,5 +1,6 @@
 import { cn } from "@/lib/cn";
 import { ArrowCounterClockwise } from "@phosphor-icons/react";
+import type { ComponentChildren } from "preact";
 import { DEFAULT_SETTINGS, type Settings } from "../../settings/settings-schema";
 import { settingRow } from "../../settings/settings-rows";
 import { resetSettingsKeys } from "../../settings/settings-store";
@@ -11,25 +12,33 @@ import { LIVE_ROW_ATTRIBUTE, rowDomId } from "./command-settings-live";
 import { commandActiveKey } from "./command-settings-state";
 import { settingValueText } from "./command-settings-view";
 
-interface LiveRowProps {
+interface RowShellProps {
   readonly itemKey: string;
-  readonly settingKey: keyof Settings;
-  readonly settings: Settings;
+  readonly active: boolean;
+  readonly changed: boolean;
+  readonly label: string;
   /** The area's name, shown where no heading names it. */
   readonly crumb: string | null;
-  readonly active: boolean;
-  /** The settings snapshot is still loading. */
-  readonly locked: boolean;
+  readonly control: ComponentChildren;
+  readonly reset: ComponentChildren;
+  /** Full-width content under the row, such as a conflict. */
+  readonly below?: ComponentChildren;
 }
 
 /**
- * One setting as a row: a changed mark, the label, the control in place and, once the value
- * differs from its default, a reset. The row is a plain container; its control owns the keyboard.
+ * The frame every live row shares: a changed mark, the label, the control in place and a reset
+ * slot. The row is a plain container; its control owns the keyboard.
  */
-export function LiveRow({ itemKey, settingKey, settings, crumb, active, locked }: LiveRowProps) {
-  const row = settingRow(settingKey, settings);
-  const reset = row.changed && row.resetKeys !== null ? row.resetKeys : null;
-  const fallback = settingValueText(settingKey, DEFAULT_SETTINGS);
+export function RowShell({
+  itemKey,
+  active,
+  changed,
+  label,
+  crumb,
+  control,
+  reset,
+  below,
+}: RowShellProps) {
   return (
     <li
       id={rowDomId(itemKey)}
@@ -45,7 +54,7 @@ export function LiveRow({ itemKey, settingKey, settings, crumb, active, locked }
       )}
     >
       <span className="flex justify-center">
-        {row.changed ? (
+        {changed ? (
           <>
             <span aria-hidden="true" className="size-1.5 rounded-full bg-primary" />
             <span className="sr-only">Changed</span>
@@ -53,32 +62,78 @@ export function LiveRow({ itemKey, settingKey, settings, crumb, active, locked }
         ) : null}
       </span>
       <span className="flex min-w-0 items-baseline gap-2">
-        <span className="truncate">{row.label}</span>
+        <span className="truncate">{label}</span>
         {crumb ? <span className="shrink-0 text-muted-foreground">{crumb}</span> : null}
       </span>
-      <span className="flex items-center justify-end gap-2">
-        <SettingControl row={row} disabled={locked} />
-      </span>
-      <span className="flex justify-end">
-        {reset === null ? null : (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={locked}
-                  aria-label={`Reset ${row.label} to ${fallback}`}
-                  onClick={() => resetSettingsKeys(reset)}
-                />
-              }
-            >
-              <DeckIcon icon={ArrowCounterClockwise} size={ROW_ICON} />
-            </TooltipTrigger>
-            <TooltipContent>Reset to {fallback}</TooltipContent>
-          </Tooltip>
-        )}
-      </span>
+      <span className="flex items-center justify-end gap-2">{control}</span>
+      <span className="flex justify-end">{reset}</span>
+      {below ? <div className="col-span-4 pb-1.5 pl-[18px]">{below}</div> : null}
     </li>
+  );
+}
+
+interface RowResetProps {
+  /** What is reset, for the accessible name. */
+  readonly label: string;
+  /** The default, as the row would print it. */
+  readonly to: string;
+  readonly locked: boolean;
+  readonly onReset: () => void;
+}
+
+export function RowReset({ label, to, locked, onReset }: RowResetProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            disabled={locked}
+            aria-label={`Reset ${label} to ${to}`}
+            onClick={onReset}
+          />
+        }
+      >
+        <DeckIcon icon={ArrowCounterClockwise} size={ROW_ICON} />
+      </TooltipTrigger>
+      <TooltipContent>Reset to {to}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+interface LiveRowProps {
+  readonly itemKey: string;
+  readonly settingKey: keyof Settings;
+  readonly settings: Settings;
+  readonly crumb: string | null;
+  readonly active: boolean;
+  /** The settings snapshot is still loading. */
+  readonly locked: boolean;
+}
+
+/** One setting as a row: its control in place and, once the value differs from its default, a reset. */
+export function LiveRow({ itemKey, settingKey, settings, crumb, active, locked }: LiveRowProps) {
+  const row = settingRow(settingKey, settings);
+  const keys = row.changed && row.resetKeys !== null ? row.resetKeys : null;
+  return (
+    <RowShell
+      itemKey={itemKey}
+      active={active}
+      changed={row.changed}
+      label={row.label}
+      crumb={crumb}
+      control={<SettingControl row={row} disabled={locked} />}
+      reset={
+        keys === null ? null : (
+          <RowReset
+            label={row.label}
+            to={settingValueText(settingKey, DEFAULT_SETTINGS)}
+            locked={locked}
+            onReset={() => resetSettingsKeys(keys)}
+          />
+        )
+      }
+    />
   );
 }

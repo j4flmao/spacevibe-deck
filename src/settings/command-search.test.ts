@@ -182,6 +182,31 @@ describe("searchHits", () => {
   });
 });
 
+describe("searchHits by chord", () => {
+  it("finds an action by the chord it answers to, printed or spelled", () => {
+    expect(labels(searchHits("⌘d", null, sources()))).toContain("Split Vertically");
+    expect(labels(searchHits("cmd+d", null, sources()))).toContain("Split Vertically");
+    expect(labels(searchHits("command d", null, sources()))).toContain("Split Vertically");
+  });
+
+  it("follows a rebind: the new chord finds the action, the old one finds it only where still bound", () => {
+    expect(labels(searchHits("⌘d", null, sources(CLASH)))).toEqual(
+      expect.arrayContaining(["Split Vertically", "Close Pane"]),
+    );
+    expect(labels(searchHits("⌘w", null, sources(CLASH)))).not.toContain("Close Pane");
+  });
+
+  it("finds an action by its Windows chord, and does not read the mac glyphs there", () => {
+    const windows = { ...sources(), platform: "windows" };
+    expect(labels(searchHits("ctrl+shift+d", null, windows))).toContain("Split Vertically");
+    expect(labels(searchHits("⌘d", null, windows))).not.toContain("Split Vertically");
+  });
+
+  it("keeps a one-character query out of the shortcut list", () => {
+    expect(labels(searchHits("d", null, sources())).includes("Split Vertically")).toBe(false);
+  });
+});
+
 describe("buildCommandItems with a query", () => {
   it("shows one empty line naming the query when nothing matches", () => {
     expect(buildCommandItems("  zzz ", null, sources())).toEqual([

@@ -1,6 +1,7 @@
 import { signal } from "@preact/signals";
 import { settingsOpen } from "../../chrome/events";
 import type { Settings } from "../../settings/settings-schema";
+import { isLiveKey, settingRowKey } from "../command-settings/command-settings-live";
 import { revealInCommand } from "../command-settings/command-settings-state";
 import { activeCategory, type CategoryId } from "./active-category-store";
 
@@ -20,6 +21,6 @@ export function openSettingsAt(page: CategoryId, key?: keyof Settings): void {
   settingsQuery.value = "";
   activeCategory.value = page;
   settingsTarget.value = key ?? null;
-  revealInCommand(page, key);
+  revealInCommand(page, key !== undefined && isLiveKey(key) ? settingRowKey(key) : null);
   settingsOpen.value = true;
 }

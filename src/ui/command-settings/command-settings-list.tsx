@@ -1,8 +1,8 @@
 import type { CommandItem } from "../../settings/command-hits";
 import type { CommandSources } from "../../settings/command-search";
 import { openHit, openIssue } from "./command-settings-actions";
+import { isLiveHit, isLiveKey } from "./command-settings-live";
 import { LiveRow } from "./command-settings-live-row";
-import { isLiveHit } from "./command-settings-live";
 import {
   AttentionRow,
   EmptyRow,
@@ -11,6 +11,8 @@ import {
   PieceMount,
   SectionMount,
 } from "./command-settings-rows";
+import { ShortcutRow } from "./command-settings-shortcut-row";
+import { shortcutContext } from "./command-settings-shortcuts";
 import { commandQuery } from "./command-settings-state";
 import { areaLabel, hitValueText, issueText, type ListItem } from "./command-settings-view";
 
@@ -38,6 +40,10 @@ interface ListProps {
 }
 
 export function List({ items, active, sources, crumbs, locked, focusSearch }: ListProps) {
+  // Resolved once for every shortcut row of this render, not per row.
+  const shortcuts = items.some((item) => item.type === "hit" && item.hit.kind === "shortcut")
+    ? shortcutContext(sources)
+    : null;
   return (
     <ul className="m-0 list-none">
       {items.map((item) => {
@@ -45,12 +51,27 @@ export function List({ items, active, sources, crumbs, locked, focusSearch }: Li
           case "head":
             return <Head key={item.key} title={item.title} />;
           case "hit": {
-            const crumb = crumbs ? areaLabel(item.hit.area, sources) : null;
-            return isLiveHit(item.hit) ? (
+            const { hit } = item;
+            const crumb = crumbs ? areaLabel(hit.area, sources) : null;
+            if (hit.kind === "shortcut" && shortcuts !== null) {
+              return (
+                <ShortcutRow
+                  key={item.key}
+                  itemKey={item.key}
+                  action={hit.action}
+                  label={hit.label}
+                  context={shortcuts}
+                  crumb={crumb}
+                  active={item.key === active}
+                  locked={locked}
+                />
+              );
+            }
+            return hit.kind === "setting" && isLiveKey(hit.key) ? (
               <LiveRow
                 key={item.key}
                 itemKey={item.key}
-                settingKey={item.hit.key}
+                settingKey={hit.key}
                 settings={sources.settings}
                 crumb={crumb}
                 active={item.key === active}
@@ -60,12 +81,12 @@ export function List({ items, active, sources, crumbs, locked, focusSearch }: Li
               <HitRow
                 key={item.key}
                 itemKey={item.key}
-                hit={item.hit}
-                value={hitValueText(item.hit, sources)}
+                hit={hit}
+                value={hitValueText(hit, sources)}
                 crumb={crumb}
                 active={item.key === active}
                 onOpen={() => {
-                  openHit(item.hit);
+                  openHit(hit);
                   focusSearch();
                 }}
               />

@@ -16,14 +16,21 @@ import { commandActiveKey, commandScope, revealInCommand } from "./command-setti
  * is entered again.
  */
 
-/** A stand-in row of the home list or of results: open its area, and its row when it has one. */
+/** A stand-in row of the home list or of results: open its area. */
 export function openHit(hit: CommandHit): void {
-  revealInCommand(hit.area, hit.kind === "setting" ? hit.key : undefined);
+  revealInCommand(hit.area);
   settingsTarget.value = hit.kind === "setting" ? hit.key : null;
 }
 
+/**
+ * An attention row: open its area, on the row of the first action in a shortcut conflict (the
+ * user's newest choice, which fires). An action the list does not show leaves the first row.
+ */
 export function openIssue(issue: AttentionIssue): void {
-  revealInCommand(issue.area);
+  revealInCommand(
+    issue.area,
+    issue.kind === "shortcut-conflict" ? `shortcut:${issue.actions[0]}` : null,
+  );
   settingsTarget.value = null;
 }
 
