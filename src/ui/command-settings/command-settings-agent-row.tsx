@@ -127,8 +127,9 @@ interface AgentRowProps {
 
 /**
  * One agent as a row: its mark, name and state, the install offer for a missing built-in, the
- * enable switch, and a disclosure for its pin, Signals, launch command and model. The row mounts
- * the details only while open, so a control inside a closed row is never a tab stop.
+ * enable switch, and a disclosure for its pin and, for a built-in, its Signals, launch command and
+ * model. The row mounts the details only while open, so a control inside a closed row is never a
+ * tab stop.
  */
 export function AgentRow({ itemKey, agentId, settings, crumb, active, locked }: AgentRowProps) {
   const data = agentRowData(agentId, settings);
@@ -171,19 +172,17 @@ export function AgentRow({ itemKey, agentId, settings, crumb, active, locked }: 
               updateSettings({ disabledAgents: next ? off : [...off, data.id] });
             }}
           />
-          {data.builtin === null ? null : (
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Configure ${data.label}`}
-              aria-expanded={open.value}
-              onClick={() => {
-                open.value = !open.value;
-              }}
-            >
-              <DeckIcon icon={open.value ? CaretDown : CaretRight} size={ROW_ICON} />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Configure ${data.label}`}
+            aria-expanded={open.value}
+            onClick={() => {
+              open.value = !open.value;
+            }}
+          >
+            <DeckIcon icon={open.value ? CaretDown : CaretRight} size={ROW_ICON} />
+          </Button>
         </>
       }
       reset={
@@ -196,9 +195,7 @@ export function AgentRow({ itemKey, agentId, settings, crumb, active, locked }: 
           />
         ) : null
       }
-      below={
-        open.value && data.builtin !== null ? <AgentDetails data={data} locked={locked} /> : null
-      }
+      below={open.value ? <AgentDetails data={data} locked={locked} /> : null}
     />
   );
 }

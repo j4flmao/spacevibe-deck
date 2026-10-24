@@ -116,15 +116,19 @@ describe("the Agents area", () => {
     expect(row("codex").textContent).toContain("Not installed");
   });
 
-  it("draws a declared agent as a row of its own, with no built-in-only controls", async () => {
+  it("draws a declared agent as a row of its own, with a pin but no built-in-only controls", async () => {
     settings.value = { ...DEFAULT_SETTINGS, customAgents: [ASIDE] };
     await open();
     expect(row("custom:aider").textContent).toContain("Aider");
     expect(row("custom:aider").textContent).toContain("Not installed");
-    expect(control("custom:aider", "Configure Aider")).toBeNull();
 
     await clickIn(control("custom:aider", "Aider availability"));
     expect(settings.value.disabledAgents).toEqual(["custom:aider"]);
+
+    await configure("custom:aider", "Aider");
+    expect(control("custom:aider", "Aider pinned")).not.toBeNull();
+    expect(control("custom:aider", "Aider signals")).toBeNull();
+    expect(document.querySelector('input[aria-label="Command for Aider"]')).toBeNull();
   });
 
   it("forces a full probe on Refresh", async () => {
