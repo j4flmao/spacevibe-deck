@@ -100,9 +100,9 @@ describe("Settings entrance with the commandSettings switch on", () => {
 
   it("scopes to the page's area and mounts its section when no row edits the page", async () => {
     await mount(<Entrance />);
-    await openAt("agents");
-    expect(badge()).toBe("Agents");
-    expect(document.querySelector('section[aria-label="Agents"]')).not.toBeNull();
+    await openAt("reset");
+    expect(badge()).toBe("Reset");
+    expect(document.querySelector('section[aria-label="Reset"]')).not.toBeNull();
   });
 
   it("scopes to the area and makes the named row the active one, scrolled into view", async () => {
@@ -120,7 +120,7 @@ describe("Settings entrance with the commandSettings switch on", () => {
     await mount(<Entrance />);
     await openAt("agents", "customAgents");
     expect(badge()).toBe("Agents");
-    expect(document.querySelector('section[aria-label="Agents"]')).not.toBeNull();
+    expect(rowOf("agent:claude")).not.toBeNull();
     await openAt("shortcuts", "keybindings");
     expect(badge()).toBe("Shortcuts");
     expect(rowOf("shortcut:split-row")).not.toBeNull();

@@ -74,10 +74,10 @@ const labelKey = (id: string): string => `${id}:label`;
 const commandKey = (id: string): string => `${id}:command`;
 
 /**
- * The Agents category: the built-in four, locked, then every declared agent
- * with its command — one `cfg-row` each, edited in place (DL-12).
+ * The declared agents with their command — one `cfg-row` each, edited in place (DL-12) — and the
+ * add form. Exported so Command Settings can mount it beside its own agent rows.
  */
-export function AgentsSection() {
+export function AgentIdentities() {
   const customAgents = settings.value.customAgents;
   const editing = useSignal<string | null>(null);
   /** Why the last in-place edit was refused, and which row refused it. */
@@ -86,9 +86,6 @@ export function AgentsSection() {
   const draftLabel = useSignal("");
   const draftCommand = useSignal("");
   const draftError = useSignal<string | null>(null);
-  // Once here, not in each list: both lists below show at the same moment, and
-  // each call would force its own login-shell probe.
-  useNoteAgentListWhileSettingsOpen();
 
   const replace = (next: readonly CustomAgent[]): void => {
     updateSettings({ customAgents: next });
@@ -179,35 +176,8 @@ export function AgentsSection() {
     draftError.value = null;
   };
 
-  /**
-   * Settings → Token Usage, in one click. Writes the two signals directly
-   * instead of calling `closeSettingsPanel` (app.tsx): that helper hands focus
-   * back to the active pane, and here focus must land inside the screen that
-   * is opening — the dock's usage tab takes it, exactly as `SettingsScreen`
-   * does. Same mutual-exclusion rule `toggleUsagePanel` enforces (spec
-   * §Surface, major M4).
-   *
-   * No draft preflight is needed here, unlike the Settings toggle: a
-   * PresetEditor/SavePresetDialog scrim sits at z-40 over Settings' z-35, so
-   * this button is physically unclickable while a draft is up.
-   */
-  const openUsage = (): void => {
-    settingsOpen.value = false;
-    revealDockTab("usage");
-  };
-
   return (
     <>
-      {/* No `Built in` group label above this: the editor heads its own two
-          lists with `Installed` / `Available to install`, and a third heading
-          stacked on top of them named the same thing twice. */}
-      <SettingsGroup>
-        <LaunchProfileEditor />
-      </SettingsGroup>
-      <SettingsGroup>
-        <QuickAgentsSection />
-      </SettingsGroup>
-
       <SettingsGroup title="Agent identities" description="Add and name the other CLIs you run.">
         {customAgents.map((agent) => (
           <Fragment key={agent.id}>
@@ -361,13 +331,61 @@ export function AgentsSection() {
           </Button>
         </ConfigRow>
       </SettingsGroup>
-      <SettingsGroup title="Usage">
-        <ConfigRow label="Token usage" desc="Tokens and estimated cost for Claude Code and Codex">
-          <Button type="button" variant="outline" size="sm" onClick={openUsage}>
-            open …
-          </Button>
-        </ConfigRow>
+    </>
+  );
+}
+
+/** Settings → Token usage: the row that opens the dock's usage tab. */
+export function AgentUsage() {
+  /**
+   * Settings → Token Usage, in one click. Writes the two signals directly
+   * instead of calling `closeSettingsPanel` (app.tsx): that helper hands focus
+   * back to the active pane, and here focus must land inside the screen that
+   * is opening — the dock's usage tab takes it, exactly as `SettingsScreen`
+   * does. Same mutual-exclusion rule `toggleUsagePanel` enforces (spec
+   * §Surface, major M4).
+   *
+   * No draft preflight is needed here, unlike the Settings toggle: a
+   * PresetEditor/SavePresetDialog scrim sits at z-40 over Settings' z-35, so
+   * this button is physically unclickable while a draft is up.
+   */
+  const openUsage = (): void => {
+    settingsOpen.value = false;
+    revealDockTab("usage");
+  };
+
+  return (
+    <SettingsGroup title="Usage">
+      <ConfigRow label="Token usage" desc="Tokens and estimated cost for Claude Code and Codex">
+        <Button type="button" variant="outline" size="sm" onClick={openUsage}>
+          open …
+        </Button>
+      </ConfigRow>
+    </SettingsGroup>
+  );
+}
+
+/**
+ * The Agents category: the built-in four, locked, then every declared agent
+ * with its command — one `cfg-row` each, edited in place (DL-12).
+ */
+export function AgentsSection() {
+  // Once here, not in each list: both lists below show at the same moment, and
+  // each call would force its own login-shell probe.
+  useNoteAgentListWhileSettingsOpen();
+  return (
+    <>
+      {/* No `Built in` group label above this: the editor heads its own two
+          lists with `Installed` / `Available to install`, and a third heading
+          stacked on top of them named the same thing twice. */}
+      <SettingsGroup>
+        <LaunchProfileEditor />
       </SettingsGroup>
+      <SettingsGroup>
+        <QuickAgentsSection />
+      </SettingsGroup>
+      <AgentIdentities />
+      <AgentUsage />
     </>
   );
 }

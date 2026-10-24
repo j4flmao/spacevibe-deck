@@ -16,7 +16,8 @@ interface RowShellProps {
   readonly itemKey: string;
   readonly active: boolean;
   readonly changed: boolean;
-  readonly label: string;
+  /** Text, or a node that truncates itself (an agent's mark, name and state). */
+  readonly label: ComponentChildren;
   /** The area's name, shown where no heading names it. */
   readonly crumb: string | null;
   readonly control: ComponentChildren;
@@ -62,7 +63,7 @@ export function RowShell({
         ) : null}
       </span>
       <span className="flex min-w-0 items-baseline gap-2">
-        <span className="truncate">{label}</span>
+        {typeof label === "string" ? <span className="truncate">{label}</span> : label}
         {crumb ? <span className="shrink-0 text-muted-foreground">{crumb}</span> : null}
       </span>
       <span className="flex items-center justify-end gap-2">{control}</span>

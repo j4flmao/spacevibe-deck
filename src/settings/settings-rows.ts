@@ -1,5 +1,6 @@
 import { isMarkedChanged, marksChange } from "./settings-changes";
 import { SETTINGS_REGISTRY, type SettingsPage } from "./settings-registry";
+import { DEFAULT_SIGNAL_ADAPTERS, signalAdaptersPatch } from "./signal-adapter-choice";
 import {
   DEFAULT_SETTINGS,
   FONT_SIZE_MAX,
@@ -163,4 +164,58 @@ export function agentEntryChanged(agentId: string, current: Settings): boolean {
       current.defaultLaunchProfiles[agentId] !== defaults.defaultLaunchProfiles[agentId],
     )
   );
+}
+
+/**
+ * Whether anything of one agent's own differs from the defaults: its on/off, its Signals switch,
+ * its starred command, its model and effort. The one predicate the row's changed mark and the
+ * Changed list share, so a row never sits in that list unmarked.
+ */
+export function agentChanged(agentId: string, current: Settings): boolean {
+  return (
+    agentEntryChanged(agentId, current) ||
+    marksChange(
+      "agentRuntimeDefaults",
+      JSON.stringify(current.agentRuntimeDefaults[agentId]) !==
+        JSON.stringify(DEFAULT_SETTINGS.agentRuntimeDefaults[agentId]),
+    )
+  );
+}
+
+function withoutAgent<T>(record: Readonly<Record<string, T>>, agentId: string): Record<string, T> {
+  return Object.fromEntries(Object.entries(record).filter(([id]) => id !== agentId));
+}
+
+/**
+ * The patch that puts everything `agentChanged` looks at back to the defaults. Saved commands and
+ * declared models are the user's data (FBK-3) and stay: only the star on a command, and the
+ * choice of default model, are undone. The Signals switch goes through `signalAdaptersPatch`
+ * like every write of it, or the next load would read the stored value as unchosen.
+ */
+export function agentResetPatch(agentId: string, current: Settings): Partial<Settings> {
+  const adapters = current.agentSignalAdapters;
+  const hasAdapter = Object.hasOwn(DEFAULT_SIGNAL_ADAPTERS, agentId);
+  const defaults = DEFAULT_SETTINGS;
+  const star = defaults.defaultLaunchProfiles[agentId];
+  const runtime = defaults.agentRuntimeDefaults[agentId];
+  return {
+    disabledAgents: [
+      ...current.disabledAgents.filter((id) => id !== agentId),
+      ...(defaults.disabledAgents.includes(agentId) ? [agentId] : []),
+    ],
+    defaultLaunchProfiles:
+      star === undefined
+        ? withoutAgent(current.defaultLaunchProfiles, agentId)
+        : { ...current.defaultLaunchProfiles, [agentId]: star },
+    agentRuntimeDefaults:
+      runtime === undefined
+        ? withoutAgent(current.agentRuntimeDefaults, agentId)
+        : { ...current.agentRuntimeDefaults, [agentId]: runtime },
+    ...(hasAdapter
+      ? signalAdaptersPatch({
+          ...adapters,
+          [agentId]: DEFAULT_SIGNAL_ADAPTERS[agentId as keyof typeof DEFAULT_SIGNAL_ADAPTERS],
+        })
+      : {}),
+  };
 }

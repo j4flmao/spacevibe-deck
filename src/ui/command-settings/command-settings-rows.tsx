@@ -7,10 +7,13 @@ import { Button } from "../controls/button";
 import { DeckIcon, ROW_ICON } from "../controls/deck-icon";
 import { LogoRow } from "../controls/logo-row";
 import { AppearancePreview } from "../settings/appearance-preview";
+import { AddCommandRow } from "../settings/launch-profile-editor";
+import { AgentIdentities, AgentUsage } from "../settings/sections/agents-section";
 import { PageResetBar } from "../settings/page-reset-bar";
 import { SETTINGS_CATEGORIES } from "../settings/settings-categories";
 import { SettingsGroup } from "../settings/settings-group";
 import { ThemeModeSelector } from "../settings/theme-mode-selector";
+import { AgentsRefresh } from "./command-settings-agent-row";
 import { rowDomId } from "./command-settings-live";
 import { commandActiveKey } from "./command-settings-state";
 import type { LegacyPiece } from "./command-settings-view";
@@ -223,6 +226,26 @@ export function PieceMount({
           <SettingsGroup title="Identity">
             <LogoRow />
           </SettingsGroup>
+        </LegacyBox>
+      );
+    case "refresh":
+      return <AgentsRefresh />;
+    case "commands":
+      return (
+        <LegacyBox area={area} label="Commands">
+          <AddCommandRow />
+        </LegacyBox>
+      );
+    case "identities":
+      return (
+        <LegacyBox area={area} label="Agent identities">
+          <AgentIdentities />
+        </LegacyBox>
+      );
+    case "usage":
+      return (
+        <LegacyBox area={area} label="Usage">
+          <AgentUsage />
         </LegacyBox>
       );
   }

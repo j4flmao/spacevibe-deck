@@ -29,10 +29,10 @@ import {
   type ReportedIssue,
   type ShortcutConflictIssue,
 } from "./command-hits";
-import { isMarkedChanged, marksChange } from "./settings-changes";
+import { isMarkedChanged } from "./settings-changes";
 import { SETTINGS_REGISTRY } from "./settings-registry";
-import { agentEntryChanged, SETTING_CONTROLS } from "./settings-rows";
-import { DEFAULT_SETTINGS, type Settings } from "./settings-schema";
+import { agentChanged, SETTING_CONTROLS } from "./settings-rows";
+import type { Settings } from "./settings-schema";
 import { searchSettings } from "./settings-search";
 
 /*
@@ -221,15 +221,7 @@ export function changedHits(sources: CommandSources): readonly CommandHit[] {
       ? [settingHit(key, page)]
       : [];
   });
-  const agents = agentsOf(current).filter(
-    (agent) =>
-      agentEntryChanged(agent.id, current) ||
-      marksChange(
-        "agentRuntimeDefaults",
-        JSON.stringify(current.agentRuntimeDefaults[agent.id]) !==
-          JSON.stringify(DEFAULT_SETTINGS.agentRuntimeDefaults[agent.id]),
-      ),
-  );
+  const agents = agentsOf(current).filter((agent) => agentChanged(agent.id, current));
   const running = keymapPlatform(sources.platform);
   const shortcuts = shortcutRows(sources).filter((row) =>
     isOverridden(current.keybindings, running, row.action),

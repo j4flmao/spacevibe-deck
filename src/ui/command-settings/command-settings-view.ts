@@ -32,7 +32,8 @@ export function commandSources(): CommandSources {
 }
 
 /** What a live area cannot draw as a row: content with no registry key, or a kind a row does not edit. */
-export type LegacyPiece = "reset" | "theme" | "preview" | "logo";
+export type LegacyPiece =
+  "reset" | "theme" | "preview" | "logo" | "refresh" | "commands" | "identities" | "usage";
 
 /** The list as drawn: the model's items, plus the legacy pieces an area view mounts in place. */
 export type ListItem =
@@ -50,7 +51,7 @@ export function commandItemsOf(items: readonly ListItem[]): readonly CommandItem
 }
 
 /** Areas whose settings no row edits yet: their own section is mounted as is. */
-const SECTION_AREAS: ReadonlySet<CommandAreaId> = new Set(["agents", "about", "privacy", "reset"]);
+const SECTION_AREAS: ReadonlySet<CommandAreaId> = new Set(["about", "privacy", "reset"]);
 
 /** An area with nothing typed: its live rows, and the legacy pieces that have no row. */
 function areaItems(area: CommandAreaId, sources: CommandSources): readonly ListItem[] {
@@ -67,6 +68,18 @@ function areaItems(area: CommandAreaId, sources: CommandSources): readonly ListI
   const rows = buildCommandItems("", area, sources).filter(
     (item) => item.key !== "setting:themeId",
   );
+  if (area === "agents") {
+    // The rows are the agents and the pinned count; the forms that add a command or an agent,
+    // and the usage link, have no row to draw and are mounted as they were.
+    return [
+      piece("reset"),
+      piece("refresh"),
+      ...rows,
+      piece("commands"),
+      piece("identities"),
+      piece("usage"),
+    ];
+  }
   if (area !== "appearance") {
     return [piece("reset"), ...rows];
   }
@@ -112,7 +125,7 @@ export function settingValueText(key: keyof Settings, current: Settings): string
     case "theme":
       return getTheme(String(value)).name;
     case "pins":
-      return Array.isArray(value) ? `${value.length} pinned` : "";
+      return Array.isArray(value) ? `${value.length} pinned` : "automatic";
     default:
       return "";
   }

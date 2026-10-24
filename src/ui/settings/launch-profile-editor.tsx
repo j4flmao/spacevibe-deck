@@ -65,7 +65,7 @@ import { Switch } from "../controls/switch";
  */
 
 /** The agent's brand mark, or the letter avatar every unmarked agent wears. */
-function AgentMark({ id, label }: { id: string; label: string }) {
+export function AgentMark({ id, label }: { id: string; label: string }) {
   const logo = AGENT_LOGOS[id];
   if (logo !== undefined) {
     return <img class="lp-mark" src={logo} alt="" />;
@@ -79,7 +79,7 @@ function AgentMark({ id, label }: { id: string; label: string }) {
 }
 
 /** A command, split so the binary reads louder than its flags. */
-function CommandLine({ command }: { command: string }) {
+export function CommandLine({ command }: { command: string }) {
   const flags = commandFlags(command);
   return (
     <span class="lp-command">
@@ -101,7 +101,7 @@ function CommandLine({ command }: { command: string }) {
  * typed `claude`. A display that derives the sentence independently is a
  * promise nothing keeps.
  */
-function effectiveCommand(
+export function effectiveCommand(
   agent: BuiltinAgent,
   profiles: readonly LaunchProfile[],
   defaults: Readonly<Record<string, string>>,
@@ -129,7 +129,7 @@ function EnabledToggle({
 }
 
 /** The agents a signal adapter exists for (spec §4 stage 2, v1). */
-const ADAPTER_AGENTS: ReadonlySet<string> = new Set(["claude", "codex", "opencode"]);
+export const ADAPTER_AGENTS: ReadonlySet<string> = new Set(["claude", "codex", "opencode"]);
 
 /**
  * The adapters that work ONLY through an installed hook script or plugin, so
@@ -139,7 +139,7 @@ const ADAPTER_AGENTS: ReadonlySet<string> = new Set(["claude", "codex", "opencod
  * launch flag (`launch-augment.ts`) is applied on every Electron host, Windows
  * included, so its switch still does something there and must keep working.
  */
-const HOOK_ONLY_ADAPTER_AGENTS: ReadonlySet<string> = new Set(["claude", "opencode"]);
+export const HOOK_ONLY_ADAPTER_AGENTS: ReadonlySet<string> = new Set(["claude", "opencode"]);
 
 /**
  * The per-agent adapter switch (agent-signal contract layer, stage 2; spec
@@ -304,7 +304,7 @@ function withoutKey<T>(source: Readonly<Record<string, T>>, key: string): Record
   return Object.fromEntries(Object.entries(source).filter(([entry]) => entry !== key));
 }
 
-function RuntimeSettings({ agent }: { readonly agent: BuiltinAgent }) {
+export function RuntimeSettings({ agent }: { readonly agent: BuiltinAgent }) {
   const capability = runtimeFor(agent.id);
   const declared = settings.value.agentModels[agent.id] ?? [];
   const stored = settings.value.agentRuntimeDefaults[agent.id] ?? {
@@ -416,8 +416,6 @@ export function LaunchProfileEditor() {
   const defaults = settings.value.defaultLaunchProfiles;
   const disabled = settings.value.disabledAgents;
 
-  const draft = useSignal("");
-  const draftError = useSignal<string | null>(null);
   const refreshing = useSignal(false);
 
   // Asked here, once for every row below, rather than per row: the answer is a
@@ -449,29 +447,6 @@ export function LaunchProfileEditor() {
     void probeAgentsNow().finally(() => {
       refreshing.value = false;
     });
-  };
-
-  const add = (): void => {
-    const command = draft.value.trim();
-    const problem = commandProblem(command);
-    if (problem !== null) {
-      draftError.value = problem;
-      return;
-    }
-    if (profiles.some((profile) => profile.command === command)) {
-      draftError.value = "that command is already in the list";
-      return;
-    }
-    const id = createLaunchProfileId(command, profiles);
-    const agentId = commandAgentId(command);
-    updateSettings({
-      launchProfiles: [...profiles, { id, command }],
-      ...(defaults[agentId] === undefined
-        ? { defaultLaunchProfiles: { ...defaults, [agentId]: id } }
-        : {}),
-    });
-    draft.value = "";
-    draftError.value = null;
   };
 
   const adapters = settings.value.agentSignalAdapters;
@@ -535,6 +510,43 @@ export function LaunchProfileEditor() {
         </>
       )}
 
+      <AddCommandRow />
+    </>
+  );
+}
+
+/** The saved-commands form: another way to launch an existing agent identity. */
+export function AddCommandRow() {
+  const profiles = settings.value.launchProfiles;
+  const defaults = settings.value.defaultLaunchProfiles;
+  const draft = useSignal("");
+  const draftError = useSignal<string | null>(null);
+
+  const add = (): void => {
+    const command = draft.value.trim();
+    const problem = commandProblem(command);
+    if (problem !== null) {
+      draftError.value = problem;
+      return;
+    }
+    if (profiles.some((profile) => profile.command === command)) {
+      draftError.value = "that command is already in the list";
+      return;
+    }
+    const id = createLaunchProfileId(command, profiles);
+    const agentId = commandAgentId(command);
+    updateSettings({
+      launchProfiles: [...profiles, { id, command }],
+      ...(defaults[agentId] === undefined
+        ? { defaultLaunchProfiles: { ...defaults, [agentId]: id } }
+        : {}),
+    });
+    draft.value = "";
+    draftError.value = null;
+  };
+
+  return (
+    <>
       <ConfigGroup label="Commands" />
       <ConfigRow
         entryOf="launchProfiles"

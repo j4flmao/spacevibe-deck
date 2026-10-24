@@ -4,6 +4,7 @@ import { CaretLeft } from "@phosphor-icons/react";
 import { initSettings, settingsLoadState } from "../../settings/settings-store";
 import { Button } from "../controls/button";
 import { DeckIcon, ROW_ICON } from "../controls/deck-icon";
+import { useNoteAgentListWhileSettingsOpen } from "../../launcher/agent-install-control";
 import { LoadError } from "../controls/load-error";
 import { settingsTarget } from "../settings/settings-focus-store";
 import { AreaChips, Footer, SearchField } from "./command-settings-frame";
@@ -38,6 +39,8 @@ interface CommandSettingsProps {
  *   they edit nothing.
  */
 function CommandSurface({ onClose }: { readonly onClose: () => void }) {
+  // Once for the surface, not per agent row: every call forces its own login-shell probe.
+  useNoteAgentListWhileSettingsOpen();
   const rootRef = useRef<HTMLElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const itemsRef = useRef<readonly CommandItem[]>([]);

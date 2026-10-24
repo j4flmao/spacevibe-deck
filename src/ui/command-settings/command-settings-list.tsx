@@ -2,6 +2,7 @@ import type { CommandItem } from "../../settings/command-hits";
 import type { CommandSources } from "../../settings/command-search";
 import { openHit, openIssue } from "./command-settings-actions";
 import { isLiveHit, isLiveKey } from "./command-settings-live";
+import { AgentRow } from "./command-settings-agent-row";
 import { LiveRow } from "./command-settings-live-row";
 import {
   AttentionRow,
@@ -61,6 +62,19 @@ export function List({ items, active, sources, crumbs, locked, focusSearch }: Li
                   action={hit.action}
                   label={hit.label}
                   context={shortcuts}
+                  crumb={crumb}
+                  active={item.key === active}
+                  locked={locked}
+                />
+              );
+            }
+            if (hit.kind === "agent") {
+              return (
+                <AgentRow
+                  key={item.key}
+                  itemKey={item.key}
+                  agentId={hit.agentId}
+                  settings={sources.settings}
                   crumb={crumb}
                   active={item.key === active}
                   locked={locked}

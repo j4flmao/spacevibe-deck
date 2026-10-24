@@ -3,13 +3,20 @@ import { SETTING_CONTROLS } from "../../settings/settings-rows";
 import type { Settings } from "../../settings/settings-schema";
 
 /*
- * Which hits a row edits in place: a setting of a kind a control draws, and a shortcut. Every
- * other hit (the theme cards, the pinned agents, an agent) is edited by a legacy piece or
- * section, so it stays a stand-in row that opens the area. A leaf module: the state module needs it, and that one
+ * Which hits a row edits in place: a setting of a kind a control draws, a shortcut and an agent.
+ * Every other hit (the theme cards) is edited by a legacy piece, so it stays a stand-in row that
+ * opens the area. A leaf module: the state module needs it, and that one
  * must not reach a store.
  */
 
-const LIVE_KINDS: ReadonlySet<string> = new Set(["switch", "choice", "stepper", "text", "menu"]);
+const LIVE_KINDS: ReadonlySet<string> = new Set([
+  "switch",
+  "choice",
+  "stepper",
+  "text",
+  "menu",
+  "pins",
+]);
 
 export function isLiveKey(key: keyof Settings): boolean {
   return LIVE_KINDS.has(SETTING_CONTROLS[key].kind);
@@ -17,7 +24,11 @@ export function isLiveKey(key: keyof Settings): boolean {
 
 /** A hit with a control in its row: a setting a row edits, or a shortcut. */
 export function isLiveHit(hit: CommandHit): boolean {
-  return hit.kind === "shortcut" || (hit.kind === "setting" && isLiveKey(hit.key));
+  return (
+    hit.kind === "shortcut" ||
+    hit.kind === "agent" ||
+    (hit.kind === "setting" && isLiveKey(hit.key))
+  );
 }
 
 /** The key a live row of this setting has in the list. */

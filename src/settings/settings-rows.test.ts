@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { SETTINGS_REGISTRY } from "./settings-registry";
 import {
+  agentChanged,
   agentEntryChanged,
+  agentResetPatch,
   FONT_SIZE_STEPPER,
   SETTING_CONTROLS,
   scrollbackLabel,
   settingRow,
 } from "./settings-rows";
 import { DEFAULT_SETTINGS, SCROLLBACK_CHOICES, type Settings } from "./settings-schema";
+import { SIGNAL_ADAPTERS_REVISION } from "./signal-adapter-choice";
 
 describe("SETTING_CONTROLS", () => {
   it("gives a control to exactly the keys a Settings page shows", () => {
@@ -76,5 +79,62 @@ describe("agentEntryChanged", () => {
     const profiled: Settings = { ...DEFAULT_SETTINGS, defaultLaunchProfiles: { claude: "fast" } };
     expect(agentEntryChanged("claude", profiled)).toBe(true);
     expect(agentEntryChanged("codex", profiled)).toBe(false);
+  });
+});
+
+describe("an agent's own changes", () => {
+  const edited: Settings = {
+    ...DEFAULT_SETTINGS,
+    disabledAgents: ["claude", "codex"],
+    agentSignalAdapters: { ...DEFAULT_SETTINGS.agentSignalAdapters, claude: false },
+    defaultLaunchProfiles: { claude: "plan", codex: "fast" },
+    launchProfiles: [{ id: "plan", command: "claude --plan" }],
+    agentRuntimeDefaults: {
+      claude: { model: "opus", effort: null },
+      codex: { model: "x", effort: null },
+    },
+    agentModels: { claude: ["extra"] },
+    quickAgentIds: ["claude"],
+  };
+
+  it("counts the on/off, the Signals switch, the starred command and the model default", () => {
+    expect(agentChanged("claude", DEFAULT_SETTINGS)).toBe(false);
+    expect(agentChanged("claude", edited)).toBe(true);
+    for (const patch of [
+      { disabledAgents: ["opencode"] },
+      { defaultLaunchProfiles: { opencode: "x" } },
+      { agentRuntimeDefaults: { opencode: { model: "m", effort: null } } },
+    ] satisfies Partial<Settings>[]) {
+      expect(agentChanged("opencode", { ...DEFAULT_SETTINGS, ...patch })).toBe(true);
+    }
+    expect(agentChanged("claude", { ...DEFAULT_SETTINGS, quickAgentIds: ["claude"] })).toBe(false);
+  });
+
+  it("is undone by its reset patch, for that agent only", () => {
+    const after = { ...edited, ...agentResetPatch("claude", edited) };
+    expect(agentChanged("claude", after)).toBe(false);
+    // Another agent's edits, and the user's data, are not touched.
+    expect(agentChanged("codex", after)).toBe(true);
+    expect(after.disabledAgents).toEqual(["codex"]);
+    expect(after.defaultLaunchProfiles).toEqual({ codex: "fast" });
+    expect(after.agentRuntimeDefaults).toEqual({ codex: { model: "x", effort: null } });
+    expect(after.launchProfiles).toEqual(edited.launchProfiles);
+    expect(after.agentModels).toEqual(edited.agentModels);
+    expect(after.quickAgentIds).toEqual(["claude"]);
+  });
+
+  it("puts the Signals switch back with the revision, so the next load reads it as chosen", () => {
+    const patch = agentResetPatch("claude", edited);
+    expect(patch.agentSignalAdapters?.claude).toBe(DEFAULT_SETTINGS.agentSignalAdapters.claude);
+    expect(patch.signalAdaptersRevision).toBe(SIGNAL_ADAPTERS_REVISION);
+  });
+
+  it("leaves the adapters alone for an agent that has none", () => {
+    const patch = agentResetPatch("custom:aider", {
+      ...edited,
+      disabledAgents: [...edited.disabledAgents, "custom:aider"],
+    });
+    expect(patch).not.toHaveProperty("agentSignalAdapters");
+    expect(patch.disabledAgents).toEqual(["claude", "codex"]);
   });
 });

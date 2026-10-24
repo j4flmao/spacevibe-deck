@@ -1,4 +1,5 @@
 import type { ComponentChild } from "preact";
+import { quickAgentChoices } from "../../settings/quick-agent-choices";
 import type { SettingRow } from "../../settings/settings-rows";
 import type { Settings } from "../../settings/settings-schema";
 import { updateSettings } from "../../settings/settings-store";
@@ -139,6 +140,13 @@ export function SettingControl({ row, disabled }: ControlProps): ComponentChild 
           value={String(row.value)}
           onCommit={(next) => write(row.key, next)}
         />
+      );
+    case "pins":
+      // Each agent row holds its own pin switch; this row says how many, and resets to automatic.
+      return (
+        <span className="text-muted-foreground">
+          {quickAgentChoices().filter((choice) => choice.pinned).length} pinned
+        </span>
       );
     case "menu":
       return row.control.source === "fonts" ? (
