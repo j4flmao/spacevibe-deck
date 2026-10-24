@@ -16,6 +16,8 @@ export const RELEASE_SWITCHES = Object.freeze({
   projectRail: { enabled: false, createdOn: "2026-10-24" },
   /** Command Settings replaces the Settings screen (shell rebuild, Settings track C1c). */
   commandSettings: { enabled: false, createdOn: "2026-10-24" },
+  /** The stacked-section agent dock replaces the tabbed dock column (shell rebuild, Overview track A1). */
+  agentDock: { enabled: false, createdOn: "2026-10-24" },
 } satisfies ReleaseSwitchDefinitions);
 export type ReleaseSwitchId = keyof typeof RELEASE_SWITCHES;
 

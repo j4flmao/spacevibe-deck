@@ -23,6 +23,7 @@
 @source "./blocks";
 @source "./project-rail";
 @source "./command-settings";
+@source "./agent-dock";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter/wght.css";

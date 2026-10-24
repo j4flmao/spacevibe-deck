@@ -220,6 +220,10 @@ import { installChangesTriggers } from "../files/changes/changes-controller";
 import { SessionsDockTab } from "./sessions/sessions-dock-tab";
 import { RailAgentLimits } from "./usage/agent-usage-summary";
 import { DockPanel } from "./dock/dock-panel";
+import { AgentDock } from "./agent-dock/agent-dock";
+import { agentDockEnabled, dockStageWidth } from "./agent-dock/agent-dock-layout";
+import { dockSheetOpen, setDockSectionOpen } from "./agent-dock/agent-dock-state";
+import { DockSlot } from "./agent-dock/dock-slot";
 import { SidebarActions } from "./sidebar-actions";
 import { DockToggle } from "./dock/dock-toggle";
 import { useDockPresence } from "./dock/dock-presence";
@@ -320,6 +324,8 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
         if (!settings.value.dockOpen || settings.value.dockTab !== "explorer") {
           updateSettings({ dockOpen: true, dockTab: "explorer" });
         }
+        // The stacked dock keeps the document inside its Files section.
+        if (agentDockEnabled()) setDockSectionOpen("files", true);
       },
       canFocus: () =>
         agentLaunchPage.request.value === null &&
@@ -2095,10 +2101,15 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
       createEntryOpen: createEntryRequest.value !== null,
       persistErrorVisible: persistError.value !== null,
       settingsLoadError: settingsLoadState.value.status === "error",
+      // The narrow-window dock sheet is DOM over the stage (spec OD-4).
+      dockSheetOpen: dockSheetOpen.value,
     });
 
-  /** Live drag width while resizing, the persisted setting otherwise. */
-  const dockWidth = (): number => dockWidthLive.value ?? settings.value.dockWidth;
+  /**
+   * Live drag width while resizing, the persisted setting otherwise. The stacked dock is a fixed
+   * column with no grip: its width replaces both and the stored setting is left as it was.
+   */
+  const dockWidth = (): number => dockStageWidth(dockWidthLive.value ?? settings.value.dockWidth);
 
   /**
    * The tab the dock actually shows: the stored one, re-checked against
@@ -2108,6 +2119,21 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
    * host that has it restores the user's own choice.
    */
   const dockTab = (): DockTab => resolveDockTab(settings.value.dockTab, sessionsSupported.value);
+
+  /** What each dock surface shows: the legacy column mounts one, the stacked dock all of them. */
+  const dockBodies = {
+    files: (
+      <ExplorerTab
+        controller={fileController}
+        onDocumentEmpty={() => tabsRef.current?.focusActive()}
+        workspacePath={activeWorkspace.value}
+        canCreate={fileCreateAvailable}
+        changesAvailable={gitChangesAvailable}
+      />
+    ),
+    usage: <UsageDockTab onOpenDetails={() => tabsRef.current?.runAction("open-usage")} />,
+    history: <SessionsDockTab onResume={(entry) => void resumeSessionEntry(entry)} />,
+  };
 
   /** Why Prompts cannot run, or null — one answer, read by both mounts. */
   const promptsUnavailable = (): string | null =>
@@ -2720,33 +2746,41 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
               a profile that stored "sessions" and then moved to a host with
               no `sessions_list` must not paint an empty column. */}
           {dockPresence.mounted ? (
-            <DockPanel
-              entered={dockPresence.entered}
-              tabs={availableDockTabs(sessionsSupported.value)}
-              activeTab={dockTab()}
-              onSelectTab={(tab) => updateSettings({ dockTab: tab })}
-              width={dockWidth()}
-              onWidthChange={(width) => updateSettings({ dockWidth: width })}
-              // Through the action for the same reason the toolbar button is
-              // (see `chromeActions` above): the chord path owns the focus
-              // guard, so the drag-past-the-floor gesture must not flip
-              // `dockOpen` on its own.
-              onClose={() => tabsRef.current?.runAction("toggle-dock")}
-            >
-              {dockTab() === "explorer" ? (
-                <ExplorerTab
-                  controller={fileController}
-                  onDocumentEmpty={() => tabsRef.current?.focusActive()}
-                  workspacePath={activeWorkspace.value}
-                  canCreate={fileCreateAvailable}
-                  changesAvailable={gitChangesAvailable}
+            <DockSlot
+              legacy={
+                <DockPanel
+                  entered={dockPresence.entered}
+                  tabs={availableDockTabs(sessionsSupported.value)}
+                  activeTab={dockTab()}
+                  onSelectTab={(tab) => updateSettings({ dockTab: tab })}
+                  width={dockWidth()}
+                  onWidthChange={(width) => updateSettings({ dockWidth: width })}
+                  // Through the action for the same reason the toolbar button is
+                  // (see `chromeActions` above): the chord path owns the focus
+                  // guard, so the drag-past-the-floor gesture must not flip
+                  // `dockOpen` on its own.
+                  onClose={() => tabsRef.current?.runAction("toggle-dock")}
+                >
+                  {dockTab() === "explorer"
+                    ? dockBodies.files
+                    : dockTab() === "usage"
+                      ? dockBodies.usage
+                      : dockBodies.history}
+                </DockPanel>
+              }
+              // `agentDock` switch: sections on one scroll, no resize grip. Closing goes
+              // through the action too, so the focus guard stays the one way out.
+              stacked={
+                <AgentDock
+                  entered={dockPresence.entered}
+                  onClose={() => tabsRef.current?.runAction("toggle-dock")}
+                  bodies={{
+                    ...dockBodies,
+                    history: sessionsSupported.value ? dockBodies.history : null,
+                  }}
                 />
-              ) : dockTab() === "usage" ? (
-                <UsageDockTab onOpenDetails={() => tabsRef.current?.runAction("open-usage")} />
-              ) : (
-                <SessionsDockTab onResume={(entry) => void resumeSessionEntry(entry)} />
-              )}
-            </DockPanel>
+              }
+            />
           ) : null}
           <DockSections />
           <HunkQueue />
