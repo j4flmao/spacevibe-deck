@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { CODEX_RESTORE_SCAN, listCodexFiles, readCodexRecord } from "../resume/codex";
+import { isCompressedRollout } from "../usage/compressed-rollout";
 
 const LSOF_TIMEOUT_MS = 1_500;
 const LSOF_MAX_BYTES = 4 * 1024 * 1024;
@@ -61,7 +62,11 @@ export async function processCodexSessions(
   const interactive = new Set<string>();
   if (ambiguous.size > 0) {
     const options = { ...CODEX_RESTORE_SCAN, requireInteractiveSource: true };
-    for (const file of listCodexFiles(home, true).slice(0, options.maxFiles)) {
+    // Compressed rollouts stay out, as they were before Deck could read them: Codex writes a
+    // rollout back as plain `.jsonl` before it appends, and their heads cost this per-poll
+    // path 37 → 146 ms on a 1,943-rollout home (2026-10-24).
+    const plain = listCodexFiles(home, true).filter((file) => !isCompressedRollout(file.filePath));
+    for (const file of plain.slice(0, options.maxFiles)) {
       const record = readCodexRecord(file, options);
       if (record !== null && ambiguous.has(record.id)) interactive.add(record.id);
     }
