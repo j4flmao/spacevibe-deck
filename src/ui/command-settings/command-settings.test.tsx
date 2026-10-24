@@ -159,8 +159,8 @@ describe("Command Settings frame", () => {
 
   it("mounts the legacy section of an area no row edits yet", async () => {
     await open();
-    await clickIn(chip("Reset"));
-    expect(document.querySelector('section[aria-label="Reset"]')).not.toBeNull();
+    await clickIn(chip("Privacy"));
+    expect(document.querySelector('section[aria-label="Privacy"]')).not.toBeNull();
     expect(rowLabels()).toEqual([]);
   });
 

@@ -33,7 +33,15 @@ export function commandSources(): CommandSources {
 
 /** What a live area cannot draw as a row: content with no registry key, or a kind a row does not edit. */
 export type LegacyPiece =
-  "reset" | "theme" | "preview" | "logo" | "refresh" | "commands" | "identities" | "usage";
+  | "reset"
+  | "theme"
+  | "preview"
+  | "logo"
+  | "refresh"
+  | "commands"
+  | "identities"
+  | "usage"
+  | "resets";
 
 /** The list as drawn: the model's items, plus the legacy pieces an area view mounts in place. */
 export type ListItem =
@@ -51,7 +59,7 @@ export function commandItemsOf(items: readonly ListItem[]): readonly CommandItem
 }
 
 /** Areas whose settings no row edits yet: their own section is mounted as is. */
-const SECTION_AREAS: ReadonlySet<CommandAreaId> = new Set(["about", "privacy", "reset"]);
+const SECTION_AREAS: ReadonlySet<CommandAreaId> = new Set(["about", "privacy"]);
 
 /** An area with nothing typed: its live rows, and the legacy pieces that have no row. */
 function areaItems(area: CommandAreaId, sources: CommandSources): readonly ListItem[] {
@@ -64,6 +72,9 @@ function areaItems(area: CommandAreaId, sources: CommandSources): readonly ListI
     area,
     piece: name,
   });
+  if (area === "reset") {
+    return [piece("resets")];
+  }
   // The colour mode is edited by its cards, not by a row.
   const rows = buildCommandItems("", area, sources).filter(
     (item) => item.key !== "setting:themeId",

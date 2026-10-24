@@ -100,9 +100,9 @@ describe("Settings entrance with the commandSettings switch on", () => {
 
   it("scopes to the page's area and mounts its section when no row edits the page", async () => {
     await mount(<Entrance />);
-    await openAt("reset");
-    expect(badge()).toBe("Reset");
-    expect(document.querySelector('section[aria-label="Reset"]')).not.toBeNull();
+    await openAt("privacy");
+    expect(badge()).toBe("Privacy");
+    expect(document.querySelector('section[aria-label="Privacy"]')).not.toBeNull();
   });
 
   it("scopes to the area and makes the named row the active one, scrolled into view", async () => {

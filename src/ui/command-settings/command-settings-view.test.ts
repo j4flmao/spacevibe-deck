@@ -125,8 +125,8 @@ describe("the sentence an attention row reads as", () => {
 
 describe("the list for a query and a scope", () => {
   it("is the area's own section for an area no row edits yet", () => {
-    expect(commandListItems("", "reset", commandSources())).toEqual([
-      { type: "section", key: "section:reset", area: "reset" },
+    expect(commandListItems("", "about", commandSources())).toEqual([
+      { type: "section", key: "section:about", area: "about" },
     ]);
     expect(commandListItems("   ", "privacy", commandSources())).toEqual([
       { type: "section", key: "section:privacy", area: "privacy" },

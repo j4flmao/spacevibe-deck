@@ -89,9 +89,14 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
   }, [onClose]);
 
   // A row that unmounts under focus (a reset in the Changed list, a value flipped back to its
-  // default) leaves it on the body, where Escape and the arrows reach nothing: the search takes it.
+  // default), or a button that disables itself under it (a reset with nothing left to reset),
+  // leaves focus where Escape and the arrows reach nothing: the search takes it.
   useEffect(() => {
-    if (document.activeElement === document.body) {
+    const focused = document.activeElement;
+    if (
+      focused === document.body ||
+      (focused instanceof HTMLElement && focused.matches(":disabled"))
+    ) {
       searchRef.current?.focus({ preventScroll: true });
     }
   });

@@ -14,6 +14,7 @@ import { SETTINGS_CATEGORIES } from "../settings/settings-categories";
 import { SettingsGroup } from "../settings/settings-group";
 import { ThemeModeSelector } from "../settings/theme-mode-selector";
 import { AgentsRefresh } from "./command-settings-agent-row";
+import { ResetRows } from "./command-settings-reset";
 import { rowDomId } from "./command-settings-live";
 import { commandActiveKey } from "./command-settings-state";
 import type { LegacyPiece } from "./command-settings-view";
@@ -242,6 +243,8 @@ export function PieceMount({
           <AgentIdentities />
         </LegacyBox>
       );
+    case "resets":
+      return <ResetRows />;
     case "usage":
       return (
         <LegacyBox area={area} label="Usage">

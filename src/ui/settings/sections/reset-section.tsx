@@ -7,7 +7,7 @@ import { ConfigRow } from "../../controls/config-row";
 import { confirmReset, resetPromptOpen } from "../confirm-reset";
 import { Button } from "../../controls/button";
 
-interface ResetRowSpec {
+export interface ResetRowSpec {
   readonly scope: SettingScope;
   readonly label: string;
   readonly desc: string;
@@ -15,7 +15,7 @@ interface ResetRowSpec {
 }
 
 /** Three independent resets, so none of them wipes more than its row says (FBK-3). */
-const RESET_ROWS: readonly ResetRowSpec[] = [
+export const RESET_ROWS: readonly ResetRowSpec[] = [
   {
     scope: "preference",
     label: "Reset preferences",
