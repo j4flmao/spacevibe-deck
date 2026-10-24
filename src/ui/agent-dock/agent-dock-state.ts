@@ -6,7 +6,7 @@
 import { signal } from "@preact/signals";
 import type { DockTab } from "../../settings/settings-schema";
 
-export type DockSectionId = "changes" | "files" | "usage" | "history";
+export type DockSectionId = "changes" | "space" | "files" | "usage" | "history";
 
 /**
  * What a fresh window shows (the mock's own defaults): the checkout's Changes, the thing an agent's
@@ -14,6 +14,7 @@ export type DockSectionId = "changes" | "files" | "usage" | "history";
  */
 const DEFAULT_OPEN: Readonly<Record<DockSectionId, boolean>> = {
   changes: true,
+  space: true,
   files: false,
   usage: false,
   history: false,

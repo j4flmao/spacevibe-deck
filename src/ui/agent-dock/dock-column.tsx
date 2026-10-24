@@ -1,7 +1,10 @@
 import type { ComponentChildren } from "preact";
+import type { RailSelection } from "../project-rail/project-rail-model";
 import type { RailItem } from "../rail-view-model";
+import { DockAsk } from "./dock-ask";
 import { DockHeader } from "./dock-header";
 import { DockSection } from "./dock-section";
+import { DockSpace } from "./dock-space";
 
 /**
  * What the sections show. `App` picks the bodies, as it does for the legacy column, so the host
@@ -33,6 +36,10 @@ export interface DockBodies {
 
 export interface DockColumnProps {
   readonly item: RailItem | null;
+  /** The focused agent's space-mates, for "In this space". */
+  readonly space: readonly RailItem[];
+  /** How an Ask or space row takes the keyboard to an agent's pane: the rail's own focus path. */
+  readonly selection: RailSelection;
   /** The folder the sections show (`dock-root.ts`). */
   readonly root: string | null;
   readonly bodies: DockBodies;
@@ -47,6 +54,8 @@ export interface DockColumnProps {
  */
 export function DockColumn({
   item,
+  space,
+  selection,
   root,
   bodies,
   closeLabel,
@@ -57,7 +66,9 @@ export function DockColumn({
     <div className="agent-dock__column flex h-full min-h-0 flex-col">
       <DockHeader item={item} closeLabel={closeLabel} closeChord={closeChord} onClose={onClose} />
       <div className="min-h-0 flex-1 overflow-y-auto">
+        <DockAsk item={item} selection={selection} />
         {bodies.changes === null ? null : bodies.changes.section(root)}
+        <DockSpace agents={space} selection={selection} />
         <DockSection id="usage" title="Usage">
           <div className="max-h-96 overflow-y-auto">{bodies.usage}</div>
         </DockSection>

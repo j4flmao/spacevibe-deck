@@ -1,11 +1,12 @@
 import { useEffect } from "preact/hooks";
 import { shortcutLabel } from "../../lib/shortcut-label";
+import type { RailSelection } from "../project-rail/project-rail-model";
 import { dockNarrow } from "./agent-dock-layout";
 import { dockSheetOpen } from "./agent-dock-state";
 import { DockColumn, type DockBodies } from "./dock-column";
 import { DockEdge } from "./dock-edge";
 import { dockRoot } from "./dock-root";
-import { useFocusedRailItem } from "./use-focused-rail-item";
+import { useDockAgents } from "./use-dock-agents";
 import { useRevealDockTab } from "./use-reveal-dock-tab";
 
 export interface AgentDockProps {
@@ -14,6 +15,8 @@ export interface AgentDockProps {
   /** Hides the dock. `App` routes it into the `toggle-dock` action and its focus guard. */
   readonly onClose: () => void;
   readonly bodies: DockBodies;
+  /** The rail's own focus path, for the rows that name another agent's pane. */
+  readonly selection: RailSelection;
 }
 
 /**
@@ -22,9 +25,9 @@ export interface AgentDockProps {
  * `.dock-panel` box, so the stage inset, the slide-over and the usage page's `inert` cover keep
  * working, and `27-dock-stacked.css` repaints it on the rail's surface.
  */
-export function AgentDock({ entered, onClose, bodies }: AgentDockProps) {
+export function AgentDock({ entered, onClose, bodies, selection }: AgentDockProps) {
   const narrow = dockNarrow.value;
-  const item = useFocusedRailItem();
+  const { focused: item, space } = useDockAgents();
   const root = dockRoot.value;
   useRevealDockTab();
   // The browser yields while the sheet is open, so a stale flag would hide it for good.
@@ -46,10 +49,12 @@ export function AgentDock({ entered, onClose, bodies }: AgentDockProps) {
     >
       {bodies.changes === null ? null : bodies.changes.watch(root)}
       {narrow ? (
-        <DockEdge item={item} root={root} bodies={bodies} />
+        <DockEdge item={item} space={space} selection={selection} root={root} bodies={bodies} />
       ) : (
         <DockColumn
           item={item}
+          space={space}
+          selection={selection}
           root={root}
           bodies={bodies}
           closeLabel="Hide the side panel"
