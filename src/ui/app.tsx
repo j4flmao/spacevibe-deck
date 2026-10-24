@@ -27,7 +27,7 @@ import { defaultPtyClient } from "../terminal/pty-client";
 import {
   agentsProbed,
   detectedAgents,
-  ensureAgentsDetected,
+  primeAgentsDetected,
 } from "../terminal/agent-detection-store";
 import type { BootMode } from "../terminal/transfer-client";
 import { applyThemeVars } from "../lib/theme-vars";
@@ -1213,10 +1213,11 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
   // already on screen: discovery spends an interactive login shell and measured
   // ~1.1s here (see `agent-detection-store.ts`), so a picker that probes on
   // open offers "Shell only" for a second first. Reading `customAgents` also
-  // re-runs this when settings land, and the store's own freshness window is
-  // what stops an ordinary settings broadcast from paying for a second probe.
+  // re-runs this on every settings broadcast, so it uses the prime, which
+  // probes only for a new name list or an answer minutes old: a broadcast that
+  // leaves the list alone does not spend a login shell every 30 s.
   useSignalEffect(() => {
-    void ensureAgentsDetected(probeNames(settings.value.customAgents));
+    void primeAgentsDetected(probeNames(settings.value.customAgents));
   });
 
   // The external-app scan, started at boot for the same reason: the toolbar's
