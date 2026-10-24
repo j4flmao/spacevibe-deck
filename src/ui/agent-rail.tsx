@@ -26,6 +26,9 @@ import { WorkspaceIcon } from "./workspace-icon";
 import { buildRailAvatars } from "./agent-rail-collapsed-model";
 import { RailAvatarColumn } from "./agent-rail-column";
 import { RailCreate } from "./rail-create";
+import { isReleaseSwitchEnabled } from "../lib/release-switches";
+import { rendererReleaseSwitches } from "../terminal/action-availability";
+import { ProjectRail } from "./project-rail/project-rail";
 
 /**
  * The agent status rail.
@@ -315,6 +318,26 @@ function WorktreeCardRail(props: AgentRailProps) {
           actions: props.cardActions,
         }}
       />
+    );
+  }
+
+  // Read at render time, never at import (release-switch convention). On, the project-first
+  // rail replaces the cluster list only: the create row, footer and usage summary stay, and
+  // the collapsed avatar column above is still the old one. Rows call the same callbacks.
+  if (isReleaseSwitchEnabled("projectRail", rendererReleaseSwitches())) {
+    return (
+      <nav class="asr-rail asr-rail--mounted" aria-label="Agents">
+        {create("row")}
+        <div class="asr-rail__list">
+          <ProjectRail
+            view={view}
+            onFocusPane={props.onFocusPane}
+            onSelectTab={props.onSelectTab}
+          />
+        </div>
+        {props.footer}
+        {props.usageSummary}
+      </nav>
     );
   }
 

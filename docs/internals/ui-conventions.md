@@ -19,7 +19,11 @@ in [`src/ui/preset.css:22`](../../src/ui/preset.css). Each gallery page adds its
 [`sections/preset-controls-section.css:4`](../../src/gallery/sections/preset-controls-section.css)
 and [`shadcn-preview/preset.css:4`](../../src/gallery/shadcn-preview/preset.css). So a class that
 renders in a gallery page can compile to nothing in the app, and nothing fails: a class that
-appears only in a shipping file outside those controls leaves its element unstyled. Chrome outside the fence is plain CSS under
+appears only in a shipping file outside those controls leaves its element unstyled. A shipping
+directory that writes Tailwind classes of its own (`src/ui/blocks/`, `src/ui/project-rail/`) needs its
+own `@source` line there **and** an exemption in the "chrome markup" scan of
+[`ui-preset-boundary.test.ts`](../../scripts/ui-preset-boundary.test.ts), which otherwise reads its
+classes as chrome class names the preset must not generate. Chrome outside the fence is plain CSS under
 `src/styles/`.
 
 ## Tailwind
