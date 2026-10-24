@@ -82,12 +82,13 @@ constants that currently switch behaviour off and are meant to be flipped back.
 
 ## Hosts and evidence
 
-- **macOS notification evidence requires a signed build.** Electron's notification API does
-  not display alerts from unsigned development builds; the first-alert permission prompt
-  cannot be proved in `electron:dev` or the unsigned `electron:package`. The Dock badge also
-  requires notification permission. Unit tests and an isolated unsigned run can check the
-  [routing and count](../../electron/ipc/register-shell.ts), not native delivery, permission
-  or badge visibility. Check those on a signed build.
+- **A dev notification check is not release notification evidence.** The
+  [dev launcher](../../scripts/electron-dev-launch.mjs) ad-hoc signs Deck Dev with its own
+  bundle identity; do not describe `electron:dev` as unsigned or assume its OS permissions
+  match the release app's. Unsigned builds cannot prove macOS alert delivery, and the Dock
+  badge requires notification permission. Tests that intercept the
+  [notification API](../../electron/ipc/register-shell.ts) prove routing and counts only;
+  verify native delivery, permission and badge visibility on the exact app being tested.
 
 - **The app running an update is the old build.** An updater fix cannot protect the
   transition into the release that carries it.

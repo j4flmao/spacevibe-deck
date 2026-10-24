@@ -7,6 +7,11 @@ the release PR, and frozen at the tag — never an auto-generated commit list.
 
 ## Unreleased
 
+- **Agent alerts reach you outside Deck.** Background agents notify when they finish, need
+  input or approval, or fail. Click an alert to return to its pane; the macOS Dock badge sums
+  the panes that need you across windows. Alerts are on by default, including a one-time
+  enable for older settings; turning them off afterward is remembered. Open system
+  notification settings from Deck's [Notifications settings](docs/user/settings.md#notifications).
 - **Deck stays lighter when it runs all day.** Closing a terminal tab or switching away from
   it no longer leaves its memory behind. Deck stops starting a login shell every minute or so
   to look for installed agents, and the sidebar reads far less from your session history to
