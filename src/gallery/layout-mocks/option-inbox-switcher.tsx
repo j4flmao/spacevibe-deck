@@ -1,6 +1,7 @@
 import { cn } from "@/lib/cn";
 import { useEffect, useRef } from "preact/hooks";
-import { Kbd, KbdGroup } from "../../ui/controls/kbd";
+import { Chord } from "../../ui/blocks/chord";
+import { Kbd } from "../../ui/controls/kbd";
 import { AgentLogo, AgentStateMark } from "./agent-parts";
 import { AGENT_NAME, STATE_LABEL, type MockAgent } from "./layout-fixture";
 import {
@@ -117,18 +118,11 @@ export function InboxSwitcher({
         </div>
         <div className="flex h-9 shrink-0 items-center gap-4 border-t px-3 text-2xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <KbdGroup>
-              <Kbd>⌘</Kbd>
-              <Kbd>⇧</Kbd>
-              <Kbd>A</Kbd>
-            </KbdGroup>
+            <Chord keys={["⌘", "⇧", "A"]} />
             next
           </span>
           <span className="flex items-center gap-1.5">
-            <KbdGroup>
-              <Kbd>↑</Kbd>
-              <Kbd>↓</Kbd>
-            </KbdGroup>
+            <Chord keys={["↑", "↓"]} />
             move
           </span>
           <span className="flex items-center gap-1.5">

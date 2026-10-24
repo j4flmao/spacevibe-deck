@@ -1,6 +1,7 @@
 import { cn } from "@/lib/cn";
+import { ChangeCounts } from "../../../../ui/blocks/change-counts";
+import { Chord } from "../../../../ui/blocks/chord";
 import { Button } from "../../../../ui/controls/button";
-import { Kbd, KbdGroup } from "../../../../ui/controls/kbd";
 import { ToggleGroup, ToggleGroupItem } from "../../../../ui/controls/toggle-group";
 import type { MockFileChange } from "../../layout-fixture";
 import type { DiffFile, Review } from "./diff-data";
@@ -10,15 +11,6 @@ const STATUS_CLASS: Readonly<Record<MockFileChange["status"], string>> = {
   A: "text-(--term-ok)",
   D: "text-(--term-err)",
 };
-
-export function Counts({ change }: { readonly change: MockFileChange }) {
-  return (
-    <span className="shrink-0 font-mono tabular-nums">
-      <span className="text-(--term-ok)">+{change.added}</span>{" "}
-      <span className="text-(--term-err)">−{change.removed}</span>
-    </span>
-  );
-}
 
 /** One changed file as a button; `rail` stacks the directory under the name. */
 export function FileButton({
@@ -56,7 +48,7 @@ export function FileButton({
         {rail ? null : <span className="text-foreground">{dir}</span>}
         <span className={cn("font-medium text-foreground", active && "font-semibold")}>{name}</span>
       </span>
-      <Counts change={file.change} />
+      <ChangeCounts added={file.change.added} removed={file.change.removed} />
       {rail && dir ? (
         <span className="w-full truncate pl-5 text-2xs text-foreground">{dir}</span>
       ) : null}
@@ -91,11 +83,7 @@ export function CommentButton({ review }: { readonly review: Review }) {
       onClick={review.open}
     >
       Comment
-      <KbdGroup>
-        <Kbd>⌘</Kbd>
-        <Kbd>⌥</Kbd>
-        <Kbd>M</Kbd>
-      </KbdGroup>
+      <Chord keys={["⌘", "⌥", "M"]} />
     </Button>
   );
 }

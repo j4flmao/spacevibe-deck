@@ -18,7 +18,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "../../ui/controls/dropdown-menu";
-import { Kbd, KbdGroup } from "../../ui/controls/kbd";
+import { Chord } from "../../ui/blocks/chord";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/controls/tooltip";
 import { AgentDock } from "./agent-dock";
 import { AgentLogo, AgentStateMark, TrafficLights } from "./agent-parts";
@@ -76,13 +76,7 @@ function IconButton({
       </TooltipTrigger>
       <TooltipContent>
         {label}
-        {keys ? (
-          <KbdGroup>
-            {keys.map((key) => (
-              <Kbd key={key}>{key}</Kbd>
-            ))}
-          </KbdGroup>
-        ) : null}
+        {keys ? <Chord keys={keys} /> : null}
       </TooltipContent>
     </Tooltip>
   );

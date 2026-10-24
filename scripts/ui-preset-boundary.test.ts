@@ -217,7 +217,9 @@ describe("the preset leaks nothing into a surface that does not carry it", () =>
     const sources = files(SRC, (name) => /\.tsx$/.test(name) && !name.endsWith(".test.tsx"));
     for (const file of sources) {
       const path = posix(relative(SRC, file));
-      if (path.startsWith("gallery/") || presetControlFiles().has(path)) continue;
+      // Blocks are composed from the preset controls and scanned by preset.css, like them.
+      if (path.startsWith("gallery/") || path.startsWith("ui/blocks/")) continue;
+      if (presetControlFiles().has(path)) continue;
       const text = readFileSync(file, "utf8");
       // A template literal is read up to its first `${`: what follows is code, not class names.
       for (const match of text.matchAll(/\bclass(?:Name)?=(?:\{\s*)?(["'`])([^"'`]*)\1/g)) {

@@ -71,15 +71,6 @@ export function splitPath(path: string) {
   return { dir: cut < 0 ? "" : path.slice(0, cut + 1), file: path.slice(cut + 1) };
 }
 
-export function Counts({ added, removed }: { added: number; removed: number }) {
-  return (
-    <span className="shrink-0 font-mono text-code tabular-nums">
-      <span className="text-(--term-ok)">+{added}</span>{" "}
-      <span className="text-(--term-err)">−{removed}</span>
-    </span>
-  );
-}
-
 export function StatusLetter({ status }: { status: MockFileChange["status"] }) {
   return (
     <span

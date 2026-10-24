@@ -1,7 +1,8 @@
 import { cn } from "@/lib/cn";
 import { useSignal } from "@preact/signals";
+import { ChangeCounts } from "../../../../ui/blocks/change-counts";
 import type { MockAgent, MockFileChange } from "../../layout-fixture";
-import { Chevron, Counts, EmptyChanges, RefreshButton, changesOf, totalsOf } from "./changes-parts";
+import { Chevron, EmptyChanges, RefreshButton, changesOf, totalsOf } from "./changes-parts";
 import { FileRow, flipped } from "./changes-row";
 
 interface DirNode {
@@ -82,7 +83,7 @@ export function TreeChanges({
           <span className="shrink-0 text-2xs text-muted-foreground tabular-nums">
             {files.length}
           </span>
-          <Counts added={sums.added} removed={sums.removed} />
+          <ChangeCounts added={sums.added} removed={sums.removed} />
         </button>
         {open ? <ul className="m-0 list-none p-0">{children(node, depth + 1)}</ul> : null}
       </li>
@@ -110,7 +111,7 @@ export function TreeChanges({
       <div className="flex h-9 items-center justify-between pr-2 pl-3 text-foreground">
         <span className="tabular-nums">{changes.length} files</span>
         <span className="flex items-center gap-1.5">
-          <Counts added={total.added} removed={total.removed} />
+          <ChangeCounts added={total.added} removed={total.removed} />
           <RefreshButton />
         </span>
       </div>

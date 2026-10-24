@@ -13,7 +13,7 @@ import { cn } from "@/lib/cn";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { Button } from "../../../../ui/controls/button";
 import { Input } from "../../../../ui/controls/input";
-import { Kbd, KbdGroup } from "../../../../ui/controls/kbd";
+import { Chord } from "../../../../ui/blocks/chord";
 import { Separator } from "../../../../ui/controls/separator";
 import { AgentLogo, AgentStateMark } from "../../agent-parts";
 import { AGENT_NAME, STATE_LABEL, type MockAgent, type TermLine } from "../../layout-fixture";
@@ -92,11 +92,7 @@ export function BrowserPaired({
   const reopen = (
     <Button variant="outline" size="sm" onClick={() => (placement.value = "beside")}>
       Browser
-      <KbdGroup>
-        {OPEN_KEYS.map((key) => (
-          <Kbd key={key}>{key}</Kbd>
-        ))}
-      </KbdGroup>
+      <Chord keys={OPEN_KEYS} />
     </Button>
   );
   const terminal = (

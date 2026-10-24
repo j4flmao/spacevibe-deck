@@ -4,7 +4,8 @@ import { useSignal } from "@preact/signals";
 import { cn } from "@/lib/cn";
 import { useEffect, useRef } from "preact/hooks";
 import { Button } from "../../../../ui/controls/button";
-import { Kbd, KbdGroup } from "../../../../ui/controls/kbd";
+import { Chord } from "../../../../ui/blocks/chord";
+import { Kbd } from "../../../../ui/controls/kbd";
 import {
   Select,
   SelectContent,
@@ -57,13 +58,7 @@ export function ToolButton({
       </TooltipTrigger>
       <TooltipContent side="top">
         {label}
-        {keys ? (
-          <KbdGroup>
-            {keys.map((key) => (
-              <Kbd key={key}>{key}</Kbd>
-            ))}
-          </KbdGroup>
-        ) : null}
+        {keys ? <Chord keys={keys} /> : null}
       </TooltipContent>
     </Tooltip>
   );

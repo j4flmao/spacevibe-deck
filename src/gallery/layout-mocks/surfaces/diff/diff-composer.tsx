@@ -12,7 +12,8 @@ import {
   DropdownMenuTrigger,
 } from "../../../../ui/controls/dropdown-menu";
 import { Input } from "../../../../ui/controls/input";
-import { Kbd, KbdGroup } from "../../../../ui/controls/kbd";
+import { Chord } from "../../../../ui/blocks/chord";
+import { Kbd } from "../../../../ui/controls/kbd";
 import { AgentLogo } from "../../agent-parts";
 import { locate, rowsIn, type Review } from "./diff-data";
 
@@ -109,10 +110,7 @@ export function DiffComposer({
   const send = (
     <Button size="lg" onClick={review.send} disabled={empty} aria-label="Send comment">
       Send
-      <KbdGroup>
-        <Kbd>⌘</Kbd>
-        <Kbd>↵</Kbd>
-      </KbdGroup>
+      <Chord keys={["⌘", "↵"]} />
     </Button>
   );
   const cancel = (

@@ -1,6 +1,7 @@
 import { useSignal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
 import { cn } from "@/lib/cn";
+import { ChangeCounts } from "../../../../ui/blocks/change-counts";
 import { Button } from "../../../../ui/controls/button";
 import { Kbd } from "../../../../ui/controls/kbd";
 import { AgentLogo } from "../../agent-parts";
@@ -8,7 +9,7 @@ import { AGENT_NAME, agentById, type MockAgent } from "../../layout-fixture";
 import { DiffCode } from "./diff-code";
 import { DiffComposer, SendNotice } from "./diff-composer";
 import { diffFiles, useReview, type Review } from "./diff-data";
-import { CommentButton, Counts, SplitToggle } from "./diff-parts";
+import { CommentButton, SplitToggle } from "./diff-parts";
 import { DiffStageShell } from "./diff-stage-shell";
 
 interface Step {
@@ -146,7 +147,7 @@ export function DiffQueue({
           >
             <header className="flex h-9 shrink-0 items-center gap-3 border-b px-3 text-xs">
               <span className="min-w-0 truncate font-mono text-foreground">{file.change.path}</span>
-              <Counts change={file.change} />
+              <ChangeCounts added={file.change.added} removed={file.change.removed} />
               <span className="flex shrink-0 items-center gap-1.5 text-muted-foreground">
                 <AgentLogo kind={author.kind} className="size-3.5" />
                 {AGENT_NAME[author.kind]} · turn {file.change.turn}

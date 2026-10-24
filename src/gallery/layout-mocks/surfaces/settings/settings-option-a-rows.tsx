@@ -9,7 +9,8 @@ import type { ComponentChildren } from "preact";
 import { Badge } from "../../../../ui/controls/badge";
 import { Button } from "../../../../ui/controls/button";
 import { Input } from "../../../../ui/controls/input";
-import { Kbd, KbdGroup } from "../../../../ui/controls/kbd";
+import { Chord } from "../../../../ui/blocks/chord";
+import { Kbd } from "../../../../ui/controls/kbd";
 import { Switch } from "../../../../ui/controls/switch";
 import { AgentLogo } from "../../agent-parts";
 import { areaById, type AreaId, type MockSetting } from "./settings-data";
@@ -460,11 +461,7 @@ export function ShortcutRow({
               <Kbd>Esc</Kbd>
             </span>
           ) : keys.length > 0 ? (
-            <KbdGroup aria-label={`${shortcut.label} chord`}>
-              {keys.map((key) => (
-                <Kbd key={key}>{key}</Kbd>
-              ))}
-            </KbdGroup>
+            <Chord keys={keys} label={`${shortcut.label} chord`} />
           ) : (
             <span className="text-muted-foreground">Unassigned</span>
           )}

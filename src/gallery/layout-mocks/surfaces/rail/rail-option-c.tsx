@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "../../../../ui/controls/dropdown-menu";
 import { Input } from "../../../../ui/controls/input";
-import { Kbd, KbdGroup } from "../../../../ui/controls/kbd";
+import { Chord } from "../../../../ui/blocks/chord";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../../ui/controls/tooltip";
 import { AgentStateMark, TrafficLights } from "../../agent-parts";
 import { AGENTS } from "../../layout-fixture";
@@ -81,13 +81,7 @@ function AttentionPill({ state, chord }: { readonly state: RailState; readonly c
       </TooltipTrigger>
       <TooltipContent>
         Next
-        {chord ? (
-          <KbdGroup>
-            {["⌘", "⇧", "A"].map((key) => (
-              <Kbd key={key}>{key}</Kbd>
-            ))}
-          </KbdGroup>
-        ) : null}
+        {chord ? <Chord keys={["⌘", "⇧", "A"]} /> : null}
       </TooltipContent>
     </Tooltip>
   );
@@ -110,10 +104,7 @@ function Footer({
         </TooltipTrigger>
         <TooltipContent>
           Settings
-          <KbdGroup>
-            <Kbd>⌘</Kbd>
-            <Kbd>,</Kbd>
-          </KbdGroup>
+          <Chord keys={["⌘", ","]} />
         </TooltipContent>
       </Tooltip>
       <div className="flex items-center gap-1">
@@ -132,11 +123,7 @@ function Footer({
           </TooltipTrigger>
           <TooltipContent>
             Session history
-            <KbdGroup>
-              {["⌘", "⇧", "Y"].map((key) => (
-                <Kbd key={key}>{key}</Kbd>
-              ))}
-            </KbdGroup>
+            <Chord keys={["⌘", "⇧", "Y"]} />
           </TooltipContent>
         </Tooltip>
         <DropdownMenu>

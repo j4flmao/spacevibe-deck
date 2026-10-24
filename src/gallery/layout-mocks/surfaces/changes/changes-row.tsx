@@ -1,8 +1,8 @@
 import { cn } from "@/lib/cn";
+import { ChangeCounts } from "../../../../ui/blocks/change-counts";
 import type { MockAgent, MockFileChange } from "../../layout-fixture";
 import {
   Chevron,
-  Counts,
   HIDE_ON_REVEAL,
   Preview,
   REVEAL,
@@ -67,7 +67,7 @@ export function FileRow({
             <span className="text-foreground">{file}</span>
           </span>
           <span className={cn("flex", HIDE_ON_REVEAL)}>
-            <Counts added={change.added} removed={change.removed} />
+            <ChangeCounts added={change.added} removed={change.removed} />
           </span>
         </button>
         <RowActions

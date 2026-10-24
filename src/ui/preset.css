@@ -20,6 +20,7 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
 @source "./controls/{badge,button,dialog,dropdown-menu,field,input,kbd,label,popover,scroll-area,select,separator,switch,tabs,toggle,toggle-group,tooltip}.tsx";
+@source "./blocks";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter/wght.css";

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { ChangeCounts } from "../../ui/blocks/change-counts";
 import { Badge } from "../../ui/controls/badge";
 import { Button } from "../../ui/controls/button";
 import { ScrollArea } from "../../ui/controls/scroll-area";
@@ -33,10 +34,7 @@ function ChangeRow({ change }: { readonly change: MockFileChange }) {
         <span className="text-muted-foreground">{dir}</span>
         <span className="text-foreground">{file}</span>
       </span>
-      <span className="shrink-0 tabular-nums">
-        <span className="text-(--term-ok)">+{change.added}</span>{" "}
-        <span className="text-(--term-err)">−{change.removed}</span>
-      </span>
+      <ChangeCounts added={change.added} removed={change.removed} />
     </li>
   );
 }
