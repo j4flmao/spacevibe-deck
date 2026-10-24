@@ -11,10 +11,28 @@ import {
   INITIAL_RAIL_VIEW_STATE,
   setArchived,
   togglePinned,
+  type RailGrouping,
+  type RailSorting,
   type RailViewState,
 } from "../rail-view-state";
 
 export const railViewState = signal<RailViewState>(INITIAL_RAIL_VIEW_STATE);
+
+/** The search, Organize and sort fields are plain data on `RailViewState`; one new object per change. */
+export function setRailQuery(query: string): void {
+  railViewState.value = { ...railViewState.value, query };
+}
+
+export function setRailGrouping(grouping: RailGrouping): void {
+  railViewState.value = { ...railViewState.value, grouping };
+}
+
+export function setRailSorting(sorting: RailSorting): void {
+  railViewState.value = { ...railViewState.value, sorting };
+}
+
+/** Organize's "Show archived". Nothing draws archived rows until their section lands. */
+export const showArchived = signal(false);
 
 export function togglePin(id: string): void {
   railViewState.value = togglePinned(railViewState.value, id);
@@ -66,5 +84,6 @@ export function runRailClock(): () => void {
 export function resetProjectRailState(): void {
   railViewState.value = INITIAL_RAIL_VIEW_STATE;
   foldedProjects.value = new Set();
+  showArchived.value = false;
   railNow.value = Date.now();
 }

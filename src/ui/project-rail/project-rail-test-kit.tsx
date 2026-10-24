@@ -4,6 +4,7 @@
 import { render } from "preact";
 import { act } from "preact/test-utils";
 import { afterEach, beforeEach, vi } from "vitest";
+import { byRole, settle as settleTimers, waitUntil } from "../controls/preset-test-kit";
 import { activeTabIndex, tabViews, type PaneView, type TabView } from "../../terminal/tabs-store";
 import { AgentRail } from "../agent-rail";
 import {
@@ -126,8 +127,11 @@ export function workdayFocusing(key: number): TabView[] {
   );
 }
 
-/** One element per suite file; `afterEach` empties it, so a handle taken at import stays valid. */
-export const host = document.createElement("div");
+/**
+ * A fresh element per test (`beforeEach`): Base UI marks the rest of the page inert while a popup
+ * is open, and a mark a test left behind would keep the next one's fields from taking focus.
+ */
+export let host = document.createElement("div");
 let fileController: FileSurfaceController;
 
 const NOOP = (): void => {};
@@ -195,12 +199,49 @@ export const names = () =>
   headers().map((header) => header.querySelector(".truncate")?.textContent);
 export const text = (element: Element | null | undefined) => element?.textContent ?? "";
 
+/** The entries of the open menu, labelled by their text. */
+export const menuItems = () => [
+  ...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+];
+export const menuLabels = () => menuItems().map((entry) => text(entry));
+
+/** A real activation: Base UI listens for the click a button's own press produces. */
+export async function activate(element: HTMLElement | null | undefined): Promise<void> {
+  await act(async () => {
+    element?.click();
+  });
+  await settleTimers();
+}
+
+/** Right-click a row's wrapper; resolves to whether the native menu was cancelled, with ours open. */
+export async function openMenuByRightClick(id: string): Promise<boolean> {
+  let cancelled = false;
+  await act(async () => {
+    const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    item(id)?.dispatchEvent(event);
+    cancelled = event.defaultPrevented;
+  });
+  await waitUntil(() => byRole("menu") !== null);
+  return cancelled;
+}
+
+export async function closeMenu(): Promise<void> {
+  press(byRole("menu"), "Escape");
+  await waitUntil(() => byRole("menu") === null);
+}
+
+/** Choose a menu entry by its label. */
+export async function pick(label: string): Promise<void> {
+  await activate(menuItems().find((entry) => text(entry) === label));
+}
+
 /** Registers the per-test setup every suite of the rail shares. Call once at the top of a suite. */
 export function installRailHarness(): void {
   beforeEach(() => {
     // Real time keeps passing (`shouldAdvanceTime`), so the controls' own deadlines still end.
     vi.useFakeTimers({ toFake: ["Date", "setInterval", "clearInterval"], shouldAdvanceTime: true });
     vi.setSystemTime(NOW);
+    host = document.createElement("div");
     document.body.appendChild(host);
     invalidateRepositoryScans();
     configureRepositoryClient({

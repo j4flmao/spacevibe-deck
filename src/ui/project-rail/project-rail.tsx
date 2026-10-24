@@ -1,64 +1,27 @@
 import { useEffect, useMemo, useState } from "preact/hooks";
 import type { AgentRailView } from "../agent-rail-model";
-import { buildRailView, type RailGroup } from "../rail-view-model";
-import { rowCommands, type RailRowDeps } from "./project-rail-commands";
-import { ProjectRailHeader } from "./project-rail-header";
-import { isRailItemFocused, selectRailItem, type RailSelection } from "./project-rail-model";
-import { ProjectRailRow } from "./project-rail-row";
+import { Button } from "../controls/button";
+import { buildRailView } from "../rail-view-model";
+import type { RailRowDeps } from "./project-rail-commands";
+import { isRailItemFocused, type RailSelection } from "./project-rail-model";
+import { FlatSection, ProjectSection, type RailRowEnv } from "./project-rail-sections";
 import {
   foldedProjects,
+  railNow,
   railViewState,
   runRailClock,
-  toggleProjectFolded,
+  setRailQuery,
 } from "./project-rail-state";
 
 /** The things arrow keys walk: every project header and every row of an open project. */
 const STOPS = "[data-rail-project],[data-rail-row]";
 
+/** While a search is set no project is folded: every one with a match shows it. */
+const NO_FOLDS: ReadonlySet<string> = new Set();
+
 export interface ProjectRailProps extends RailSelection, RailRowDeps {
   /** The view `AgentRail` already builds, so the two rails cannot disagree about it. */
   readonly view: AgentRailView;
-}
-
-function ProjectSection({
-  group,
-  folded,
-  tabStopId,
-  pinned,
-  selection,
-  deps,
-}: {
-  readonly group: RailGroup;
-  readonly folded: boolean;
-  readonly tabStopId: string | undefined;
-  readonly pinned: ReadonlySet<string>;
-  readonly selection: RailSelection;
-  readonly deps: RailRowDeps;
-}) {
-  return (
-    <section aria-label={group.label}>
-      <ProjectRailHeader
-        group={group}
-        folded={folded}
-        onToggle={() => toggleProjectFolded(group.key)}
-      />
-      {folded
-        ? null
-        : group.items.map((item) => (
-            <ProjectRailRow
-              key={item.id}
-              item={item}
-              tabStop={item.id === tabStopId}
-              pinned={pinned.has(item.id)}
-              commands={rowCommands(item, deps)}
-              onSelect={() => selectRailItem(item, selection)}
-            />
-          ))}
-      {!folded && group.items.length === 0 ? (
-        <p className="px-5 py-2 text-xs text-muted-foreground">No sessions</p>
-      ) : null}
-    </section>
-  );
 }
 
 /**
@@ -103,20 +66,34 @@ function onListKeyDown(event: KeyboardEvent): void {
 export function ProjectRail({ view, onFocusPane, onSelectTab, ...deps }: ProjectRailProps) {
   useEffect(() => runRailClock(), []);
   const state = railViewState.value;
-  const folded = foldedProjects.value;
+  const searching = state.query.trim() !== "";
+  const byProject = state.grouping === "project";
+  // The user's folds are kept aside, so clearing a search brings them back.
+  const folded = searching || !byProject ? NO_FOLDS : foldedProjects.value;
   // The row the keyboard last stood on: it keeps the Tab stop (and its buttons) while it lives.
   const [activeId, setActiveId] = useState<string | null>(null);
-  // The memo reads the clock once, as the shipped rail's does; only time grouping uses it.
-  const model = useMemo(() => buildRailView(view, state, Date.now()), [view, state]);
-  const open = model.groups.filter((group) => !folded.has(group.key));
-  const rows = open.flatMap((group) => group.items);
+  // The memo reads the clock once, as the shipped rail's does. Only time buckets age, so only
+  // that grouping follows the ticking clock; the others never rebuild on a tick.
+  const clock = state.grouping === "time" ? railNow.value : 0;
+  const model = useMemo(
+    () => buildRailView(view, state, clock === 0 ? Date.now() : clock),
+    [view, state, clock],
+  );
+  const rows = model.groups
+    .filter((group) => !folded.has(group.key))
+    .flatMap((group) => group.items);
   // One Tab stop for all rows: where the keyboard last was, else the focused row, else the first.
   const tabStopId = (
     rows.find((item) => item.id === activeId) ??
     rows.find(isRailItemFocused) ??
     rows[0]
   )?.id;
-  const selection: RailSelection = { onFocusPane, onSelectTab };
+  const env: RailRowEnv = {
+    tabStopId,
+    pinned: state.pinned,
+    selection: { onFocusPane, onSelectTab },
+    deps,
+  };
   return (
     <section
       aria-label="Open agents"
@@ -130,19 +107,22 @@ export function ProjectRail({ view, onFocusPane, onSelectTab, ...deps }: Project
       }}
       className="ui-preset min-w-0 bg-transparent pb-3"
     >
-      {model.groups.map((group) => (
-        <ProjectSection
-          key={group.key}
-          group={group}
-          folded={folded.has(group.key)}
-          tabStopId={tabStopId}
-          pinned={state.pinned}
-          selection={selection}
-          deps={deps}
-        />
-      ))}
+      {model.groups.map((group) =>
+        byProject ? (
+          <ProjectSection key={group.key} group={group} folded={folded.has(group.key)} env={env} />
+        ) : (
+          <FlatSection key={group.key} group={group} env={env} />
+        ),
+      )}
       {model.groups.length === 0 ? (
-        <p className="px-4 py-10 text-center text-xs text-muted-foreground">Nothing here</p>
+        <div className="flex flex-col items-center gap-2 px-4 py-10 text-center text-xs text-muted-foreground">
+          <p>{searching ? "No sessions match" : "Nothing here"}</p>
+          {searching ? (
+            <Button variant="outline" size="sm" onClick={() => setRailQuery("")}>
+              Clear search
+            </Button>
+          ) : null}
+        </div>
       ) : null}
     </section>
   );

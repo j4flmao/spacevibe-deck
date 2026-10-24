@@ -29,6 +29,7 @@ import { RailCreate } from "./rail-create";
 import { isReleaseSwitchEnabled } from "../lib/release-switches";
 import { rendererReleaseSwitches } from "../terminal/action-availability";
 import { ProjectRail } from "./project-rail/project-rail";
+import { onProjectRailKeyDown, ProjectRailControls } from "./project-rail/project-rail-controls";
 
 /**
  * The agent status rail.
@@ -322,12 +323,17 @@ function WorktreeCardRail(props: AgentRailProps) {
   }
 
   // Read at render time, never at import (release-switch convention). On, the project-first
-  // rail replaces the cluster list only: the create row, footer and usage summary stay, and
+  // rail replaces the create row and the cluster list: the footer and usage summary stay, and
   // the collapsed avatar column above is still the old one. Rows call the same callbacks.
   if (isReleaseSwitchEnabled("projectRail", rendererReleaseSwitches())) {
     return (
-      <nav class="asr-rail asr-rail--mounted" aria-label="Agents">
-        {create("row")}
+      <nav class="asr-rail asr-rail--mounted" aria-label="Agents" onKeyDown={onProjectRailKeyDown}>
+        <ProjectRailControls
+          stream={view.stream}
+          actions={props.cardActions}
+          onOpenBoard={props.legacy.onOpenWorkspace}
+          disabled={props.legacy.openWorkspaceDisabled}
+        />
         <div class="asr-rail__list">
           <ProjectRail
             view={view}

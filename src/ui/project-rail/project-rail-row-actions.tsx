@@ -8,9 +8,7 @@ import {
   PushPin,
   PushPinSlash,
   X,
-  type Icon,
 } from "@phosphor-icons/react";
-import type { ComponentChildren, JSX } from "preact";
 import { useRef } from "preact/hooks";
 import { cn } from "@/lib/cn";
 import { Button } from "../controls/button";
@@ -18,54 +16,15 @@ import { DeckIcon, ROW_ICON } from "../controls/deck-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../controls/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../controls/tooltip";
 import type { RowCommands } from "./project-rail-commands";
+import { MenuEntry, Tip } from "./project-rail-menu-parts";
 
 /** Hover actions show on hover, keyboard focus or while their menu is open; they never take room. */
 const REVEAL =
   "pointer-events-none opacity-0 group-hover/item:pointer-events-auto group-hover/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:opacity-100 has-[[data-popup-open]]:pointer-events-auto has-[[data-popup-open]]:opacity-100";
-
-function Tip({
-  label,
-  button,
-  children,
-}: {
-  readonly label: string;
-  readonly button: JSX.Element;
-  readonly children: ComponentChildren;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger render={button}>{children}</TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-function MenuEntry({
-  icon,
-  onClick,
-  disabled,
-  variant,
-  children,
-}: {
-  readonly icon: Icon;
-  readonly onClick: () => void;
-  readonly disabled?: boolean;
-  readonly variant?: "destructive";
-  readonly children: ComponentChildren;
-}) {
-  return (
-    <DropdownMenuItem onClick={onClick} disabled={disabled} variant={variant}>
-      <DeckIcon icon={icon} size={ROW_ICON} />
-      {children}
-    </DropdownMenuItem>
-  );
-}
 
 export interface ProjectRailRowActionsProps {
   /** The row's title, so every button names the row it acts on. */

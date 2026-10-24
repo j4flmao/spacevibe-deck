@@ -62,17 +62,28 @@ describe("AgentRail behind the projectRail switch", () => {
     expect(rows()).toHaveLength(0);
   });
 
-  it("replaces only the cluster list when the switch is on", async () => {
+  it("replaces the cluster list and the create row when the switch is on", async () => {
     pinHost(true);
     mount({ footer: <div data-testid="footer" /> });
     await settle();
 
     expect(host.querySelector(".asr-cluster")).toBeNull();
     expect(rows()).toHaveLength(5);
-    // The create row above, the footer below and the nav that places them are still the old ones.
+    // The controls strip stands where the create row stood; the footer and the nav that
+    // places them are still the old ones.
+    expect(host.querySelector(".rail-create")).toBeNull();
+    expect(host.querySelector('input[aria-label="Search sessions"]')).not.toBeNull();
     expect(host.querySelector("nav.asr-rail--mounted")).not.toBeNull();
-    expect(host.querySelector(".rail-create")).not.toBeNull();
     expect(host.querySelector("[data-testid=footer]")).not.toBeNull();
+  });
+
+  it("keeps the shipped create row while the switch is off", async () => {
+    pinHost(false);
+    mount();
+    await settle();
+
+    expect(host.querySelector(".rail-create")).not.toBeNull();
+    expect(host.querySelector('input[aria-label="Search sessions"]')).toBeNull();
   });
 
   it("leaves the collapsed avatar column alone when the switch is on", async () => {

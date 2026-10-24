@@ -24,6 +24,8 @@ export interface ProjectRailRowProps {
   readonly tabStop: boolean;
   readonly pinned: boolean;
   readonly commands: RowCommands;
+  /** Set when the list is not grouped by project, so the row names its own project (LAY-3). */
+  readonly projectName?: string;
   readonly onSelect: () => void;
 }
 
@@ -32,7 +34,14 @@ export interface ProjectRailRowProps {
  * Hover or focus adds pin, archive and the more menu over the trailing edge; the same menu
  * opens on right-click. F2 or a double-click renames in place.
  */
-export function ProjectRailRow({ item, tabStop, pinned, commands, onSelect }: ProjectRailRowProps) {
+export function ProjectRailRow({
+  item,
+  tabStop,
+  pinned,
+  commands,
+  projectName,
+  onSelect,
+}: ProjectRailRowProps) {
   const focused = isRailItemFocused(item);
   const { entry } = item;
   const { rename } = commands;
@@ -113,6 +122,9 @@ export function ProjectRailRow({ item, tabStop, pinned, commands, onSelect }: Pr
                 <AgentGlyph agent={entry.agent} className="size-3 shrink-0" />
               ) : (
                 <DeckIcon icon={TerminalWindow} size={CHROME_ICON} class="size-3 shrink-0" />
+              )}
+              {projectName === undefined ? null : (
+                <span className="min-w-0 shrink truncate">{projectName}</span>
               )}
               <span className="inline-flex min-w-0 items-center gap-1 rounded-sm bg-muted px-1.5">
                 <DeckIcon

@@ -26,14 +26,20 @@ vi.mock("../controls/deck-icon", () => ({
 
 import { invoke } from "../../host/bridge";
 import type { CardActions } from "../worktree-card-menus";
-import { byRole, settle as settleTimers, waitUntil } from "../controls/preset-test-kit";
+import { byRole, waitUntil } from "../controls/preset-test-kit";
 import {
+  activate,
   click,
+  closeMenu,
   headers,
   host,
   installRailHarness,
   item,
+  menuItems,
+  menuLabels,
   mount,
+  openMenuByRightClick,
+  pick,
   pinHost,
   press,
   row,
@@ -52,38 +58,6 @@ const rowIds = () => rows().map((r) => r.dataset.railRow);
 const button = (id: string, label: string) =>
   item(id)?.querySelector<HTMLElement>(`button[aria-label^="${label}"]`) ?? null;
 const input = () => host.querySelector<HTMLInputElement>('input[aria-label="Session name"]');
-const menuItems = () =>
-  [...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')].map((entry) => entry);
-const menuLabels = () => menuItems().map((entry) => text(entry));
-
-/** A real activation: Base UI listens for the click a button's own press produces. */
-async function activate(element: HTMLElement | null | undefined): Promise<void> {
-  await act(async () => {
-    element?.click();
-  });
-  await settleTimers();
-}
-
-async function openMenuByRightClick(id: string): Promise<boolean> {
-  let cancelled = false;
-  await act(async () => {
-    const event = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
-    item(id)?.dispatchEvent(event);
-    cancelled = event.defaultPrevented;
-  });
-  await waitUntil(() => byRole("menu") !== null);
-  return cancelled;
-}
-
-async function closeMenu(): Promise<void> {
-  press(byRole("menu"), "Escape");
-  await waitUntil(() => byRole("menu") === null);
-}
-
-async function pick(label: string): Promise<void> {
-  await activate(menuItems().find((entry) => text(entry) === label));
-}
-
 const actionsWithFinder = (onOpenFolder: (path: string) => void): CardActions => ({
   agents: [],
   agentsResolved: true,
