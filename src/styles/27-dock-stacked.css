@@ -17,8 +17,9 @@
 }
 
 /* The header is `.dock-panel__header` (its `--frame-h` height and Windows inset are keyed on
-   that class); the identity needs more room on the left than the legacy tab row's 4px. */
-.agent-dock .dock-panel__header {
+   that class); the identity needs more room on the left than the legacy tab row's 4px. Keyed on
+   the column, not the root, so it reaches the header inside the sheet's portal too. */
+.agent-dock__column .dock-panel__header {
   padding-left: 12px;
 }
 
