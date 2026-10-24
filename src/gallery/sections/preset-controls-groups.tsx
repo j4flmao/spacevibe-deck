@@ -59,9 +59,10 @@ import {
   TooltipTrigger,
 } from "../../ui/controls/preset-controls";
 
-const VARIANTS = ["default", "secondary", "outline", "ghost", "destructive", "link"] as const;
+const VARIANTS = ["default", "secondary", "outline", "ghost", "destructive"] as const;
+const BADGE_VARIANTS = ["default", "secondary", "outline"] as const;
 const SIZES = ["xs", "sm", "default", "lg"] as const;
-const ICON_SIZES = ["icon-xs", "icon-sm", "icon", "icon-lg"] as const;
+const ICON_SIZES = ["icon-xs", "icon-sm", "icon"] as const;
 const MODES = [
   { value: "system", label: "System" },
   { value: "dark", label: "Dark" },
@@ -121,7 +122,7 @@ export function ButtonsAndBadges() {
         </Button>
       </Group>
       <Group name="Badge">
-        {VARIANTS.map((variant) => (
+        {BADGE_VARIANTS.map((variant) => (
           <Badge key={variant} variant={variant}>
             {variant}
           </Badge>
