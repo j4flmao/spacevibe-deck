@@ -72,22 +72,25 @@ describe("focusExpand", () => {
 });
 
 describe("agentNotifications", () => {
-  it("defaults to false", () => {
-    expect(DEFAULT_SETTINGS.agentNotifications).toBe(false);
-    expect(validateSettings({}).agentNotifications).toBe(false);
+  it("defaults on and migrates legacy off choices", () => {
+    expect(DEFAULT_SETTINGS.agentNotifications).toBe(true);
+    expect(validateSettings({}).agentNotifications).toBe(true);
+    expect(validateSettings({ agentNotifications: false }).agentNotifications).toBe(true);
   });
 
-  it("accepts true", () => {
-    expect(validateSettings({ agentNotifications: true }).agentNotifications).toBe(true);
+  it.each([true, false])("preserves a migrated choice of %s", (agentNotifications) => {
+    expect(
+      validateSettings({ agentNotifications, agentNotificationsDefaultOn: true })
+        .agentNotifications,
+    ).toBe(agentNotifications);
   });
 
-  it("accepts false", () => {
-    expect(validateSettings({ agentNotifications: false }).agentNotifications).toBe(false);
-  });
-
-  it("falls back to false on invalid types (string, number)", () => {
-    expect(validateSettings({ agentNotifications: "yes" }).agentNotifications).toBe(false);
-    expect(validateSettings({ agentNotifications: 1 }).agentNotifications).toBe(false);
+  it("defaults on for invalid values", () => {
+    expect(
+      validateSettings({ agentNotifications: "yes", agentNotificationsDefaultOn: true })
+        .agentNotifications,
+    ).toBe(true);
+    expect(validateSettings({ agentNotifications: 1 }).agentNotifications).toBe(true);
   });
 });
 

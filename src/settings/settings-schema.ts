@@ -53,6 +53,8 @@ export interface Settings {
    */
   showStatusBar: boolean;
   agentNotifications: boolean;
+  /** Persisted once; later user choices must never be migrated again. */
+  agentNotificationsDefaultOn: boolean;
   tabBarPosition: TabBarPosition;
   /**
    * Width of the navigation sidebar column, in CSS pixels (DL-18.9). Only
@@ -225,7 +227,8 @@ export const DEFAULT_SETTINGS: Settings = {
   focusExpand: false,
   showPaneBar: false,
   showStatusBar: false,
-  agentNotifications: false,
+  agentNotifications: true,
+  agentNotificationsDefaultOn: true,
   tabBarPosition: "left",
   sidebarWidth: 275,
   sidebarCollapsed: false,
@@ -536,9 +539,10 @@ export function validateSettings(raw: unknown): Settings {
     showPaneBar:
       typeof source.showPaneBar === "boolean" ? source.showPaneBar : DEFAULT_SETTINGS.showPaneBar,
     agentNotifications:
-      typeof source.agentNotifications === "boolean"
+      source.agentNotificationsDefaultOn === true && typeof source.agentNotifications === "boolean"
         ? source.agentNotifications
         : DEFAULT_SETTINGS.agentNotifications,
+    agentNotificationsDefaultOn: true,
     tabBarPosition: isTabBarPosition(source.tabBarPosition)
       ? source.tabBarPosition
       : DEFAULT_SETTINGS.tabBarPosition,

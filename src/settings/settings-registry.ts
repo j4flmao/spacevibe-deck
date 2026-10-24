@@ -83,6 +83,12 @@ export const SETTINGS_REGISTRY: Readonly<Record<keyof Settings, SettingEntry>> =
     label: "Agent notifications",
     keywords: ["alert", "attention"],
   },
+  agentNotificationsDefaultOn: {
+    page: null,
+    scope: "data",
+    label: "Notification default migration",
+    keywords: [],
+  },
   tabBarPosition: {
     page: "appearance",
     scope: "preference",

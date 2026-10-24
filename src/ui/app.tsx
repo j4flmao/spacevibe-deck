@@ -6,6 +6,8 @@ import { agentLaunchPage, agentLaunchPageAvailable } from "../launcher/agent-lau
 import { createAgentInstallHost } from "../launcher/agent-install-host";
 import { registerAgentInstallHost } from "../launcher/agent-install-store";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
+import { installAttentionBadgeSync } from "./attention/attention-badge-sync";
+import { installNotificationActivation } from "./attention/notification-activation";
 import { useSignal, useSignalEffect } from "@preact/signals";
 import { launchPageAgents, quickAgentOptions } from "../settings/quick-agents";
 import { openSettingsAt } from "./settings/settings-focus-store";
@@ -681,6 +683,8 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
   // (`recent-activity-sync.ts`), so a sentence in the sidebar is the one the
   // agent said last rather than the one it said at launch.
   useEffect(() => installRecentActivitySync(), []);
+  useEffect(() => installAttentionBadgeSync(), []);
+  useEffect(() => installNotificationActivation(focusRailPane), []);
   // The window's clone job outlives the Open Board, so its controller is
   // attached here for the window's whole life, not when the board mounts.
   useEffect(() => {

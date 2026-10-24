@@ -3,6 +3,23 @@ import { describe, expect, it } from "vitest";
 import { mergeSettings } from "./settings-merge";
 
 describe("mergeSettings", () => {
+  it("migrates notifications once and ignores a late window's migration after opt-out", () => {
+    const migrated = mergeSettings(
+      { agentNotifications: false, fontSize: 16 },
+      { agentNotificationsDefaultOn: true },
+    );
+    expect(migrated).toEqual({
+      agentNotifications: true,
+      agentNotificationsDefaultOn: true,
+      fontSize: 16,
+    });
+    const disabled = mergeSettings(migrated, { agentNotifications: false });
+    expect(mergeSettings(disabled, { agentNotificationsDefaultOn: true })).toEqual({
+      agentNotifications: false,
+      agentNotificationsDefaultOn: true,
+      fontSize: 16,
+    });
+  });
   it("replaces a patched key and keeps the rest", () => {
     expect(mergeSettings({ fontSize: 13, theme: "dark" }, { fontSize: 15 })).toEqual({
       fontSize: 15,

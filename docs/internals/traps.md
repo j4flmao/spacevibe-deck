@@ -82,6 +82,13 @@ constants that currently switch behaviour off and are meant to be flipped back.
 
 ## Hosts and evidence
 
+- **macOS notification evidence requires a signed build.** Electron's notification API does
+  not display alerts from unsigned development builds; the first-alert permission prompt
+  cannot be proved in `electron:dev` or the unsigned `electron:package`. The Dock badge also
+  requires notification permission. Unit tests and an isolated unsigned run can check the
+  [routing and count](../../electron/ipc/register-shell.ts), not native delivery, permission
+  or badge visibility. Check those on a signed build.
+
 - **The app running an update is the old build.** An updater fix cannot protect the
   transition into the release that carries it.
 - **An installer handover cannot be retried in the same process.**

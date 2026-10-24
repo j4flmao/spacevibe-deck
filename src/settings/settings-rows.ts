@@ -76,6 +76,7 @@ export const SETTING_CONTROLS: Readonly<Record<SettingKey, SettingControl>> = {
   showPaneBar: SWITCH,
   showStatusBar: SWITCH,
   agentNotifications: SWITCH,
+  agentNotificationsDefaultOn: NONE,
   tabBarPosition: { kind: "choice", choices: TAB_BAR_CHOICES },
   sidebarWidth: NONE,
   sidebarCollapsed: NONE,
