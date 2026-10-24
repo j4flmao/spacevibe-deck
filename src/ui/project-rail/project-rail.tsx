@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import type { AgentRailView } from "../agent-rail-model";
 import { buildRailView, type RailGroup } from "../rail-view-model";
+import { rowCommands, type RailRowDeps } from "./project-rail-commands";
 import { ProjectRailHeader } from "./project-rail-header";
 import { isRailItemFocused, selectRailItem, type RailSelection } from "./project-rail-model";
 import { ProjectRailRow } from "./project-rail-row";
@@ -14,7 +15,7 @@ import {
 /** The things arrow keys walk: every project header and every row of an open project. */
 const STOPS = "[data-rail-project],[data-rail-row]";
 
-export interface ProjectRailProps extends RailSelection {
+export interface ProjectRailProps extends RailSelection, RailRowDeps {
   /** The view `AgentRail` already builds, so the two rails cannot disagree about it. */
   readonly view: AgentRailView;
 }
@@ -23,12 +24,16 @@ function ProjectSection({
   group,
   folded,
   tabStopId,
+  pinned,
   selection,
+  deps,
 }: {
   readonly group: RailGroup;
   readonly folded: boolean;
   readonly tabStopId: string | undefined;
+  readonly pinned: ReadonlySet<string>;
   readonly selection: RailSelection;
+  readonly deps: RailRowDeps;
 }) {
   return (
     <section aria-label={group.label}>
@@ -44,6 +49,8 @@ function ProjectSection({
               key={item.id}
               item={item}
               tabStop={item.id === tabStopId}
+              pinned={pinned.has(item.id)}
+              commands={rowCommands(item, deps)}
               onSelect={() => selectRailItem(item, selection)}
             />
           ))}
@@ -93,21 +100,34 @@ function onListKeyDown(event: KeyboardEvent): void {
  * The project-first rail's list (spec LAY-1..LAY-4), mounted by `AgentRail` behind the
  * `projectRail` release switch in place of its cluster list.
  */
-export function ProjectRail({ view, onFocusPane, onSelectTab }: ProjectRailProps) {
+export function ProjectRail({ view, onFocusPane, onSelectTab, ...deps }: ProjectRailProps) {
   useEffect(() => runRailClock(), []);
   const state = railViewState.value;
   const folded = foldedProjects.value;
+  // The row the keyboard last stood on: it keeps the Tab stop (and its buttons) while it lives.
+  const [activeId, setActiveId] = useState<string | null>(null);
   // The memo reads the clock once, as the shipped rail's does; only time grouping uses it.
   const model = useMemo(() => buildRailView(view, state, Date.now()), [view, state]);
   const open = model.groups.filter((group) => !folded.has(group.key));
   const rows = open.flatMap((group) => group.items);
-  // One Tab stop for all rows: the row that holds the keyboard, else the first.
-  const tabStopId = (rows.find(isRailItemFocused) ?? rows[0])?.id;
+  // One Tab stop for all rows: where the keyboard last was, else the focused row, else the first.
+  const tabStopId = (
+    rows.find((item) => item.id === activeId) ??
+    rows.find(isRailItemFocused) ??
+    rows[0]
+  )?.id;
   const selection: RailSelection = { onFocusPane, onSelectTab };
   return (
     <section
       aria-label="Open agents"
       onKeyDown={onListKeyDown}
+      onFocusCapture={(event: FocusEvent) => {
+        const row =
+          event.target instanceof Element ? event.target.closest("[data-rail-item]") : null;
+        if (row !== null) {
+          setActiveId(row.getAttribute("data-rail-item"));
+        }
+      }}
       className="ui-preset min-w-0 bg-transparent pb-3"
     >
       {model.groups.map((group) => (
@@ -116,7 +136,9 @@ export function ProjectRail({ view, onFocusPane, onSelectTab }: ProjectRailProps
           group={group}
           folded={folded.has(group.key)}
           tabStopId={tabStopId}
+          pinned={state.pinned}
           selection={selection}
+          deps={deps}
         />
       ))}
       {model.groups.length === 0 ? (

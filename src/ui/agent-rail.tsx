@@ -333,6 +333,10 @@ function WorktreeCardRail(props: AgentRailProps) {
             view={view}
             onFocusPane={props.onFocusPane}
             onSelectTab={props.onSelectTab}
+            onClosePane={props.onClosePane}
+            onCloseTab={props.onCloseTab}
+            onRenameTab={props.onRenameTab}
+            cardActions={props.cardActions}
           />
         </div>
         {props.footer}

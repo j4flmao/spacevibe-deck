@@ -7,9 +7,23 @@
  * clock the rows' time-in-state reads.
  */
 import { signal } from "@preact/signals";
-import { INITIAL_RAIL_VIEW_STATE, type RailViewState } from "../rail-view-state";
+import {
+  INITIAL_RAIL_VIEW_STATE,
+  setArchived,
+  togglePinned,
+  type RailViewState,
+} from "../rail-view-state";
 
 export const railViewState = signal<RailViewState>(INITIAL_RAIL_VIEW_STATE);
+
+export function togglePin(id: string): void {
+  railViewState.value = togglePinned(railViewState.value, id);
+}
+
+/** Archived rows are drawn nowhere until the Archived section lands. */
+export function archiveItem(id: string): void {
+  railViewState.value = setArchived(railViewState.value, id, true);
+}
 
 /** `RailGroup.key`s. A new Set per change (C1), so the signal notifies. */
 export const foldedProjects = signal<ReadonlySet<string>>(new Set());
