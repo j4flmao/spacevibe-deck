@@ -24,8 +24,8 @@ vi.mock("../../chrome/events", async (importOriginal) => {
   return { ...actual, reportPersistError: vi.fn() };
 });
 
-// Imported first: entered through `command-settings-state` or the focus store, this module graph
-// fails at import with an xterm "Data error" (see the report); through the kit it loads.
+// The import order here is load-bearing: with the kit below these imports, this suite fails at import
+// with an xterm "Data error" (tiny-inflate in the unicode-graphemes addon). Root cause unknown.
 import {
   clickIn,
   controlOf,
