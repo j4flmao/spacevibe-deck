@@ -251,6 +251,26 @@ describe("tailBytes", () => {
     expect(tailBytes(filePath, 11)?.toString("utf8")).toBe("second-half");
   });
 
+  it("decompresses an unchanged compressed rollout once, and again once it changes", () => {
+    const filePath = path.join(dir, "rollout-cached.jsonl.zst");
+    const pinned = T0 / 1000;
+    const compressed = zstdCompressSync(Buffer.from(`${"line\n".repeat(2000)}first`));
+    writeFileSync(filePath, compressed);
+    utimesSync(filePath, pinned, pinned);
+    expect(tailBytes(filePath, 5)?.toString("utf8")).toBe("first");
+
+    // Same size and mtime: the cached end answers without reading the bytes.
+    writeFileSync(filePath, Buffer.alloc(compressed.length));
+    utimesSync(filePath, pinned, pinned);
+    expect(tailBytes(filePath, 5)?.toString("utf8")).toBe("first");
+
+    // A wider window than the cache kept reads the file again.
+    const long = Buffer.concat([Buffer.alloc(3 * 1024 * 1024, "x"), Buffer.from("\nlast")]);
+    writeFileSync(filePath, zstdCompressSync(long));
+    expect(tailBytes(filePath, 4)?.toString("utf8")).toBe("last");
+    expect(tailBytes(filePath, 2 * 1024 * 1024)?.length).toBe(2 * 1024 * 1024);
+  });
+
   it("refuses a symlink rather than following it, and answers null when missing", () => {
     const target = path.join(dir, "target.txt");
     writeFileSync(target, "secret");

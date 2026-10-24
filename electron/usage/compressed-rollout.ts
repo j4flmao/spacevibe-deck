@@ -28,13 +28,50 @@ const MAX_DECOMPRESSED_BYTES = 512 * 1024 * 1024;
  */
 const FIRST_HEAD_WINDOW_BYTES = 16 * 1024;
 
+/**
+ * Decompressed bytes kept from the end of a compressed rollout: the widest
+ * window `session-tail.ts` reads. The rail re-asks every pane's tail whenever
+ * any pane's attention moves, and a `.zst` has no seekable end, so without
+ * this an idle restored Codex pane would decompress its whole rollout (up to
+ * 89 MiB measured) once per window step on every ask.
+ */
+const TAIL_CACHE_BYTES = 1024 * 1024;
+const TAIL_CACHE_ENTRIES = 16;
+
+/** `path + mtime + size` → the end of its content, and whether that is all of it. */
+const tailCache = new Map<string, { readonly tail: Buffer; readonly whole: boolean }>();
+
 export function isCompressedRollout(filePath: string): boolean {
   return filePath.endsWith(CODEX_COMPRESSED_SUFFIX);
 }
 
 /** The whole decompressed content of an open `.zst` file. Throws on a corrupt or truncated frame. */
-export function readDecompressed(fd: number): Buffer {
+function readDecompressed(fd: number): Buffer {
   return zstdDecompressSync(readFileSync(fd), { maxOutputLength: MAX_DECOMPRESSED_BYTES });
+}
+
+/**
+ * The last `cap` decompressed bytes of an open `.zst` file at `filePath`,
+ * decompressing it at most once while it is unchanged.
+ */
+export function readDecompressedTail(fd: number, filePath: string, cap: number): Buffer {
+  const { mtimeMs, size } = fstatSync(fd);
+  const key = JSON.stringify([filePath, mtimeMs, size]);
+  let entry = tailCache.get(key);
+  if (entry === undefined || (!entry.whole && entry.tail.length < cap)) {
+    const content = readDecompressed(fd);
+    const keep = Math.max(cap, TAIL_CACHE_BYTES);
+    entry = {
+      tail: Buffer.from(content.subarray(Math.max(0, content.length - keep))),
+      whole: content.length <= keep,
+    };
+    tailCache.delete(key);
+    tailCache.set(key, entry);
+    if (tailCache.size > TAIL_CACHE_ENTRIES) {
+      tailCache.delete(tailCache.keys().next().value as string);
+    }
+  }
+  return entry.tail.subarray(Math.max(0, entry.tail.length - cap));
 }
 
 /**
