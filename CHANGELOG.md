@@ -15,6 +15,8 @@ the release PR, and frozen at the tag — never an auto-generated commit list.
   session the pane last had, and the sidebar shows what opencode 2 last said.
 - **fish panes no longer open on a failed status.** The first prompt of a new fish pane showed
   `[1]`, or a red prompt character, although nothing had failed.
+- **opencode keeps its status after an install or upgrade.** The first launch of a new opencode
+  binary could start without Deck's status and leave a background opencode server running.
 - **Agent alerts reach you outside Deck.** Background agents notify when they finish, need
   input or approval, or fail. Click an alert to return to its pane; the macOS Dock badge sums
   the panes that need you across windows. Alerts are on by default, including a one-time
