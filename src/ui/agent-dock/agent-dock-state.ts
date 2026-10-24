@@ -6,11 +6,15 @@
 import { signal } from "@preact/signals";
 import type { DockTab } from "../../settings/settings-schema";
 
-export type DockSectionId = "files" | "usage" | "history";
+export type DockSectionId = "changes" | "files" | "usage" | "history";
 
-/** Files holds the Changes list and the open document until A2, so it starts unfolded. */
+/**
+ * What a fresh window shows (the mock's own defaults): the checkout's Changes, the thing an agent's
+ * work leaves behind. Usage polls while it is unfolded, so it waits for a press.
+ */
 const DEFAULT_OPEN: Readonly<Record<DockSectionId, boolean>> = {
-  files: true,
+  changes: true,
+  files: false,
   usage: false,
   history: false,
 };

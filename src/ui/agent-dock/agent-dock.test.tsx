@@ -83,6 +83,11 @@ function twoAgents(focusedKey: number | null): TabView[] {
 }
 
 const BODIES = {
+  changes: (root: string | null) => (
+    <DockSection id="changes" title="Changes">
+      <p>changes body at {root ?? "no folder"}</p>
+    </DockSection>
+  ),
   files: (root: string | null) => <p>files body at {root ?? "no folder"}</p>,
   usage: <p>usage body</p>,
   history: <p>history body</p>,
@@ -177,18 +182,26 @@ describe("the stacked dock in a wide window", () => {
     await view.unmount();
   });
 
-  it("stacks Files, Usage and History on one scroll with nothing behind a tab", async () => {
+  it("stacks Changes, Usage, Files and History on one scroll with nothing behind a tab", async () => {
     const view = await mount(dock());
-    expect(triggers().map((text) => text?.trim())).toEqual(["Files", "Usage", "History"]);
+    expect(triggers().map((text) => text?.trim())).toEqual([
+      "Changes",
+      "Usage",
+      "Files",
+      "History",
+    ]);
     expect(document.body.querySelector('[role="tab"]')).toBeNull();
-    expect(bodyText()).toContain("files body");
     await view.unmount();
   });
 
-  it("starts with Files open and Usage and History folded, and folds and unfolds on press", async () => {
+  it("starts with Changes open and the rest folded, and folds and unfolds on press", async () => {
     const view = await mount(dock());
-    expect(trigger("Files").getAttribute("aria-expanded")).toBe("true");
-    expect(trigger("Usage").getAttribute("aria-expanded")).toBe("false");
+    expect(trigger("Changes").getAttribute("aria-expanded")).toBe("true");
+    expect(bodyText()).toContain("changes body");
+    for (const title of ["Usage", "Files", "History"]) {
+      expect(trigger(title).getAttribute("aria-expanded")).toBe("false");
+    }
+    expect(bodyText()).not.toContain("files body");
     expect(bodyText()).not.toContain("usage body");
 
     await click(trigger("Usage"));
@@ -204,27 +217,27 @@ describe("the stacked dock in a wide window", () => {
 
   it("keeps the folds when focus moves to another agent and when the dock closes and reopens", async () => {
     let view = await mount(dock());
-    await click(trigger("Files"));
+    await click(trigger("Changes"));
     await click(trigger("History"));
-    expect(bodyText()).not.toContain("files body");
+    expect(bodyText()).not.toContain("changes body");
     expect(bodyText()).toContain("history body");
 
     tabViews.value = twoAgents(2);
     activeTabIndex.value = 1;
     await settle();
-    expect(trigger("Files").getAttribute("aria-expanded")).toBe("false");
+    expect(trigger("Changes").getAttribute("aria-expanded")).toBe("false");
     expect(trigger("History").getAttribute("aria-expanded")).toBe("true");
 
     await view.unmount();
     view = await mount(dock());
-    expect(trigger("Files").getAttribute("aria-expanded")).toBe("false");
+    expect(trigger("Changes").getAttribute("aria-expanded")).toBe("false");
     expect(trigger("History").getAttribute("aria-expanded")).toBe("true");
     await view.unmount();
   });
 
   it("leaves History out where the host cannot list sessions", async () => {
     const view = await mount(dock({ bodies: { ...BODIES, history: null } }));
-    expect(triggers().map((text) => text?.trim())).toEqual(["Files", "Usage"]);
+    expect(triggers().map((text) => text?.trim())).toEqual(["Changes", "Usage", "Files"]);
     await view.unmount();
   });
 
@@ -296,13 +309,13 @@ describe("the folder the sections show", () => {
   it("starts on the tab's folder, then follows the focused agent into another checkout", async () => {
     repositoryScans.value = new Map([["/r/main", repository("/r/main", "/r/main", "/r/side")]]);
     const view = await mount(dock());
-    expect(bodyText()).toContain("files body at /r/main");
+    expect(bodyText()).toContain("changes body at /r/main");
 
     await act(async () => {
       statusInfo.value = { ...statusInfo.value, cwd: "/r/side/src" };
     });
     await settle();
-    expect(bodyText()).toContain("files body at /r/side");
+    expect(bodyText()).toContain("changes body at /r/side");
     // The tab's own folder is what file tabs and the watcher key on: it is not rewritten.
     expect(activeWorkspace.value).toBe("/r/main");
     await view.unmount();
@@ -316,7 +329,7 @@ describe("the folder the sections show", () => {
     ];
     statusInfo.value = { ...statusInfo.value, cwd: "/r/main" };
     const view = await mount(dock());
-    expect(bodyText()).toContain("files body at /r/main");
+    expect(bodyText()).toContain("changes body at /r/main");
 
     tabViews.value = [
       tab({ key: 1, panes: [pane({ paneId: 11 })] }),
@@ -325,7 +338,7 @@ describe("the folder the sections show", () => {
     activeTabIndex.value = 1;
     statusInfo.value = { ...statusInfo.value, cwd: "/r/side" };
     await settle();
-    expect(bodyText()).toContain("files body at /r/side");
+    expect(bodyText()).toContain("changes body at /r/side");
     await view.unmount();
   });
 
@@ -336,7 +349,7 @@ describe("the folder the sections show", () => {
       statusInfo.value = { ...statusInfo.value, cwd: "/r/side", paneCount: null };
     });
     await settle();
-    expect(bodyText()).toContain("files body at /r/main");
+    expect(bodyText()).toContain("changes body at /r/main");
     await view.unmount();
   });
 
@@ -346,7 +359,13 @@ describe("the folder the sections show", () => {
       statusInfo.value = { ...statusInfo.value, cwd: "/home/test/projects/other" };
     });
     await settle();
-    expect(bodyText()).toContain("files body at /r/main");
+    expect(bodyText()).toContain("changes body at /r/main");
+    await view.unmount();
+  });
+
+  it("leaves the Changes section out where the host cannot read git changes", async () => {
+    const view = await mount(dock({ bodies: { ...BODIES, changes: null } }));
+    expect(triggers().map((text) => text?.trim())).toEqual(["Usage", "Files", "History"]);
     await view.unmount();
   });
 
@@ -354,20 +373,20 @@ describe("the folder the sections show", () => {
     activeWorkspace.value = null;
     tabViews.value = twoAgents(null);
     const view = await mount(dock());
-    expect(bodyText()).toContain("files body at no folder");
+    expect(bodyText()).toContain("changes body at no folder");
     await view.unmount();
   });
 });
 
 describe("a section header", () => {
   it("shows the count at the right when the section has one", async () => {
-    setDockSectionOpen("files", true);
+    setDockSectionOpen("changes", true);
     const view = await mount(
-      <DockSection id="files" title="Files" count="7">
+      <DockSection id="changes" title="Changes" count="7">
         <p>rows</p>
       </DockSection>,
     );
-    expect(trigger("Files").textContent).toBe("Files7");
+    expect(trigger("Changes").textContent).toBe("Changes7");
     await view.unmount();
   });
 });
@@ -397,7 +416,12 @@ describe("the stacked dock under 1360px", () => {
     await click(named("Open the side panel") as HTMLElement);
     const sheet = byRole("dialog") as HTMLElement;
     expect(sheet.textContent).toContain("token refresh");
-    expect(triggers().map((text) => text?.trim())).toEqual(["Files", "Usage", "History"]);
+    expect(triggers().map((text) => text?.trim())).toEqual([
+      "Changes",
+      "Usage",
+      "Files",
+      "History",
+    ]);
     expect(dockSheetOpen.value).toBe(true);
     expect(
       browserPanelObscured({

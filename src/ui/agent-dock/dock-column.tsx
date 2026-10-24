@@ -4,14 +4,17 @@ import { DockHeader } from "./dock-header";
 import { DockSection } from "./dock-section";
 
 /**
- * What the sections show. `App` picks the bodies, as it does for the legacy column, so this
- * directory never imports a feature (`src/files`, `src/ui/usage`, `src/ui/sessions`).
+ * What the sections show. `App` picks the bodies, as it does for the legacy column, so the host
+ * (`dock-column`, `dock-section`, `dock-edge`) imports no body: not the Explorer, Usage, History
+ * or the Changes section. `dock-changes` sits in this directory only because Tailwind scans it.
  */
 export interface DockBodies {
   /**
-   * The Explorer: the Files tree, the Changes list and the open document, until the Changes
-   * section splits off. It is rooted at `root`, the folder the focused agent stands in.
+   * The Changes section, header included, because its count is the section's own state. Null where
+   * the host cannot read git changes, so the section is left out.
    */
+  readonly changes: ((root: string | null) => ComponentChildren) | null;
+  /** The file tree and the open document, rooted at `root`, the folder the focused agent stands in. */
   readonly files: (root: string | null) => ComponentChildren;
   readonly usage: ComponentChildren;
   /** Null where the host cannot list sessions, so the section is left out. */
@@ -44,11 +47,12 @@ export function DockColumn({
     <div className="agent-dock__column flex h-full min-h-0 flex-col">
       <DockHeader item={item} closeLabel={closeLabel} closeChord={closeChord} onClose={onClose} />
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <DockSection id="files" title="Files">
-          <div className="h-96 min-h-0">{bodies.files(root)}</div>
-        </DockSection>
+        {bodies.changes === null ? null : bodies.changes(root)}
         <DockSection id="usage" title="Usage">
           <div className="max-h-96 overflow-y-auto">{bodies.usage}</div>
+        </DockSection>
+        <DockSection id="files" title="Files">
+          <div className="h-96 min-h-0">{bodies.files(root)}</div>
         </DockSection>
         {bodies.history === null ? null : (
           <DockSection id="history" title="History">

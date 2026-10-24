@@ -223,6 +223,7 @@ import { DockPanel } from "./dock/dock-panel";
 import { AgentDock } from "./agent-dock/agent-dock";
 import { agentDockEnabled, dockStageWidth } from "./agent-dock/agent-dock-layout";
 import { dockSheetOpen, setDockSectionOpen } from "./agent-dock/agent-dock-state";
+import { DockChanges } from "./agent-dock/dock-changes";
 import { DockSlot } from "./agent-dock/dock-slot";
 import { SidebarActions } from "./sidebar-actions";
 import { DockToggle } from "./dock/dock-toggle";
@@ -2124,18 +2125,18 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
    * The Explorer over one folder: the legacy dock roots it at the tab's folder, the stacked dock
    * at the checkout the focused agent stands in (`agent-dock/dock-root.ts`).
    */
-  const explorerAt = (workspacePath: string | null) => (
+  const explorerAt = (workspacePath: string | null, changesAvailable: boolean) => (
     <ExplorerTab
       controller={fileController}
       onDocumentEmpty={() => tabsRef.current?.focusActive()}
       workspacePath={workspacePath}
       canCreate={fileCreateAvailable}
-      changesAvailable={gitChangesAvailable}
+      changesAvailable={changesAvailable}
     />
   );
   /** What each dock surface shows: the legacy column mounts one, the stacked dock all of them. */
   const dockBodies = {
-    files: explorerAt(activeWorkspace.value),
+    files: explorerAt(activeWorkspace.value, gitChangesAvailable),
     usage: <UsageDockTab onOpenDetails={() => tabsRef.current?.runAction("open-usage")} />,
     history: <SessionsDockTab onResume={(entry) => void resumeSessionEntry(entry)} />,
   };
@@ -2781,7 +2782,9 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
                   onClose={() => tabsRef.current?.runAction("toggle-dock")}
                   bodies={{
                     ...dockBodies,
-                    files: explorerAt,
+                    // Changes is its own section here, so the Explorer keeps only the files.
+                    changes: gitChangesAvailable ? (root) => <DockChanges root={root} /> : null,
+                    files: (root) => explorerAt(root, false),
                     history: sessionsSupported.value ? dockBodies.history : null,
                   }}
                 />
