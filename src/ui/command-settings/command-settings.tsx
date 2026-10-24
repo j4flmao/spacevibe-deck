@@ -1,7 +1,10 @@
 import { useEffect, useRef } from "preact/hooks";
 import { activeKeyIn, isNavigable, type CommandItem } from "../../settings/command-hits";
 import type { CommandSources } from "../../settings/command-search";
+import { CaretLeft } from "@phosphor-icons/react";
 import { initSettings, settingsLoadState } from "../../settings/settings-store";
+import { Button } from "../controls/button";
+import { DeckIcon, ROW_ICON } from "../controls/deck-icon";
 import { LoadError } from "../controls/load-error";
 import { settingsTarget } from "../settings/settings-focus-store";
 import { openHit, openIssue } from "./command-settings-actions";
@@ -43,9 +46,11 @@ interface ListProps {
   readonly sources: CommandSources;
   /** The home list has no area headings, so a row names its own area. */
   readonly crumbs: boolean;
+  /** A row or button that unmounts itself on press leaves focus on the body; the search takes it back. */
+  readonly focusSearch: () => void;
 }
 
-function List({ items, active, sources, crumbs }: ListProps) {
+function List({ items, active, sources, crumbs, focusSearch }: ListProps) {
   return (
     <ul className="m-0 list-none">
       {items.map((item) => {
@@ -61,7 +66,10 @@ function List({ items, active, sources, crumbs }: ListProps) {
                 value={hitValueText(item.hit, sources)}
                 crumb={crumbs ? areaLabel(item.hit.area, sources) : null}
                 active={item.key === active}
-                onOpen={() => openHit(item.hit)}
+                onOpen={() => {
+                  openHit(item.hit);
+                  focusSearch();
+                }}
               />
             );
           case "attention":
@@ -73,7 +81,10 @@ function List({ items, active, sources, crumbs }: ListProps) {
                 text={issueText(item.issue, sources)}
                 crumb={areaLabel(item.issue.area, sources)}
                 active={item.key === active}
-                onOpen={() => openIssue(item.issue)}
+                onOpen={() => {
+                  openIssue(item.issue);
+                  focusSearch();
+                }}
               />
             );
           case "section":
@@ -85,6 +96,7 @@ function List({ items, active, sources, crumbs }: ListProps) {
                 query={item.query}
                 onClear={() => {
                   commandQuery.value = "";
+                  focusSearch();
                 }}
               />
             );
@@ -159,6 +171,7 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
     }
   }, [activeKey]);
 
+  const focusSearch = (): void => searchRef.current?.focus({ preventScroll: true });
   const esc = query !== "" ? "Clear" : scope !== null ? "Back" : "Close";
   return (
     <section
@@ -169,9 +182,19 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
       className="ui-preset fixed inset-0 z-35 flex flex-col"
     >
       {/* The layer covers the window's own frame row, so this strip is the only draggable
-          one while Settings is open (`11-settings-screen.css`, "Window dragging"). Nothing
-          sits in it, which also keeps clear of the traffic lights and the caption buttons. */}
-      <div aria-hidden="true" data-tauri-drag-region className="h-(--frame-h) shrink-0" />
+          one while Settings is open (`11-settings-screen.css`, "Window dragging"; the
+          buttons in it opt out through that rule). It reserves the traffic lights' footprint,
+          and keeps Back here because the layer covers every other way out for a pointer:
+          Back, not close, as the screen it replaces (2026-08-19). */}
+      <header
+        data-tauri-drag-region
+        className="flex h-(--frame-h) shrink-0 items-center pl-[calc(var(--frame-lights-w)+12px)]"
+      >
+        <Button variant="ghost" size="sm" title="Back to Deck (Esc)" onClick={onClose}>
+          <DeckIcon icon={CaretLeft} size={ROW_ICON} />
+          Back
+        </Button>
+      </header>
       <div className="mx-auto flex min-h-0 w-full max-w-190 flex-1 flex-col">
         <header className="flex shrink-0 flex-col gap-2 p-3">
           <SearchField
@@ -179,10 +202,7 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
             scope={scope}
             scopeLabel={scope === null ? null : areaLabel(scope, sources)}
           />
-          <AreaChips
-            scope={scope}
-            onChoose={() => searchRef.current?.focus({ preventScroll: true })}
-          />
+          <AreaChips scope={scope} onChoose={focusSearch} />
         </header>
         {load.status === "error" ? (
           <LoadError message={load.message} onRetry={() => void initSettings()} />
@@ -199,6 +219,7 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
               active={activeKey}
               sources={sources}
               crumbs={scope === null && query.trim() === ""}
+              focusSearch={focusSearch}
             />
           </fieldset>
         </div>

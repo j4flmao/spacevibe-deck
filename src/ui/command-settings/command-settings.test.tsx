@@ -126,6 +126,30 @@ describe("Command Settings frame", () => {
     expect(scrolled).toContain(row);
   });
 
+  it("opens a row's area on a click and leaves typing where it was", async () => {
+    settings.value = { ...DEFAULT_SETTINGS, scrollback: 1000 };
+    await open();
+    const row = document.querySelector<HTMLElement>(
+      '[id="command-row-changed:setting:scrollback"]',
+    );
+    row?.focus();
+    await act(async () => row?.click());
+    await settle();
+    expect(document.querySelector('[data-slot="badge"]')?.textContent).toBe("Terminal");
+    // The row unmounted with the list; the search field took focus rather than the body.
+    expect(document.activeElement).toBe(search());
+  });
+
+  it("closes with the Back button, the pointer's way out of a layer that covers the window", async () => {
+    const { onClose } = await open();
+    const back = [...document.querySelectorAll<HTMLElement>("button")].find(
+      (button) => button.textContent === "Back",
+    );
+    await act(async () => back?.click());
+    await settle();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("narrows the list to what the text matches, grouped under its area", async () => {
     await open();
     await typeInto(search(), "scroll");
