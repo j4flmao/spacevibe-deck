@@ -194,10 +194,14 @@ function click(element: Element | null | undefined): void {
 }
 
 /** Dispatch a key on `element`; returns whether a handler cancelled it. */
-function press(element: Element | null | undefined, key: string): boolean {
+function press(
+  element: Element | null | undefined,
+  key: string,
+  modifiers: KeyboardEventInit = {},
+): boolean {
   let event: KeyboardEvent | undefined;
   act(() => {
-    event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+    event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...modifiers });
     element?.dispatchEvent(event);
   });
   return event?.defaultPrevented ?? false;
@@ -554,6 +558,23 @@ describe("keyboard", () => {
     const shell = row("shell:4");
     press(shell, "Enter");
     expect(onSelectTab).toHaveBeenCalledExactlyOnceWith(3);
+  });
+
+  it.each([
+    ["ArrowDown", { metaKey: true }],
+    ["ArrowUp", { metaKey: true, altKey: true }],
+    ["ArrowDown", { ctrlKey: true, shiftKey: true }],
+    ["Enter", { metaKey: true, shiftKey: true }],
+  ] as const)("leaves the chord %s with %o to the keymap", async (key, modifiers) => {
+    const onFocusPane = vi.fn();
+    mount({ onFocusPane });
+    await settle();
+    const target = row("pane:12");
+    target?.focus();
+
+    expect(press(target, key, modifiers)).toBe(false);
+    expect(document.activeElement).toBe(target);
+    expect(onFocusPane).not.toHaveBeenCalled();
   });
 
   it("leaves Enter on a project header to fold it, and ignores other keys", async () => {

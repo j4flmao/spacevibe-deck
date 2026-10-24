@@ -60,7 +60,15 @@ function ProjectSection({
  */
 function onListKeyDown(event: KeyboardEvent): void {
   const target = event.target;
-  if (!(target instanceof HTMLElement) || !target.matches(STOPS)) {
+  // A chord is the keymap's (⌘⌥↑ focuses a pane, ⌘⇧↵ is a binding): only the bare key walks.
+  if (
+    event.metaKey ||
+    event.ctrlKey ||
+    event.altKey ||
+    event.shiftKey ||
+    !(target instanceof HTMLElement) ||
+    !target.matches(STOPS)
+  ) {
     return;
   }
   if (event.key === "Enter" && target.matches("[data-rail-row]")) {
