@@ -124,6 +124,12 @@ function presetControlFiles(): Set<string> {
   );
 }
 
+/** Directories under `src/ui/` that preset.css scans whole (`@source "./blocks";`), as `ui/<dir>/`. */
+function scannedDirectories(): string[] {
+  const css = readFileSync(join(SRC, "ui/preset.css"), "utf8");
+  return [...css.matchAll(/^@source "\.\/([\w-]+)";/gm)].map((m) => `ui/${m[1]}/`);
+}
+
 /** Custom properties the chrome declares: its stylesheets, and the theme the renderer sets inline. */
 function deckCustomProperties(): Set<string> {
   const names = new Set<string>();
@@ -214,18 +220,13 @@ describe("the preset leaks nothing into a surface that does not carry it", () =>
     expect(sharedWithCss, "a chrome rule and a preset utility share a class name").toEqual([]);
 
     const chromeMarkup = new Set<string>();
+    const scanned = scannedDirectories();
     const sources = files(SRC, (name) => /\.tsx$/.test(name) && !name.endsWith(".test.tsx"));
     for (const file of sources) {
       const path = posix(relative(SRC, file));
-      // Blocks and the project rail are composed from the preset controls and scanned by
-      // preset.css, like them.
-      if (
-        path.startsWith("gallery/") ||
-        path.startsWith("ui/blocks/") ||
-        path.startsWith("ui/project-rail/")
-      ) {
-        continue;
-      }
+      // Blocks and migrated regions are composed from the preset controls and scanned by
+      // preset.css, like them; the `@source` lines are the list.
+      if (path.startsWith("gallery/") || scanned.some((dir) => path.startsWith(dir))) continue;
       if (presetControlFiles().has(path)) continue;
       const text = readFileSync(file, "utf8");
       // A template literal is read up to its first `${`: what follows is code, not class names.

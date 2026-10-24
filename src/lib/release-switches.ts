@@ -14,6 +14,8 @@ export type ReleaseSwitchSnapshot = Readonly<Record<string, boolean>>;
 export const RELEASE_SWITCHES = Object.freeze({
   // The project-first rail (spec LAY-1..LAY-4): replaces the cluster list inside `AgentRail`.
   projectRail: { enabled: false, createdOn: "2026-10-24" },
+  /** Command Settings replaces the Settings screen (shell rebuild, Settings track C1c). */
+  commandSettings: { enabled: false, createdOn: "2026-10-24" },
 } satisfies ReleaseSwitchDefinitions);
 export type ReleaseSwitchId = keyof typeof RELEASE_SWITCHES;
 

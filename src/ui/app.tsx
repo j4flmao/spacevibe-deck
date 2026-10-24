@@ -174,7 +174,7 @@ import { buildAgentRail, subjectForWorkspace } from "./agent-rail-model";
 import { buildLaunchContext } from "../launcher/agent-launch-context-model";
 import { ensureRepositoriesScanned, repositoryScans } from "../repositories/repositories-store";
 import { StatusBar } from "./status-bar";
-import { SettingsScreen } from "./settings/settings-screen";
+import { SettingsSurface } from "./command-settings/settings-surface";
 import { UsageDockTab } from "./usage/usage-dock-tab";
 import { UsagePage } from "./usage/usage-page";
 import { runAttentionFocus } from "./attention-focus-coordinator";
@@ -2885,7 +2885,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
           />
           <AttentionSwitcher />
           <UsagePage open={usageOpen.value} onClose={closeUsage} />
-          <SettingsScreen open={settingsOpen.value} onClose={closePanel} />
+          <SettingsSurface open={settingsOpen.value} onClose={closePanel} />
         </main>
       }
       // Off by default since 2026-08-16 (`showStatusBar`): the row is pure

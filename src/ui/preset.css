@@ -22,6 +22,7 @@
 @source "./controls/{badge,button,collapsible,dialog,dropdown-menu,field,input,kbd,label,popover,scroll-area,select,separator,sheet,switch,tabs,toggle,toggle-group,tooltip}.tsx";
 @source "./blocks";
 @source "./project-rail";
+@source "./command-settings";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter/wght.css";

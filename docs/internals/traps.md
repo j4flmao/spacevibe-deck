@@ -66,6 +66,14 @@ constants that currently switch behaviour off and are meant to be flipped back.
   [`ui-preset-boundary.test.ts`](../../scripts/ui-preset-boundary.test.ts) builds the way a first importer
   would and fails on a leak; `--accent` is the one name the two systems shared, so the
   preset's is `--ui-accent`.
+- **A migrated region joins the fence with one bare `@source "./<dir>";` line in
+  [`preset.css`](../../src/ui/preset.css), and its root carries `.ui-preset`.**
+  [`ui-preset-boundary.test.ts`](../../scripts/ui-preset-boundary.test.ts) reads those lines and
+  stops counting the directory's markup as chrome, so a slice never edits the test. A legacy
+  section mounted inside the root (the [Command Settings](../../src/ui/command-settings/command-settings-rows.tsx)
+  area view mounts the old Settings sections as is) sits under the scoped reset, which zeroes
+  margin, padding and border in `@layer base`: legacy rules are unlayered and still win, but
+  anything that leaned on a browser default (a heading margin, a button border) loses it.
 - **A preset control takes `className`, not `class`, and its wrapper is made with
   [`withRef`](../../src/ui/controls/with-ref.ts).** Preact keeps `class` as its own prop, so a
   wrapper that merges `className` never sees it, and strips `ref` from function-component props, so
