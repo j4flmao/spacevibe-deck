@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useEffect, useRef } from "preact/hooks";
 import { Kbd, KbdGroup } from "../../ui/controls/kbd";
 import { AgentLogo, AgentStateMark } from "./agent-parts";

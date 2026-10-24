@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import type { ComponentChildren } from "preact";
 import type { DiffFile, DiffRow, Range, Sent } from "./diff-data";
 

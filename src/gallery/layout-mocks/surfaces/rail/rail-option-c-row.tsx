@@ -11,7 +11,7 @@ import {
   MoreHorizontalIcon,
   Pin02Icon,
 } from "@hugeicons/core-free-icons";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useEffect, useRef } from "preact/hooks";
 import { Button } from "../../../../ui/controls/button";
 import {

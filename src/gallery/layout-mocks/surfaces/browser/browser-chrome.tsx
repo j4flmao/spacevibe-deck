@@ -1,7 +1,7 @@
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { Cancel01Icon, CursorPointer01Icon } from "@hugeicons/core-free-icons";
 import { useSignal } from "@preact/signals";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useEffect, useRef } from "preact/hooks";
 import { Button } from "../../../../ui/controls/button";
 import { Kbd, KbdGroup } from "../../../../ui/controls/kbd";

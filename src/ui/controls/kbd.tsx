@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { withRef } from "./with-ref";
 
 const Kbd = withRef(function Kbd({

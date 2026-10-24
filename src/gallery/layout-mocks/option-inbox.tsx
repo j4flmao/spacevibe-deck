@@ -8,7 +8,7 @@ import {
   SidebarRightIcon,
 } from "@hugeicons/core-free-icons";
 import { useSignal } from "@preact/signals";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useEffect } from "preact/hooks";
 import { Button } from "../../ui/controls/button";
 import {

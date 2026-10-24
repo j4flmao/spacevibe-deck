@@ -1,5 +1,5 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { withRef } from "./with-ref";
 
 function TooltipProvider({ delay = 0, ...props }: Omit<TooltipPrimitive.Provider.Props, "ref">) {

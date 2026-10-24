@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useSignal } from "@preact/signals";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {

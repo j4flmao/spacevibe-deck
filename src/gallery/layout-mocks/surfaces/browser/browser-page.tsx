@@ -1,5 +1,5 @@
 import { useSignal } from "@preact/signals";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { MODEL_ROWS, PROVIDERS, type PickedElement, type Provider } from "./browser-data";
 
 /** Page-injected pick highlight: it lives inside the native view's own rectangle. */

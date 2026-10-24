@@ -6,7 +6,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useSignal } from "@preact/signals";
 import type { ComponentChildren } from "preact";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { Input } from "../../../../ui/controls/input";
 import { AgentLogo, AgentStateMark } from "../../agent-parts";
 import { AGENT_NAME, STATE_LABEL, type MockAgent, type TermLine } from "../../layout-fixture";

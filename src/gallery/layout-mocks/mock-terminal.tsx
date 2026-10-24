@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import type { TermLine, Tone } from "./layout-fixture";
 
 const TONE_CLASS: Readonly<Record<Tone, string>> = {

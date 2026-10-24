@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Search01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useEffect } from "preact/hooks";
 import { Badge } from "../../../../ui/controls/badge";
 import { Button } from "../../../../ui/controls/button";

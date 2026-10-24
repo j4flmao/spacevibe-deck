@@ -1,6 +1,6 @@
 import { signal } from "@preact/signals";
 import type { ComponentChildren } from "preact";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useEffect, useState } from "preact/hooks";
 import { Button } from "../../../../ui/controls/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../../ui/controls/tooltip";

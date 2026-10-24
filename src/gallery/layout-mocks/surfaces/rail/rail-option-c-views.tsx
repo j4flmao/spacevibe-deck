@@ -7,7 +7,7 @@ import {
   ViewOffIcon,
   Delete02Icon,
 } from "@hugeicons/core-free-icons";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { Button } from "../../../../ui/controls/button";
 import {
   DropdownMenu,

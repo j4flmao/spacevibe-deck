@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { CaretDown, CaretUp, CaretUpDown, Check } from "@phosphor-icons/react";
 import { DeckIcon, ROW_ICON } from "./deck-icon";
 import { withRef } from "./with-ref";

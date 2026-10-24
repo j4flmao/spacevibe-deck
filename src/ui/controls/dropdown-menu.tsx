@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { CaretRight, Check } from "@phosphor-icons/react";
 import { DeckIcon, ROW_ICON } from "./deck-icon";
 import { withRef } from "./with-ref";

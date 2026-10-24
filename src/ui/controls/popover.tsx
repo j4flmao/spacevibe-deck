@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { withRef } from "./with-ref";
 
 function Popover({ ...props }: Omit<PopoverPrimitive.Root.Props, "ref">) {

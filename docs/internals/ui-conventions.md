@@ -95,19 +95,17 @@ appears only in a shipping file outside those controls leaves its element unstyl
 
 ### How `cn` merges classes
 
-- `cn` (the `cn` package, a `clsx` + `tailwind-merge` replacement) joins conditional classes
-  and, when two classes set the same property, keeps the **last** one. Controls pass the
-  caller's `className` last, as in
+- `cn` joins conditional classes and, when two classes set the same property, keeps the
+  **last** one. Controls pass the caller's `className` last, as in
   [`button.tsx:50`](../../src/ui/controls/button.tsx), so the call site wins a conflict:
   `cn("px-2", "px-4")` is `px-4`.
-- **Trap: `cn` reads `text-code` as a colour.** It knows `text-2xs` and `text-3xs` are sizes,
-  but `cn("text-code", "text-muted-foreground")` returns `text-muted-foreground` and the size
-  is silently lost; the reverse order drops the colour. Two mocks lose it today:
-  [`mock-terminal.tsx:32`](../../src/gallery/layout-mocks/mock-terminal.tsx) (with
-  `text-(--term-fg)`) and
-  [`changes-parts.tsx:89`](../../src/gallery/layout-mocks/surfaces/changes/changes-parts.tsx)
-  (with the status colour). Until `cn` is taught the step, keep `text-code` and a text colour
-  out of the same `cn` call, for example on a wrapper.
+- **Import it from [`@/lib/cn`](../../src/lib/cn.ts), never from the `cn` package.** The bare
+  package does not know the type scale's own steps, reads `text-code` as a colour, and
+  silently drops it beside `text-foreground`, so the text falls back to 16px. The local
+  module teaches it every step [`type-scale.css`](../../src/ui/type-scale.css) declares; its
+  test fails when the two lists drift, and `no-restricted-imports` in
+  [`.oxlintrc.json`](../../.oxlintrc.json) rejects the bare import. `components.json` points
+  the shadcn CLI's `utils` alias there, so regenerated controls import the same module.
 
 ## HTML elements
 

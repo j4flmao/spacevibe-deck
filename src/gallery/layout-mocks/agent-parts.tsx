@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { AgentGlyph } from "../../ui/controls/agent-glyph";
 import type { AgentKind, Confidence, MockState } from "./layout-fixture";
 

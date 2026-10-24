@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useSignal } from "@preact/signals";
 import type { MockAgent, MockFileChange } from "../../layout-fixture";
 import { Chevron, Counts, EmptyChanges, RefreshButton, changesOf, totalsOf } from "./changes-parts";

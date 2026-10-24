@@ -1,5 +1,5 @@
 import { Input as InputPrimitive } from "@base-ui/react/input";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { withRef } from "./with-ref";
 
 const Input = withRef(function Input({

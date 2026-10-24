@@ -10,7 +10,7 @@ import {
   Settings02Icon,
 } from "@hugeicons/core-free-icons";
 import { useEffect, useRef } from "preact/hooks";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { Button } from "../../../../ui/controls/button";
 import {
   DropdownMenu,

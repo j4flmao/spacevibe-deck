@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { Badge } from "../../ui/controls/badge";
 import { Button } from "../../ui/controls/button";
 import { ScrollArea } from "../../ui/controls/scroll-area";

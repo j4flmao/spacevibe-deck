@@ -1,6 +1,6 @@
 import { useSignal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { Button } from "../../../../ui/controls/button";
 import { Kbd } from "../../../../ui/controls/kbd";
 import { AgentLogo } from "../../agent-parts";

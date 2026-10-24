@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import type { MockAgent, MockFileChange } from "../../layout-fixture";
 import {
   Chevron,

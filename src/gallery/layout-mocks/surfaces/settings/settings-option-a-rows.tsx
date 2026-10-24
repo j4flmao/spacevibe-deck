@@ -4,7 +4,7 @@ import {
   ArrowRight01Icon,
   ComputerTerminal01Icon,
 } from "@hugeicons/core-free-icons";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import type { ComponentChildren } from "preact";
 import { Badge } from "../../../../ui/controls/badge";
 import { Button } from "../../../../ui/controls/button";

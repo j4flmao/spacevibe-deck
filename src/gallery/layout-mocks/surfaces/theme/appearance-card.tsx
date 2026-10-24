@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Tick02Icon } from "@hugeicons/core-free-icons";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import type { ThemeDef } from "./theme-data";
 
 const LINES = [

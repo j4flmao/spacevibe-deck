@@ -1,5 +1,5 @@
 import { Switch as SwitchPrimitive } from "@base-ui/react/switch";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { withRef } from "./with-ref";
 
 const Switch = withRef(function Switch({

@@ -1,6 +1,6 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useRef } from "preact/hooks";
 import { Badge } from "../../../../ui/controls/badge";
 import { Button } from "../../../../ui/controls/button";

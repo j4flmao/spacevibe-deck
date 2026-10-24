@@ -1,4 +1,4 @@
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { Button } from "../../../../ui/controls/button";
 import { Kbd, KbdGroup } from "../../../../ui/controls/kbd";
 import { ToggleGroup, ToggleGroupItem } from "../../../../ui/controls/toggle-group";

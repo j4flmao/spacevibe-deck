@@ -9,7 +9,7 @@ import {
   RefreshIcon,
 } from "@hugeicons/core-free-icons";
 import { useSignal } from "@preact/signals";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { Button } from "../../../../ui/controls/button";
 import { Input } from "../../../../ui/controls/input";

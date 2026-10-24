@@ -51,6 +51,10 @@
               {
                 "name": "node-pty",
                 "message": "PTYs belong to the main process; the renderer goes through src/host/."
+              },
+              {
+                "name": "cn",
+                "message": "Import cn from @/lib/cn: the bare package drops Deck's type-scale sizes such as text-code."
               }
             ],
             "patterns": [

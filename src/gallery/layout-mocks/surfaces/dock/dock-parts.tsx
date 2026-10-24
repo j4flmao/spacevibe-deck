@@ -14,7 +14,7 @@ import {
   Settings02Icon,
 } from "@hugeicons/core-free-icons";
 import { useSignal } from "@preact/signals";
-import { cn } from "cn";
+import { cn } from "@/lib/cn";
 import { useEffect, useState } from "preact/hooks";
 import { Button } from "../../../../ui/controls/button";
 import { AgentLogo, AgentStateMark } from "../../agent-parts";
