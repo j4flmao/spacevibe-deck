@@ -224,6 +224,7 @@ import { AgentDock } from "./agent-dock/agent-dock";
 import { agentDockEnabled, dockStageWidth } from "./agent-dock/agent-dock-layout";
 import { dockSheetOpen, setDockSectionOpen } from "./agent-dock/agent-dock-state";
 import { DockChanges } from "./agent-dock/dock-changes";
+import { changedFileCount, DockChangesWatch } from "./agent-dock/dock-changes-watch";
 import { DockSlot } from "./agent-dock/dock-slot";
 import { SidebarActions } from "./sidebar-actions";
 import { DockToggle } from "./dock/dock-toggle";
@@ -2783,7 +2784,13 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
                   bodies={{
                     ...dockBodies,
                     // Changes is its own section here, so the Explorer keeps only the files.
-                    changes: gitChangesAvailable ? (root) => <DockChanges root={root} /> : null,
+                    changes: gitChangesAvailable
+                      ? {
+                          watch: (root) => <DockChangesWatch root={root} />,
+                          section: (root) => <DockChanges root={root} />,
+                          count: changedFileCount,
+                        }
+                      : null,
                     files: (root) => explorerAt(root, false),
                     history: sessionsSupported.value ? dockBodies.history : null,
                   }}

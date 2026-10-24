@@ -28,9 +28,12 @@ import type { ChangesController, ChangesState } from "../../files/changes/change
 import { diffFocusRequested } from "../../files/changes/diff-column-focus";
 import { createDiffSelection, type DiffSelectionStore } from "../../files/changes/diff-selection";
 import { repositoryScans } from "../../repositories/repositories-store";
+import type { RepositoryScan } from "../../repositories/repository-client";
+import { tabViews, type TabView } from "../../terminal/tabs-store";
 import { click, mount, press } from "../controls/preset-test-kit";
 import { resetAgentDockState } from "./agent-dock-state";
 import { DockChanges } from "./dock-changes";
+import { DockChangesWatch } from "./dock-changes-watch";
 
 const ROOT = "/work/repo";
 
@@ -93,8 +96,12 @@ function fakeChanges(initial: Partial<ChangesState> = {}) {
   return { controller, state };
 }
 
+/** What `AgentDock` mounts for Changes: the watch beside the section. */
 const section = (controller: ChangesController, root: string | null = ROOT) => (
-  <DockChanges root={root} changes={controller} diff={diff} />
+  <>
+    <DockChangesWatch root={root} changes={controller} diff={diff} />
+    <DockChanges root={root} changes={controller} diff={diff} />
+  </>
 );
 
 const row = (key: string): HTMLElement =>
@@ -108,13 +115,21 @@ const header = (): HTMLElement =>
 const text = (): string => document.body.textContent ?? "";
 const squash = (value: string | null | undefined): string => (value ?? "").replace(/\s+/g, " ");
 
+/** Resize the window the way the browser reports it: the column's tree is a wide-window thing. */
+function resizeTo(width: number): void {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+  window.dispatchEvent(new Event("resize"));
+}
+
 beforeEach(() => {
+  resizeTo(1440);
   resetAgentDockState();
   repositoryScans.value = new Map();
   diffFocusRequested.value = false;
 });
 
 afterEach(() => {
+  resizeTo(1024);
   repositoryScans.value = new Map();
   resetAgentDockState();
 });
@@ -258,6 +273,67 @@ describe("what the section watches", () => {
     await click(document.body.querySelector('[aria-label="Refresh changes"]') as HTMLElement);
     expect(controller.trigger).toHaveBeenCalledWith("refresh");
     await view.unmount();
+  });
+});
+
+describe("the turn-end refresh", () => {
+  const repository = (key: string): RepositoryScan => ({
+    kind: "repository",
+    key,
+    root: "/x",
+    worktrees: [],
+  });
+  const tab = (workspacePath: string, phase: "working" | "idle"): TabView =>
+    ({ key: 1, workspacePath, panes: [{ paneId: 1, phase }] }) as unknown as TabView;
+  const endTurn = async (workspacePath: string): Promise<void> => {
+    await act(async () => {
+      tabViews.value = [tab(workspacePath, "working")];
+    });
+    await act(async () => {
+      tabViews.value = [tab(workspacePath, "idle")];
+    });
+  };
+
+  beforeEach(() => {
+    repositoryScans.value = new Map([
+      [ROOT, repository("/repo/.git")],
+      ["/work/side", repository("/repo/.git")],
+      ["/work/other", repository("/other/.git")],
+    ]);
+    tabViews.value = [];
+  });
+  afterEach(() => {
+    tabViews.value = [];
+  });
+
+  it("reads again when a turn ends in the root's own folder", async () => {
+    const { controller } = fakeChanges();
+    const view = await mount(section(controller));
+    await endTurn(ROOT);
+    expect(controller.trigger).toHaveBeenCalledWith("turn-end");
+    await view.unmount();
+  });
+
+  it("reads again when a turn ends in another checkout of the same repository", async () => {
+    const { controller } = fakeChanges();
+    const view = await mount(section(controller));
+    await endTurn("/work/side");
+    expect(controller.trigger).toHaveBeenCalledWith("turn-end");
+    await view.unmount();
+  });
+
+  it("does not read for a turn in another repository, or when nothing is watched", async () => {
+    const { controller } = fakeChanges();
+    const view = await mount(section(controller));
+    await endTurn("/work/other");
+    expect(controller.trigger).not.toHaveBeenCalled();
+    await view.unmount();
+
+    const idle = fakeChanges();
+    const plain = await mount(section(idle.controller, null));
+    await endTurn(ROOT);
+    expect(idle.controller.trigger).not.toHaveBeenCalled();
+    await plain.unmount();
   });
 });
 

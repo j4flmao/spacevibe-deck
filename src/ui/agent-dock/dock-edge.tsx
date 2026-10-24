@@ -7,17 +7,19 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "../controls/sheet
 import { Tooltip, TooltipContent, TooltipTrigger } from "../controls/tooltip";
 import { statusLabel } from "../project-rail/project-rail-model";
 import type { RailItem } from "../rail-view-model";
-import { dockSheetOpen } from "./agent-dock-state";
+import { dockSheetOpen, takeAfterSheetClose } from "./agent-dock-state";
 import { DockColumn, type DockColumnProps } from "./dock-column";
 
 const OPEN_LABEL = "Open the side panel";
 
 /** The handle's accessible name: the way in, and which agent it would show. */
-function handleLabel(item: RailItem | null): string {
+function handleLabel(item: RailItem | null, changed: number | null): string {
+  const changes =
+    changed === null ? "" : `, ${changed} changed ${changed === 1 ? "file" : "files"}`;
   if (item === null || item.entry.kind !== "agent") {
-    return OPEN_LABEL;
+    return `${OPEN_LABEL}${changes}`;
   }
-  return `${OPEN_LABEL}, ${displayAgent(item.entry.agent)}, ${statusLabel(item)}`;
+  return `${OPEN_LABEL}, ${displayAgent(item.entry.agent)}, ${statusLabel(item)}${changes}`;
 }
 
 type DockEdgeProps = Pick<DockColumnProps, "item" | "root" | "bodies">;
@@ -30,6 +32,7 @@ type DockEdgeProps = Pick<DockColumnProps, "item" | "root" | "bodies">;
  * The sheet's own header control closes the sheet only; hiding the dock stays the toggle's job.
  */
 export function DockEdge({ item, root, bodies }: DockEdgeProps) {
+  const changed = bodies.changes?.count(root) ?? null;
   const setOpen = (open: boolean): void => {
     dockSheetOpen.value = open;
   };
@@ -42,7 +45,9 @@ export function DockEdge({ item, root, bodies }: DockEdgeProps) {
             <TooltipTrigger
               render={
                 <SheetTrigger
-                  render={<Button variant="ghost" size="icon" aria-label={handleLabel(item)} />}
+                  render={
+                    <Button variant="ghost" size="icon" aria-label={handleLabel(item, changed)} />
+                  }
                 />
               }
             >
@@ -53,11 +58,23 @@ export function DockEdge({ item, root, bodies }: DockEdgeProps) {
           {item === null ? null : (
             <AgentStateMark status={item.status} confidence={item.confidence} />
           )}
+          {changed === null ? null : (
+            <span aria-hidden="true" className="text-2xs tabular-nums text-foreground">
+              {changed}
+            </span>
+          )}
         </div>
       </div>
       <SheetContent
         showCloseButton={false}
         className="data-[side=right]:w-80 data-[side=right]:sm:max-w-80"
+        // Escape, the scrim and the close control return focus to the handle. A close that left an
+        // action (a file press showing its diff) runs it instead and leaves focus where it puts it.
+        finalFocus={() => {
+          const action = takeAfterSheetClose();
+          action?.();
+          return action === null;
+        }}
       >
         <SheetTitle className="sr-only">Side panel</SheetTitle>
         <DockColumn

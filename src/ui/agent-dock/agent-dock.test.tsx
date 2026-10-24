@@ -83,11 +83,15 @@ function twoAgents(focusedKey: number | null): TabView[] {
 }
 
 const BODIES = {
-  changes: (root: string | null) => (
-    <DockSection id="changes" title="Changes">
-      <p>changes body at {root ?? "no folder"}</p>
-    </DockSection>
-  ),
+  changes: {
+    watch: () => null,
+    section: (root: string | null) => (
+      <DockSection id="changes" title="Changes">
+        <p>changes body at {root ?? "no folder"}</p>
+      </DockSection>
+    ),
+    count: () => null,
+  },
   files: (root: string | null) => <p>files body at {root ?? "no folder"}</p>,
   usage: <p>usage body</p>,
   history: <p>history body</p>,

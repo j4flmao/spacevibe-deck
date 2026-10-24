@@ -1,5 +1,4 @@
 import { ArrowClockwise } from "@phosphor-icons/react";
-import { useEffect } from "preact/hooks";
 import { requestDiffFocus } from "../../files/changes/diff-column-focus";
 import {
   changesController,
@@ -8,12 +7,15 @@ import {
 } from "../../files/changes/changes-controller";
 import { failureLine, omittedLabel } from "../../files/changes/changes-model";
 import { diffSelection, type DiffSelectionStore } from "../../files/changes/diff-selection";
-import { ensureRepositoriesScanned, repositoryScans } from "../../repositories/repositories-store";
+import { repositoryScans } from "../../repositories/repositories-store";
 import { ChangeCounts } from "../blocks/change-counts";
 import { Button } from "../controls/button";
 import { DeckIcon, ROW_ICON } from "../controls/deck-icon";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../controls/tooltip";
+import { dockNarrow } from "./agent-dock-layout";
+import { closeDockSheetThen } from "./agent-dock-state";
 import { DockChangesTree } from "./dock-changes-tree";
+import { changedFileCount, watchedRoot } from "./dock-changes-watch";
 import { DockSection } from "./dock-section";
 
 const NOT_A_REPOSITORY = "Not a git repository";
@@ -40,32 +42,16 @@ const Note = ({ children, failure = false }: { children: string; failure?: boole
 /**
  * The Changes section of the stacked dock: the checkout's uncommitted changes as a folder tree,
  * the count of changed files in its header, and the same one press the legacy list has, which
- * opens that file's diff in the diff column.
- *
- * The section holds the controller's watch while it is mounted, folded or not, so the header's
- * count stays true; only the body unmounts when folded, and that ends the open diff, as leaving
- * the legacy Changes view does (the controller empties its state once nothing is shown).
+ * opens that file's diff in the diff column. What it reads is held by `DockChangesWatch`.
  */
 export function DockChanges({ root, changes: injected, diff: injectedDiff }: DockChangesProps) {
   const changes = injected ?? changesController();
   const diff = injectedDiff ?? diffSelection();
-  useEffect(() => {
-    if (root !== null) {
-      ensureRepositoriesScanned([root]);
-    }
-  }, [root]);
-  // Whether the section is offered at all comes from the rail's repository scan, not a `git status`.
   const plain = root !== null && repositoryScans.value.get(root)?.kind === "plain";
-  const watched = root === null || plain ? null : root;
-  useEffect(() => {
-    changes.setShown(watched);
-  }, [changes, watched]);
-  useEffect(() => () => changes.setShown(null), [changes]);
-
+  const watched = watchedRoot(root);
   const state = changes.state.value;
   const live = watched !== null && state.root === watched ? state : null;
-  const snapshot = live?.snapshot ?? null;
-  const count = snapshot !== null && snapshot.entries.length > 0 ? snapshot.entries.length : null;
+  const count = changedFileCount(root, changes);
   return (
     <DockSection id="changes" title="Changes" count={count === null ? undefined : String(count)}>
       {root === null ? (
@@ -90,9 +76,6 @@ function DockChangesBody({
   readonly changes: ChangesController;
   readonly diff: DiffSelectionStore;
 }) {
-  // The diff column lives only while the list that opened it is shown: folding the section,
-  // re-rooting and unmounting all end it (plan 2026-10-10-diff-column, D4).
-  useEffect(() => () => void diff.close(), [diff, root]);
   const snapshot = live?.snapshot ?? null;
   const open = diff.selection.value;
   const selectedPath = open !== null && open.root === root ? open.path : null;
@@ -130,7 +113,14 @@ function DockChangesBody({
           selectedPath={selectedPath}
           onOpen={(entry) => {
             diff.open(root, entry.path);
-            requestDiffFocus();
+            // In a narrow window the diff column sits beside the handle, under the sheet's scrim:
+            // the press closes the sheet to show it, and the column takes focus once the sheet has
+            // let go of it. The diff outlives the sheet (`DockChangesWatch`).
+            if (dockNarrow.value) {
+              closeDockSheetThen(requestDiffFocus);
+            } else {
+              requestDiffFocus();
+            }
           }}
         />
       ) : null}

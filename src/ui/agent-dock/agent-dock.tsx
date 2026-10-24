@@ -44,6 +44,7 @@ export function AgentDock({ entered, onClose, bodies }: AgentDockProps) {
       className={`dock-panel agent-dock ui-preset${entered ? " is-open" : ""}`}
       aria-label="Agent dock"
     >
+      {bodies.changes === null ? null : bodies.changes.watch(root)}
       {narrow ? (
         <DockEdge item={item} root={root} bodies={bodies} />
       ) : (
