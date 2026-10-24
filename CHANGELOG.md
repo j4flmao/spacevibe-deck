@@ -7,6 +7,10 @@ the release PR, and frozen at the tag — never an auto-generated commit list.
 
 ## Unreleased
 
+- **Deck stays lighter when it runs all day.** Closing a terminal tab or switching away from
+  it no longer leaves its memory behind. Deck stops starting a login shell every minute or so
+  to look for installed agents, and the sidebar reads far less from your session history to
+  show what each agent last said.
 - **Settings switches and buttons have a new look.** Toggles in Settings are now switches
   instead of an on/off button, and the text buttons on Settings pages share one style.
   Nothing moves and no setting changes.
