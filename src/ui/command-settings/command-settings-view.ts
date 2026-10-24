@@ -41,7 +41,8 @@ export type LegacyPiece =
   | "commands"
   | "identities"
   | "usage"
-  | "resets";
+  | "resets"
+  | "about";
 
 /** The list as drawn: the model's items, plus the legacy pieces an area view mounts in place. */
 export type ListItem =
@@ -59,7 +60,7 @@ export function commandItemsOf(items: readonly ListItem[]): readonly CommandItem
 }
 
 /** Areas whose settings no row edits yet: their own section is mounted as is. */
-const SECTION_AREAS: ReadonlySet<CommandAreaId> = new Set(["about", "privacy"]);
+const SECTION_AREAS: ReadonlySet<CommandAreaId> = new Set(["privacy"]);
 
 /** An area with nothing typed: its live rows, and the legacy pieces that have no row. */
 function areaItems(area: CommandAreaId, sources: CommandSources): readonly ListItem[] {
@@ -74,6 +75,9 @@ function areaItems(area: CommandAreaId, sources: CommandSources): readonly ListI
   });
   if (area === "reset") {
     return [piece("resets")];
+  }
+  if (area === "about") {
+    return [piece("about")];
   }
   // The colour mode is edited by its cards, not by a row.
   const rows = buildCommandItems("", area, sources).filter(

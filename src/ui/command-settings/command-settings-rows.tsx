@@ -13,6 +13,7 @@ import { PageResetBar } from "../settings/page-reset-bar";
 import { SETTINGS_CATEGORIES } from "../settings/settings-categories";
 import { SettingsGroup } from "../settings/settings-group";
 import { ThemeModeSelector } from "../settings/theme-mode-selector";
+import { AboutRows } from "./command-settings-about";
 import { AgentsRefresh } from "./command-settings-agent-row";
 import { ResetRows } from "./command-settings-reset";
 import { rowDomId } from "./command-settings-live";
@@ -243,6 +244,8 @@ export function PieceMount({
           <AgentIdentities />
         </LegacyBox>
       );
+    case "about":
+      return <AboutRows />;
     case "resets":
       return <ResetRows />;
     case "usage":

@@ -125,11 +125,18 @@ describe("the sentence an attention row reads as", () => {
 
 describe("the list for a query and a scope", () => {
   it("is the area's own section for an area no row edits yet", () => {
-    expect(commandListItems("", "about", commandSources())).toEqual([
-      { type: "section", key: "section:about", area: "about" },
-    ]);
-    expect(commandListItems("   ", "privacy", commandSources())).toEqual([
+    expect(commandListItems("", "privacy", commandSources())).toEqual([
       { type: "section", key: "section:privacy", area: "privacy" },
+    ]);
+    expect(commandListItems("   ", "privacy", commandSources())).toHaveLength(1);
+  });
+
+  it("is a piece of rows for the About and Reset areas", () => {
+    expect(commandListItems("", "about", commandSources()).map((item) => item.key)).toEqual([
+      "piece:about:about",
+    ]);
+    expect(commandListItems("", "reset", commandSources()).map((item) => item.key)).toEqual([
+      "piece:reset:resets",
     ]);
   });
 
