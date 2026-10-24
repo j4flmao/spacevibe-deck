@@ -10,6 +10,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, utimesSync, writeFileSync 
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { zstdCompressSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   claudeModelFromLines,
@@ -241,6 +242,13 @@ describe("tailBytes", () => {
     const filePath = path.join(dir, "small.txt");
     writeFileSync(filePath, "tiny");
     expect(tailBytes(filePath, 4096)?.toString("utf8")).toBe("tiny");
+  });
+
+  it("reads the end of a compressed Codex rollout's content, not of its bytes", () => {
+    const filePath = path.join(dir, "rollout-old.jsonl.zst");
+    // Repetitive enough that the compressed frame does not end in the literal text.
+    writeFileSync(filePath, zstdCompressSync(Buffer.from(`${"line\n".repeat(2000)}second-half`)));
+    expect(tailBytes(filePath, 11)?.toString("utf8")).toBe("second-half");
   });
 
   it("refuses a symlink rather than following it, and answers null when missing", () => {

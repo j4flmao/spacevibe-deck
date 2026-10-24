@@ -190,6 +190,12 @@ constants that currently switch behaviour off and are meant to be flipped back.
   whose hooks carry the daemon's environment, possibly a live pane's credentials. Main refuses
   a Codex post whose `X-Deck-Tty` is not that pane's tty, so a daemon-hosted Codex stays
   inferred and a hook that bypasses the script is refused.
+- **Codex compresses a rollout idle for a week** into `<name>.jsonl.zst` (since 0.162.1), so
+  most of a user's Codex history is compressed. A reader that matches only `.jsonl` or reads raw
+  bytes silently loses those sessions from resume, history and usage; read rollouts through
+  [`compressed-rollout.ts`](../../electron/usage/compressed-rollout.ts) or the readers built on
+  it. Electron's zlib throws on a cut-off zstd input that plain Node accepts, so a Vitest run
+  alone cannot prove a head read works in the app.
 - **Inside a Deck pane, `OPENCODE_CONFIG_DIR` is Deck's while opencode Signals is on.** The
   wrapper overwrites a value the user exported, so their own opencode agents, commands and
   plugins from that directory do not load there; turn Signals off to get them back.

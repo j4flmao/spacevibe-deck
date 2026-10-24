@@ -7,6 +7,9 @@ the release PR, and frozen at the tag — never an auto-generated commit list.
 
 ## Unreleased
 
+- **Older Codex conversations are back.** Codex compresses conversations it has not touched
+  for a week, and Deck stopped seeing them. Session history, resume and usage now include them
+  again.
 - **Agent alerts reach you outside Deck.** Background agents notify when they finish, need
   input or approval, or fail. Click an alert to return to its pane; the macOS Dock badge sums
   the panes that need you across windows. Alerts are on by default, including a one-time

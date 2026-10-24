@@ -7,8 +7,10 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
+import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { zstdCompressSync } from "node:zlib";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { scanClaude } from "./claude";
 import { scanCodex, CODEX_RESTORE_SCAN } from "./codex";
@@ -160,6 +162,64 @@ describe("scanCodex", () => {
     const result = scanCodex(home, { ...CODEX_RESTORE_SCAN, maxFiles: 1 });
     expect(result.records).toHaveLength(1);
     expect(result.total).toBe(5);
+  });
+});
+
+// Codex compresses a rollout idle for a week into `<name>.jsonl.zst`; on the
+// dev machine that was 1,822 of 1,943 rollouts, all gone from restore and
+// history until the scan read them.
+describe("scanCodex over compressed rollouts", () => {
+  let home: string;
+  let live: string;
+
+  function userTurn(text: string): string {
+    return JSON.stringify({
+      type: "response_item",
+      payload: { type: "message", role: "user", content: [{ type: "text", text }] },
+    });
+  }
+
+  function writeCompressed(name: string, lines: readonly string[], mtimeMs: number): void {
+    const filePath = path.join(live, name);
+    writeFileSync(filePath, zstdCompressSync(Buffer.from(lines.join("\n"))));
+    utimesSync(filePath, mtimeMs / 1000, mtimeMs / 1000);
+  }
+
+  beforeEach(() => {
+    home = mkdtempSync(path.join(tmpdir(), "sessions-scan-zst-"));
+    live = path.join(home, CODEX_DIR, CODEX_SESSIONS_DIR, "2026", "08", "01");
+    mkdirSync(live, { recursive: true });
+  });
+
+  afterEach(() => rmSync(home, { recursive: true, force: true }));
+
+  it("reads the id, cwd and title of a compressed rollout", () => {
+    // Random padding does not compress, so the head read has to widen its
+    // compressed window more than once before the first line is whole.
+    const meta = JSON.parse(codexMeta("zst-id", "/work/zst", "cli"));
+    meta.payload.base_instructions.text = randomBytes(36_000).toString("base64");
+    writeCompressed(
+      `${CODEX_ROLLOUT_PREFIX}zst${TRANSCRIPT_EXTENSION}.zst`,
+      [JSON.stringify(meta), userTurn("resume the old work")],
+      T0,
+    );
+
+    const result = scanCodex(home, { ...CODEX_RESTORE_SCAN, withTitle: true });
+
+    expect(result.records).toEqual([
+      expect.objectContaining({ id: "zst-id", cwd: "/work/zst", title: "resume the old work" }),
+    ]);
+  });
+
+  it("lists a rollout once while Codex has it both plain and compressed", () => {
+    const name = `${CODEX_ROLLOUT_PREFIX}both${TRANSCRIPT_EXTENSION}`;
+    writeAt(path.join(live, name), codexMeta("both-id", "/work/plain", "cli"), T0 + 1000);
+    writeCompressed(`${name}.zst`, [codexMeta("both-id", "/work/compressed", "cli")], T0);
+
+    const result = scanCodex(home, CODEX_RESTORE_SCAN);
+
+    expect(result.total).toBe(1);
+    expect(result.records).toEqual([expect.objectContaining({ cwd: "/work/plain" })]);
   });
 });
 
