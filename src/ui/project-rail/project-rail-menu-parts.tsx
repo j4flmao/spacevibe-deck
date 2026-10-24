@@ -1,8 +1,10 @@
 import type { Icon } from "@phosphor-icons/react";
 import type { ComponentChildren, JSX } from "preact";
+import { agentLaunchPage } from "../../launcher/agent-launch-page-store";
 import { DeckIcon, ROW_ICON } from "../controls/deck-icon";
 import { DropdownMenuItem } from "../controls/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../controls/tooltip";
+import { useStageOverlayFlag } from "../worktree-card-menus";
 
 /** An icon button's tooltip: `button` is the trigger element, `children` its glyph. */
 export function Tip({
@@ -42,4 +44,20 @@ export function MenuEntry({
       {children}
     </DropdownMenuItem>
   );
+}
+
+function HoldStageOverlay() {
+  useStageOverlayFlag();
+  return null;
+}
+
+/**
+ * Mount inside a rail popup's content. While the agent launch page is up, the shortcut handler
+ * would close it on Esc before the popup saw the key; the shipped rail menus raise
+ * `railCardMenuOpen` for exactly this (`agentLaunchPageIsTop`), and so does an open popup here.
+ * Only while the page is up: these popups sit inside the rail, so hiding the native browser
+ * under them, the flag's other job, is not needed.
+ */
+export function RailPopupGuard() {
+  return agentLaunchPage.request.value === null ? null : <HoldStageOverlay />;
 }

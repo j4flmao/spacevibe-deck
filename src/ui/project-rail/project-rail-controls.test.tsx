@@ -27,7 +27,9 @@ vi.mock("../controls/deck-icon", () => ({
   DeckIcon: ({ size }: { readonly size: number }) => <span data-deck-icon-size={size} />,
 }));
 
+import { railCardMenuOpen } from "../../chrome/events";
 import { addWorktree } from "../../host/worktree-host";
+import { agentLaunchPage } from "../../launcher/agent-launch-page-store";
 import { resetDesktopEnvironmentForTests } from "../../lib/platform";
 import { addFolderToRail, rememberOnRail } from "../rail-add-folder";
 import type { CardActions } from "../worktree-card-menus";
@@ -434,5 +436,38 @@ describe('the "+" menu', () => {
     expect(document.body.querySelector('[role="alert"]')?.textContent).not.toBe("");
     expect(rememberOnRail).not.toHaveBeenCalled();
     expect(form()).not.toBeNull();
+  });
+});
+
+describe("the strip beside the rest of the shell", () => {
+  it("keeps the worktree form's anchor out of the Tab order", async () => {
+    mount();
+    await settle();
+
+    const anchor = host.querySelector<HTMLElement>('[data-slot="popover-trigger"]');
+    expect(anchor).not.toBeNull();
+    expect(anchor?.tabIndex).toBe(-1);
+    expect(anchor?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("holds the launch page open under an open popup, so Esc closes the popup first", async () => {
+    mount();
+    await settle();
+    expect(railCardMenuOpen.value).toBe(false);
+
+    // With no launch page up the popup leaves the flag, and the native browser, alone.
+    await activate(trigger("Organize"));
+    expect(railCardMenuOpen.value).toBe(false);
+    await closeMenu();
+
+    agentLaunchPage.request.value = {} as never;
+    try {
+      await activate(trigger("Organize"));
+      expect(railCardMenuOpen.value).toBe(true);
+      await closeMenu();
+      await waitUntil(() => !railCardMenuOpen.value, 2000);
+    } finally {
+      agentLaunchPage.request.value = null;
+    }
   });
 });

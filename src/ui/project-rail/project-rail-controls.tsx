@@ -5,6 +5,7 @@ import { Input } from "../controls/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../controls/popover";
 import { railRepositories, focusedCheckout } from "../rail-create";
 import { ProjectRailCreate, type ProjectRailCreateProps } from "./project-rail-create";
+import { RailPopupGuard } from "./project-rail-menu-parts";
 import { ProjectRailOrganize } from "./project-rail-organize";
 import { railViewState, setRailQuery } from "./project-rail-state";
 import { ProjectRailWorktreeForm } from "./project-rail-worktree-form";
@@ -69,6 +70,7 @@ export function ProjectRailControls(props: ProjectRailControlsProps) {
       <Popover open={formOpen} onOpenChange={setFormOpen}>
         <PopoverTrigger
           nativeButton={false}
+          tabIndex={-1}
           render={<span aria-hidden="true" className="pointer-events-none absolute inset-0" />}
         />
         <PopoverContent
@@ -77,6 +79,7 @@ export function ProjectRailControls(props: ProjectRailControlsProps) {
           initialFocus={branchRef}
           finalFocus={plusRef}
         >
+          <RailPopupGuard />
           <ProjectRailWorktreeForm
             repositories={repositories}
             initialRepo={initialRepo}

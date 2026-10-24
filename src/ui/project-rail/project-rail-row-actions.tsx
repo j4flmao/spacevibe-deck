@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "../controls/dropdown-menu";
 import type { RowCommands } from "./project-rail-commands";
-import { MenuEntry, Tip } from "./project-rail-menu-parts";
+import { MenuEntry, RailPopupGuard, Tip } from "./project-rail-menu-parts";
 
 /** Hover actions show on hover, keyboard focus or while their menu is open; they never take room. */
 const REVEAL =
@@ -117,6 +117,7 @@ export function ProjectRailRowActions({
           <DeckIcon icon={DotsThree} size={ROW_ICON} />
         </Tip>
         <DropdownMenuContent align="end" className="min-w-44">
+          <RailPopupGuard />
           {commands.rename === undefined ? null : (
             <MenuEntry
               icon={PencilSimple}

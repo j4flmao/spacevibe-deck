@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "../contr
 import { addFolderToRail } from "../rail-add-folder";
 import { activeTabWorkspace, focusedCheckout } from "../rail-create";
 import type { CardActions } from "../worktree-card-menus";
-import { MenuEntry, Tip } from "./project-rail-menu-parts";
+import { MenuEntry, RailPopupGuard, Tip } from "./project-rail-menu-parts";
 
 export interface ProjectRailCreateProps {
   readonly stream: readonly RailStreamGroup[];
@@ -81,6 +81,7 @@ export function ProjectRailCreate({
           <DeckIcon icon={Plus} size={ROW_ICON} />
         </Tip>
         <DropdownMenuContent align="end" className="min-w-44" finalFocus={() => !chosen.current}>
+          <RailPopupGuard />
           <MenuEntry icon={UserPlus} disabled={disabled} onClick={openAgent}>
             New agent
           </MenuEntry>

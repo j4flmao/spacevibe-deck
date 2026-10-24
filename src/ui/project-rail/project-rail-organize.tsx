@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "../controls/dropdown-menu";
 import type { RailGrouping, RailSorting } from "../rail-view-state";
-import { Tip } from "./project-rail-menu-parts";
+import { RailPopupGuard, Tip } from "./project-rail-menu-parts";
 import { railViewState, setRailGrouping, setRailSorting, showArchived } from "./project-rail-state";
 
 const GROUPING_LABEL: Readonly<Record<RailGrouping, string>> = {
@@ -47,6 +47,7 @@ export function ProjectRailOrganize() {
         <DeckIcon icon={SlidersHorizontal} size={ROW_ICON} />
       </Tip>
       <DropdownMenuContent align="end" className="min-w-44">
+        <RailPopupGuard />
         <DropdownMenuGroup>
           <DropdownMenuLabel>Group</DropdownMenuLabel>
           <DropdownMenuRadioGroup
