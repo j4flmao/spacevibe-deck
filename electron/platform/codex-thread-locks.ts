@@ -50,15 +50,29 @@ function readLocks(pids: readonly number[], home: string, platform: NodeJS.Platf
   });
 }
 
+/**
+ * The thread each foreground Codex process is writing, keyed by that process's pid.
+ * `lookups` maps each foreground pid to other pids whose locks count as its own: npm's `codex`
+ * is a `node` launcher, and the lock belongs to the native child it spawned.
+ */
 export async function processCodexSessions(
-  pids: readonly number[],
+  lookups: ReadonlyMap<number, readonly number[]>,
   home = os.homedir(),
   platform = process.platform,
 ): Promise<Map<number, string>> {
-  const uniquePids = [...new Set(pids)].filter((pid) => Number.isSafeInteger(pid) && pid > 0);
-  if (platform === "win32" || uniquePids.length === 0) return new Map();
-  const locks = await readLocks(uniquePids, home, platform);
-  const ambiguous = new Set([...locks.values()].filter((ids) => ids.length > 1).flat());
+  const valid = (pid: number) => Number.isSafeInteger(pid) && pid > 0;
+  const groups = [...lookups]
+    .filter(([pid]) => valid(pid))
+    .map(([pid, members]) => [pid, [...new Set([pid, ...members.filter(valid)])]] as const);
+  if (platform === "win32" || groups.length === 0) return new Map();
+  const locks = await readLocks([...new Set(groups.flatMap(([, pids]) => pids))], home, platform);
+  const held = new Map(
+    groups.map(([pid, pids]) => [
+      pid,
+      [...new Set(pids.flatMap((member) => locks.get(member) ?? []))],
+    ]),
+  );
+  const ambiguous = new Set([...held.values()].filter((ids) => ids.length > 1).flat());
   const interactive = new Set<string>();
   if (ambiguous.size > 0) {
     const options = { ...CODEX_RESTORE_SCAN, requireInteractiveSource: true };
@@ -72,8 +86,8 @@ export async function processCodexSessions(
     }
   }
   return new Map(
-    uniquePids.flatMap((pid) => {
-      const id = selectCodexThread(locks.get(pid) ?? [], interactive);
+    groups.flatMap(([pid]) => {
+      const id = selectCodexThread(held.get(pid) ?? [], interactive);
       return id === null ? [] : [[pid, id] as const];
     }),
   );
