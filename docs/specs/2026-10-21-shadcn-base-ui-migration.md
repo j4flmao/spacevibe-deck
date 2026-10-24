@@ -7,8 +7,15 @@ acceptance remain open. This specification does not claim shipped behavior.
 ## Authority and scope
 
 The owner chose Base UI, the shadcn preset `b1a09kDGF`, and a large refactor of the entire
-Deck application UI, delivered in waves in an isolated worktree. Migrated components must
-use the preset's upstream shadcn styling, not reproduce Deck's existing CSS token system.
+Deck application UI. Migrated components must use the preset's upstream shadcn styling, not
+reproduce Deck's existing CSS token system.
+
+Delivery (owner, 2026-10-24, superseding "waves in an isolated worktree"): work lands on
+`main` region by region in small PRs, each new region behind a switch that is off outside dev
+builds, so the old surface stays the default and `main` stays releasable. Blocks that several
+regions share are extracted into one set before parallel tracks start; a region cuts over only
+after the owner's eye review against the reference mock, and that change deletes the old
+version and the region's switch.
 
 This is the canonical specification for component technology, appearance and migration
 boundaries across the app. It supersedes the Settings-only base-component direction in
@@ -117,12 +124,14 @@ under UI-4.
 
 ### Production boundary
 
-The first migrated product surface is the existing Settings functionality. All mounted
-categories, account states and compound editors must be covered, not just Appearance.
-The previously selected Command navigation remains the intended Settings direction, but is
-a separate flow-changing wave after the basic controls work. Its real stores, search and reset
-contracts come from the existing Settings specification; the gallery's in-memory model must
-never become production data. Preserve `openSettingsAt(page, key)` through the transition.
+Settings migrates by replacement, not in place (owner, 2026-10-24): the Command Settings of
+the layout mock is built directly behind its switch, and the existing Settings screen is not
+first moved onto the shared controls, because Command would replace that work. All mounted
+categories, account states and compound editors must be covered, not just Appearance. Its real
+stores, search and reset contracts come from the existing Settings specification; the
+gallery's in-memory model must never become production data. Preserve
+`openSettingsAt(page, key)` through the transition. Until Command cuts over, the existing
+Settings screen keeps its current controls; only CSS no consumer still uses may be deleted.
 
 The old theme overhaul's custom chrome token editor and replacement theme palette cannot
 override this preset during migration. Those unimplemented product features are deferred to
