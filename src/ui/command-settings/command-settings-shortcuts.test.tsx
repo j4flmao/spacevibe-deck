@@ -212,6 +212,20 @@ describe("a chord collision", () => {
     expect(rowOf("shortcut:close-pane")?.textContent).not.toContain("Also bound");
   });
 
+  it("appears when the user records onto a taken chord, and the newest choice fires until it is resolved", async () => {
+    await open();
+    await clickIn(recordButton("find", "Find…"));
+    await keydown(window, keyEvent("d", { metaKey: true }));
+
+    expect(rowOf("shortcut:find")?.textContent).toContain("Also bound to Split Vertically");
+    expect(rowOf("shortcut:split-row")?.textContent).toContain("Also bound to Find…");
+    expect(matchBinding(keyEvent("d", { metaKey: true }))).toBe("find");
+
+    await clickIn(rowOf("shortcut:find")?.querySelector("button[aria-label^='Reassign']"));
+    expect(document.body.textContent).not.toContain("Also bound");
+    expect(matchBinding(keyEvent("d", { metaKey: true }))).toBe("find");
+  });
+
   it("Reassign on a row keeps the chord there and takes it from the other action", async () => {
     settings.value = FIND_ON_SPLIT;
     await open();
