@@ -31,13 +31,18 @@ export interface AgentRowData {
   readonly changed: boolean;
 }
 
+/** Whether detection found this agent's binary; reads `detectedAgents`, so call it while rendering. */
+export function agentInstalled(agentId: string, settings: Settings): boolean {
+  const option = agentOptions(detectedAgents.value, settings.customAgents).find(
+    (entry) => entry.id === agentId,
+  );
+  return option !== undefined && !option.missing;
+}
+
 /** Reads `detectedAgents`, `agentsProbed` and `agentHooksSupported`, so call it while rendering. */
 export function agentRowData(agentId: string, settings: Settings): AgentRowData {
   const builtin = BUILTIN_AGENTS.find((agent) => agent.id === agentId) ?? null;
   const custom = settings.customAgents.find((agent) => agent.id === agentId) ?? null;
-  const option = agentOptions(detectedAgents.value, settings.customAgents).find(
-    (entry) => entry.id === agentId,
-  );
   const adapters = settings.agentSignalAdapters;
   return {
     id: agentId,
@@ -51,7 +56,7 @@ export function agentRowData(agentId: string, settings: Settings): AgentRowData 
         settings.defaultLaunchProfiles,
         settings.customAgents,
       ) ?? agentId,
-    installed: option !== undefined && !option.missing,
+    installed: agentInstalled(agentId, settings),
     probed: agentsProbed.value,
     enabled: !settings.disabledAgents.includes(agentId),
     signals: ADAPTER_AGENTS.has(agentId) ? adapters[agentId as keyof typeof adapters] : null,

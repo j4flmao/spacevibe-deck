@@ -19,6 +19,7 @@ import { settings } from "../../settings/settings-store";
 import { getTheme } from "../../settings/themes";
 import type { ActionId } from "../../terminal/action-registry";
 import { SETTINGS_CATEGORIES } from "../settings/settings-categories";
+import { reportedIssues } from "./command-settings-issues";
 import { shortcutGroups } from "../settings/shortcut-groups";
 
 /** The snapshot the list reads, taken from the live stores at render time. */
@@ -28,6 +29,7 @@ export function commandSources(): CommandSources {
     areas: SETTINGS_CATEGORIES.map(({ id, label }) => ({ id, label })),
     shortcuts: shortcutGroups(),
     platform: getDesktopEnvironment().platform,
+    reported: reportedIssues(settings.value),
   };
 }
 

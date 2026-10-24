@@ -71,6 +71,8 @@ export interface ReportedIssue {
   readonly severity: IssueSeverity;
   readonly area: CommandAreaId;
   readonly title: string;
+  /** The list key of the row that resolves it, when the area lists one. */
+  readonly row?: string;
 }
 
 /**

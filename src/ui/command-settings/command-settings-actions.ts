@@ -23,13 +23,14 @@ export function openHit(hit: CommandHit): void {
 }
 
 /**
- * An attention row: open its area, on the row of the first action in a shortcut conflict (the
- * user's newest choice, which fires). An action the list does not show leaves the first row.
+ * An attention row: open its area, on the row that resolves it. A shortcut conflict names the
+ * first action in it (the user's newest choice, which fires); a reported issue names its row.
+ * A row the list does not show leaves the first row.
  */
 export function openIssue(issue: AttentionIssue): void {
   revealInCommand(
     issue.area,
-    issue.kind === "shortcut-conflict" ? `shortcut:${issue.actions[0]}` : null,
+    issue.kind === "shortcut-conflict" ? `shortcut:${issue.actions[0]}` : (issue.row ?? null),
   );
   settingsTarget.value = null;
 }

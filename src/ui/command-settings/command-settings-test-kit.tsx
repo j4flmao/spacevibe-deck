@@ -3,6 +3,8 @@ import { vi } from "vitest";
 import { DEFAULT_SETTINGS } from "../../settings/settings-schema";
 import { settings, settingsLoadState } from "../../settings/settings-store";
 import { click, mount, settle } from "../controls/preset-test-kit";
+import { agentsProbed, detectedAgents } from "../../terminal/agent-detection-store";
+import { activeUpdateController } from "../../updater/active-update-controller";
 import { settingsTarget } from "../settings/settings-focus-store";
 import { CommandSettings } from "./command-settings";
 import { commandActiveKey, commandQuery, commandScope } from "./command-settings-state";
@@ -22,6 +24,10 @@ export function resetCommandSettings(): void {
   commandScope.value = null;
   commandActiveKey.value = null;
   settingsTarget.value = null;
+  // What Needs attention reads: left over, it would put rows on another suite's home list.
+  activeUpdateController.value = null;
+  detectedAgents.value = [];
+  agentsProbed.value = false;
   scrolled.length = 0;
   Element.prototype.scrollIntoView = vi.fn<(this: Element) => void>(function (this: Element) {
     scrolled.push(this);
