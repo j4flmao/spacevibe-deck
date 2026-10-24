@@ -13,6 +13,8 @@ the release PR, and frozen at the tag — never an auto-generated commit list.
 - **opencode 2 panes reopen the right conversation.** Deck could not see sessions started in
   opencode 2 and reopened an older one from the same folder instead. It now resumes the
   session the pane last had, and the sidebar shows what opencode 2 last said.
+- **Idle bash and fish panes count as idle.** Deck read every bash and fish pane as running a
+  command, so quitting always asked for confirmation and closing an idle pane did too.
 - **fish panes no longer open on a failed status.** The first prompt of a new fish pane showed
   `[1]`, or a red prompt character, although nothing had failed.
 - **opencode keeps its status after an install or upgrade.** The first launch of a new opencode
