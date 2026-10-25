@@ -18,6 +18,8 @@ export const RELEASE_SWITCHES = Object.freeze({
   commandSettings: { enabled: false, createdOn: "2026-10-24" },
   /** The stacked-section agent dock replaces the tabbed dock column (shell rebuild, Overview track A1). */
   agentDock: { enabled: false, createdOn: "2026-10-24" },
+  /** The flush stage replaces the card panes: breadcrumb bar, pane identity header (LAY-5, LAY-10). */
+  shellStage: { enabled: false, createdOn: "2026-10-25" },
 } satisfies ReleaseSwitchDefinitions);
 export type ReleaseSwitchId = keyof typeof RELEASE_SWITCHES;
 

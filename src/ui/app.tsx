@@ -233,6 +233,7 @@ import { DockToggle } from "./dock/dock-toggle";
 import { useDockPresence } from "./dock/dock-presence";
 import { useTitleBarOverlaySync } from "./title-bar-overlay-sync";
 import { availableDockTabs, resolveDockTab } from "./dock/dock-tab-registry";
+import { STAGE_FLUSH_CLASS, shellStageEnabled } from "./shell-stage";
 import { TabStrip } from "./tab-strip";
 import { sidebarCollapseArmed, sidebarWidthLive } from "./sidebar-grip";
 import { applySidebarShell } from "./sidebar-shell";
@@ -2588,7 +2589,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
             // open on purpose, so the painted state answers instead and the
             // terminals reclaim the space the moment the gesture arms.
             (dockDragging ? dockPainted : dockPresence.mounted) ? "stage--dock" : ""
-          } ${sidebar ? "stage--strip" : ""}`}
+          } ${sidebar ? "stage--strip" : ""} ${shellStageEnabled() ? STAGE_FLUSH_CLASS : ""}`}
           // One number, two consumers: the panel's own column and the inset
           // that keeps the terminal grid clear of it. A drag updates the
           // live signal, so both move together instead of the terminals
