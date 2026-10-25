@@ -228,7 +228,7 @@ import { DockHistory } from "./agent-dock/dock-history";
 import { DockUsage } from "./agent-dock/dock-usage";
 import { changedFileCount, DockChangesWatch } from "./agent-dock/dock-changes-watch";
 import { DockSlot } from "./agent-dock/dock-slot";
-import { SidebarActions } from "./sidebar-actions";
+import { SidebarActions, type SidebarActionsProps } from "./sidebar-actions";
 import { DockToggle } from "./dock/dock-toggle";
 import { useDockPresence } from "./dock/dock-presence";
 import { useTitleBarOverlaySync } from "./title-bar-overlay-sync";
@@ -2191,40 +2191,41 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
    * The rail's tools row (DL §28). Built here beside `chromeActions` because
    * it is the same job: `App` owns Prompts and Settings, and every layout must
    * show the same state for them — the rail on Electron's sidebar, the
-   * toolbar's `More` menu in top-tab mode and on Tauri.
+   * toolbar's `More` menu in top-tab mode and on Tauri. The props are kept as
+   * a value too, so the project-first rail draws its own foot from the same
+   * callbacks (`AgentRail`'s `tools`).
    */
-  const railActions = (
-    <SidebarActions
-      // `railToolsMounted` already implies the Electron column, so collapsed
-      // here is exactly the avatar column's `Tools` button (DL-28.6).
-      collapsed={effectiveSidebarCollapsed()}
-      // Every callback here OPENS and stops. Pressing the row of something
-      // already on screen is a no-op, so none of them can be the thing that
-      // puts a surface away — that stays with each surface's own control.
-      onOpenBrowser={() => {
-        if (!browserSurfaceActive.value) {
-          tabsRef.current?.runAction("toggle-browser");
-        }
-      }}
-      onOpenUsage={() => openDockTab("usage")}
-      onOpenExplorer={() => openDockTab("explorer")}
-      sessionsAvailable={sessionsSupported.value}
-      onOpenSessions={() => openDockTab("sessions")}
-      promptsOpen={promptsOpen.value}
-      promptsUnavailable={promptsUnavailable()}
-      promptPopover={promptPopover}
-      onOpenPrompts={() => {
-        if (!promptsOpen.value) {
-          togglePrompts();
-        }
-      }}
-      onOpenSettings={() => {
-        if (!settingsOpen.value) {
-          toggleSettings();
-        }
-      }}
-    />
-  );
+  const railToolProps: SidebarActionsProps = {
+    // `railToolsMounted` already implies the Electron column, so collapsed
+    // here is exactly the avatar column's `Tools` button (DL-28.6).
+    collapsed: effectiveSidebarCollapsed(),
+    // Every callback here OPENS and stops. Pressing the row of something
+    // already on screen is a no-op, so none of them can be the thing that
+    // puts a surface away — that stays with each surface's own control.
+    onOpenBrowser: () => {
+      if (!browserSurfaceActive.value) {
+        tabsRef.current?.runAction("toggle-browser");
+      }
+    },
+    onOpenUsage: () => openDockTab("usage"),
+    onOpenExplorer: () => openDockTab("explorer"),
+    sessionsAvailable: sessionsSupported.value,
+    onOpenSessions: () => openDockTab("sessions"),
+    promptsOpen: promptsOpen.value,
+    promptsUnavailable: promptsUnavailable(),
+    promptPopover,
+    onOpenPrompts: () => {
+      if (!promptsOpen.value) {
+        togglePrompts();
+      }
+    },
+    onOpenSettings: () => {
+      if (!settingsOpen.value) {
+        toggleSettings();
+      }
+    },
+  };
+  const railActions = <SidebarActions {...railToolProps} />;
 
   // One element, both layouts: DesktopChrome mounts it in the frame in
   // sidebar mode, TabBar mounts the same element in top-tab mode. Building it
@@ -2524,6 +2525,7 @@ export function App({ boot = { kind: "normal" } }: { boot?: BootMode } = {}) {
           <AgentRail
             newPaneDrop={newPaneDrop}
             footer={railToolsMounted ? railActions : undefined}
+            tools={railToolsMounted ? railToolProps : undefined}
             collapsed={effectiveSidebarCollapsed()}
             usageSummary={
               effectiveSidebarCollapsed() ? null : (

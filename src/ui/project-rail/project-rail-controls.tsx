@@ -1,4 +1,5 @@
 import { MagnifyingGlass } from "@phosphor-icons/react";
+import type { ComponentChildren } from "preact";
 import { useRef, useState } from "preact/hooks";
 import { CHROME_ICON, DeckIcon } from "../controls/deck-icon";
 import { Input } from "../controls/input";
@@ -46,13 +47,16 @@ export function onProjectRailKeyDown(event: KeyboardEvent): void {
   }
 }
 
-export type ProjectRailControlsProps = Omit<
+export interface ProjectRailControlsProps extends Omit<
   ProjectRailCreateProps,
   "onNotice" | "onNewWorktree" | "plusRef"
->;
+> {
+  /** The "N need you" pill: it takes room beside the search field, never a row of its own. */
+  readonly attention?: ComponentChildren;
+}
 
-/** The strip above the list (LAY-3): search, Organize and "+". It replaces the create row. */
-export function ProjectRailControls(props: ProjectRailControlsProps) {
+/** The strip above the list (LAY-3): search, the pill, Organize and "+". It replaces the create row. */
+export function ProjectRailControls({ attention, ...props }: ProjectRailControlsProps) {
   const [notice, setNotice] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const branchRef = useRef<HTMLInputElement>(null);
@@ -117,6 +121,7 @@ export function ProjectRailControls(props: ProjectRailControlsProps) {
             }}
           />
         </div>
+        {attention}
         <ProjectRailOrganize />
         <ProjectRailCreate
           {...props}

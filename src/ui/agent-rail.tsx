@@ -29,7 +29,10 @@ import { RailCreate } from "./rail-create";
 import { isReleaseSwitchEnabled } from "../lib/release-switches";
 import { rendererReleaseSwitches } from "../terminal/action-availability";
 import { ProjectRail } from "./project-rail/project-rail";
+import { ProjectRailAttentionPill } from "./project-rail/project-rail-attention-pill";
 import { onProjectRailKeyDown, ProjectRailControls } from "./project-rail/project-rail-controls";
+import { ProjectRailFooter } from "./project-rail/project-rail-footer";
+import type { SidebarActionsProps } from "./sidebar-actions";
 
 /**
  * The agent status rail.
@@ -138,6 +141,12 @@ export interface AgentRailProps {
    * layouts. Electron only — Tauri's `RepositoryRail` is handed none.
    */
   footer?: ComponentChildren;
+  /**
+   * What `footer` was built from. The project-first rail (`projectRail` switch) draws its own
+   * foot from these callbacks instead of mounting `footer`, with `usageSummary` beneath its
+   * buttons; omitted, it mounts `footer` as the cluster rail does.
+   */
+  readonly tools?: SidebarActionsProps;
   /**
    * The sidebar is collapsed (DL-27.29): the rail draws a column of project
    * avatars instead of the tree. Electron only — Tauri's `RepositoryRail`
@@ -323,8 +332,9 @@ function WorktreeCardRail(props: AgentRailProps) {
   }
 
   // Read at render time, never at import (release-switch convention). On, the project-first
-  // rail replaces the create row and the cluster list: the footer and usage summary stay, and
-  // the collapsed avatar column above is still the old one. Rows call the same callbacks.
+  // rail replaces the create row, the cluster list and the tools row; the usage summary moves
+  // into the new foot, and the collapsed avatar column above is still the old one. Rows and
+  // tools call the same callbacks.
   if (isReleaseSwitchEnabled("projectRail", rendererReleaseSwitches())) {
     return (
       <nav class="asr-rail asr-rail--mounted" aria-label="Agents" onKeyDown={onProjectRailKeyDown}>
@@ -333,6 +343,13 @@ function WorktreeCardRail(props: AgentRailProps) {
           actions={props.cardActions}
           onOpenBoard={props.legacy.onOpenWorkspace}
           disabled={props.legacy.openWorkspaceDisabled}
+          attention={
+            <ProjectRailAttentionPill
+              view={view}
+              onFocusPane={props.onFocusPane}
+              onSelectTab={props.onSelectTab}
+            />
+          }
         />
         <div class="asr-rail__list">
           <ProjectRail
@@ -349,8 +366,14 @@ function WorktreeCardRail(props: AgentRailProps) {
             agentDisabled={props.legacy.openWorkspaceDisabled}
           />
         </div>
-        {props.footer}
-        {props.usageSummary}
+        {props.tools === undefined ? (
+          <>
+            {props.footer}
+            {props.usageSummary}
+          </>
+        ) : (
+          <ProjectRailFooter {...props.tools} usage={props.usageSummary} />
+        )}
       </nav>
     );
   }

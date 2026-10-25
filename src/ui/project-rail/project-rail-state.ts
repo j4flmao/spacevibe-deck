@@ -71,6 +71,16 @@ export function toggleProjectFolded(key: string): void {
   foldedProjects.value = next;
 }
 
+/** Bring a project's rows back: the pill's jump lands on a row a fold would hide. */
+export function unfoldProject(key: string): void {
+  if (!foldedProjects.value.has(key)) {
+    return;
+  }
+  const next = new Set(foldedProjects.value);
+  next.delete(key);
+  foldedProjects.value = next;
+}
+
 /** The label reads "5m", so a minute is the finest step worth waking a row for. */
 const CLOCK_TICK_MS = 60_000;
 
