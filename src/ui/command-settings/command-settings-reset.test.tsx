@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { act } from "preact/test-utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // The sections and pieces an area mounts pull in host-backed stores; stub them for jsdom.
@@ -156,6 +157,24 @@ describe("the Reset area", () => {
     expect(settings.value).toEqual(EDITED);
     expect(resetPromptOpen.value).toBe(false);
     await waitUntil(() => document.activeElement === trigger);
+  });
+
+  it("closes on a press at its own backdrop without closing Settings", async () => {
+    const { onClose } = await open();
+    await clickIn(resetButton("Reset preferences"));
+    const backdrop = document.querySelector<HTMLElement>('[data-slot="dialog-overlay"]');
+    expect(backdrop).not.toBeNull();
+    // Portalled out of the scrim, so the scrim's close-on-press never sees this press.
+    expect(document.querySelector('[aria-label="Settings"]')?.contains(backdrop ?? null)).toBe(
+      false,
+    );
+    await act(async () => {
+      backdrop?.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+      backdrop?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await waitUntil(() => dialog() === null);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(settings.value).toEqual(EDITED);
   });
 
   it("leaves Tab to the dialog instead of wrapping it into the surface", async () => {

@@ -1,9 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
 import { activeKeyIn, isNavigable, type CommandItem } from "../../settings/command-hits";
-import { CaretLeft } from "@phosphor-icons/react";
 import { initSettings, settingsLoadState } from "../../settings/settings-store";
-import { Button } from "../controls/button";
-import { DeckIcon, ROW_ICON } from "../controls/deck-icon";
 import { useNoteAgentListWhileSettingsOpen } from "../../launcher/agent-install-control";
 import { LoadError } from "../controls/load-error";
 import { settingsTarget } from "../settings/settings-focus-store";
@@ -31,8 +28,8 @@ interface CommandSettingsProps {
  * Three keyboard contracts carry over from the screen it replaces:
  *
  * - **Escape belongs to the innermost owner** (`command-settings-keys.ts`).
- * - **Focus cannot leave the surface.** The layer covers the window but the app
- *   behind it stays in the document, so Tab is wrapped inside it.
+ * - **Focus cannot leave the surface.** The scrim covers the window but the app
+ *   behind it stays in the document, so Tab is wrapped inside the panel.
  * - **A loading snapshot cannot overwrite an edit.** `initSettings` assigns the
  *   disk snapshot over `settings.value` when it resolves, so the list is inert
  *   (a disabled fieldset) until it has landed. The field and the chips stay live:
@@ -110,29 +107,26 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
   const focusSearch = (): void => searchRef.current?.focus({ preventScroll: true });
   const esc = query !== "" ? "Clear" : scope !== null ? "Back" : "Close";
   return (
-    <section
-      ref={rootRef}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Settings"
-      className="ui-preset fixed inset-0 z-35 flex flex-col"
+    // The scrim is the pointer's way out: it covers the whole window, and a press that lands on
+    // it (not on the panel it holds) closes. `pointerdown`, not `click`, so a drag that starts
+    // in a field and ends on the scrim does not close. `fixed`, not `absolute`: this mounts
+    // inside the stage, and the dim has to reach the rail and the frame row too. `no-drag`
+    // because the frame row's drag strip would otherwise swallow a press on the top 34px
+    // (which also means the window cannot be dragged while Settings is open).
+    <div
+      className="fixed inset-0 z-35 flex items-start justify-center bg-black/55 pt-[64px] [-webkit-app-region:no-drag]"
+      onPointerDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      {/* The layer covers the window's own frame row, so this strip is the only draggable
-          one while Settings is open (`11-settings-screen.css`, "Window dragging"; the
-          buttons in it opt out through that rule). It reserves the traffic lights' footprint,
-          and keeps Back here because the layer covers every other way out for a pointer:
-          Back, not close, as the screen it replaces (2026-08-19). */}
-      <header
-        data-tauri-drag-region
-        className="flex h-(--frame-h) shrink-0 items-center pl-[calc(var(--frame-lights-w)+12px)]"
+      <section
+        ref={rootRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Settings"
+        className="ui-preset flex max-h-[calc(100%-128px)] w-[760px] max-w-[calc(100%-48px)] flex-col overflow-hidden rounded-xl bg-background text-foreground ring-1 ring-foreground/15"
       >
-        <Button variant="ghost" size="sm" title="Back to Deck (Esc)" onClick={onClose}>
-          <DeckIcon icon={CaretLeft} size={ROW_ICON} />
-          Back
-        </Button>
-      </header>
-      <div className="mx-auto flex min-h-0 w-full max-w-190 flex-1 flex-col">
-        <header className="flex shrink-0 flex-col gap-2 p-3">
+        <header className="flex shrink-0 flex-col gap-2 border-b p-3">
           <SearchField
             inputRef={searchRef}
             scope={scope}
@@ -161,8 +155,8 @@ function CommandSurface({ onClose }: { readonly onClose: () => void }) {
           </fieldset>
         </div>
         <Footer move={items.some(isNavigable)} enter={enterLabel(current)} esc={esc} />
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }
 

@@ -103,14 +103,35 @@ describe("Command Settings frame", () => {
     expect(document.activeElement).toBe(search());
   });
 
-  it("closes with the Back button, the pointer's way out of a layer that covers the window", async () => {
+  it("closes when a press lands on the scrim, the pointer's way out of the modal", async () => {
     const { onClose } = await open();
-    const back = [...document.querySelectorAll<HTMLElement>("button")].find(
-      (button) => button.textContent === "Back",
-    );
-    await act(async () => back?.click());
+    const scrim = (byRole("dialog") as HTMLElement).parentElement as HTMLElement;
+    await act(async () => {
+      scrim.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+    });
     await settle();
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays open for a press inside the panel, in a field or on a row", async () => {
+    const { onClose } = await open();
+    const panel = byRole("dialog") as HTMLElement;
+    for (const target of [panel, search(), chip("Terminal")]) {
+      await act(async () => {
+        target.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+      });
+    }
+    await settle();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(byRole("dialog")).not.toBeNull();
+  });
+
+  it("names the panel as a modal dialog", async () => {
+    await open();
+    const panel = byRole("dialog") as HTMLElement;
+    expect(panel.getAttribute("aria-label")).toBe("Settings");
+    expect(panel.getAttribute("aria-modal")).toBe("true");
+    expect(panel.contains(search())).toBe(true);
   });
 
   it("narrows the list to what the text matches, grouped under its area", async () => {
