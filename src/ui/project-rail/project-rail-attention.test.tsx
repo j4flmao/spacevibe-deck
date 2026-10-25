@@ -105,7 +105,7 @@ describe("the N need you pill", () => {
     expect(text(pill())).toBe("3 need you");
   });
 
-  it("offers the next agent and ⌘⇧A's chord in its tooltip", async () => {
+  it("offers the next agent in its tooltip and names no chord", async () => {
     tabViews.value = projects("requested", "none", "none");
     mount();
     await settle();
@@ -113,7 +113,7 @@ describe("the N need you pill", () => {
     act(() => pill()?.focus());
     await waitUntil(() => tooltip() !== null);
 
-    expect(text(tooltip())).toBe("Next⌘⇧A");
+    expect(text(tooltip())).toBe("Next");
   });
 
   it("counts a failed agent and leaves a finished run alone", async () => {

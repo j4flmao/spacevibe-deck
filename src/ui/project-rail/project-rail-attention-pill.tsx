@@ -1,8 +1,6 @@
 import { useMemo } from "preact/hooks";
-import { shortcutCaps } from "../../lib/shortcut-label";
 import type { AgentRailView } from "../agent-rail-model";
 import { AgentStateMark } from "../blocks/agent-state-mark";
-import { Chord } from "../blocks/chord";
 import { Button } from "../controls/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../controls/tooltip";
 import { needsYouItems, nextNeedsYou } from "./project-rail-attention";
@@ -19,8 +17,9 @@ export interface ProjectRailAttentionPillProps extends RailSelection {
  * the next, wrapping around. It counts every such row, including those of hidden projects,
  * archived rows and folded projects, and is absent at zero. A press goes through the host's
  * pane-exact focus (`onFocusPane`), the preflight ⌘⇧A runs too, then unfolds the target's
- * project so the row it landed on is on screen. ⌘⇧A keeps its own jump (decision F4); the
- * chord in the tooltip is that action's.
+ * project so the row it landed on is on screen. ⌘⇧A keeps its own jump (decision F4: severity
+ * first, finished runs included, no wrap), so the tooltip names no chord: it would promise a
+ * behaviour this press does not have.
  */
 export function ProjectRailAttentionPill({
   view,
@@ -31,7 +30,6 @@ export function ProjectRailAttentionPill({
   if (count === 0) {
     return null;
   }
-  const caps = shortcutCaps("focus-next-attention");
   const jump = (): void => {
     const next = nextNeedsYou(view);
     if (next === null) {
@@ -46,10 +44,7 @@ export function ProjectRailAttentionPill({
         <AgentStateMark status="needs-input" />
         {count} need you
       </TooltipTrigger>
-      <TooltipContent>
-        Next
-        {caps === null ? null : <Chord keys={caps} />}
-      </TooltipContent>
+      <TooltipContent>Next</TooltipContent>
     </Tooltip>
   );
 }
